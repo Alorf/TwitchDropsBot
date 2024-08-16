@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34622.214
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TwitchDropsBot.Core", "TwitchDropsBot.Core\TwitchDropsBot.Core.csproj", "{2D9DE952-DAF4-48EB-8C8E-6C184EE976F7}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TwitchDropsBot.Console", "TwitchDropsBot.Console\TwitchDropsBot.Console.csproj", "{8D2953E1-9C01-495B-898D-F33899419CDC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchDropsBot.WinForms", "TwitchDropsBot.WinForms\TwitchDropsBot.WinForms.csproj", "{74C16BFF-14D3-4BDB-AC11-C7AC2D2994A2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2D9DE952-DAF4-48EB-8C8E-6C184EE976F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2D9DE952-DAF4-48EB-8C8E-6C184EE976F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2D9DE952-DAF4-48EB-8C8E-6C184EE976F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2D9DE952-DAF4-48EB-8C8E-6C184EE976F7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D2953E1-9C01-495B-898D-F33899419CDC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D2953E1-9C01-495B-898D-F33899419CDC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D2953E1-9C01-495B-898D-F33899419CDC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D2953E1-9C01-495B-898D-F33899419CDC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{74C16BFF-14D3-4BDB-AC11-C7AC2D2994A2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{74C16BFF-14D3-4BDB-AC11-C7AC2D2994A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{74C16BFF-14D3-4BDB-AC11-C7AC2D2994A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{74C16BFF-14D3-4BDB-AC11-C7AC2D2994A2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2DCB42AB-9982-4712-866E-BD593FA68986}
+	EndGlobalSection
+EndGlobal

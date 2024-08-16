@@ -1,0 +1,451 @@
+using TwitchDropsBot.Core.Object;
+using TwitchDropsBot.Core;
+using System.Runtime.InteropServices;
+using System.Security.Policy;
+using TwitchDropsBot.Core.Exception;
+using Microsoft.Win32;
+using System.Windows.Forms;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+
+namespace TwitchDropsBot.WinForms
+{
+    public partial class MainForm : Form
+    {
+        public MainForm()
+        {
+            InitializeComponent();
+
+            if (!File.Exists("config.json"))
+            {
+                AppConfig.SaveConfig(new AppConfig());
+            };
+
+            AppConfig config = AppConfig.GetConfig();
+
+            checkBoxFavourite.Checked = config.OnlyFavouriteGames;
+            checkBoxStartup.Checked = config.LaunchOnStartup;
+            checkBoxMinimizeInTray.Checked = config.MinimizeInTray;
+
+            while (config.Users.Count == 0)
+            {
+                SystemLogger.Info("No users found in the configuration file.");
+                SystemLogger.Info("Login process will start.");
+
+                AuthDevice authDevice = new AuthDevice();
+                authDevice.ShowDialog();
+
+                if (authDevice.DialogResult == DialogResult.Cancel)
+                {
+                    Environment.Exit(1);
+                }
+
+                config = AppConfig.GetConfig();
+            }
+
+            foreach (ConfigUser user in config.Users)
+            {
+                TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId);
+
+                Bot bot = new Bot(twitchUser);
+                Task.Run(async () =>
+                {
+                    while (true)
+                    {
+                        try
+                        {
+                            await bot.StartAsync();
+                        }
+                        catch (NoBroadcasterOrNoCampaignFound ex)
+                        {
+                            twitchUser.Logger.Info(ex.Message);
+                            twitchUser.Logger.Info("Waiting for 5 minutes before trying again.");
+                        }
+                        catch (Exception ex)
+                        {
+                            twitchUser.Logger.Error(ex);
+                        }
+
+                        await Task.Delay(300000);
+                    }
+                });
+                tabControl1.TabPages.Add(CreateTabPage(twitchUser));
+
+                InitList();
+
+            }
+
+#if DEBUG
+            AllocConsole();
+#endif
+        }
+
+        void InitList()
+        {
+            FavGameListBox.Items.Clear();
+            AppConfig config = AppConfig.GetConfig();
+
+            foreach (var game in config.FavouriteGames)
+            {
+                FavGameListBox.Items.Add(game);
+            }
+        }
+
+#if DEBUG
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool AllocConsole();
+#endif
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            notifyIcon1.BalloonTipTitle = "TwitchDropsBot";
+            notifyIcon1.BalloonTipText = "The application has been put in the tray";
+            notifyIcon1.Text = "TwitchDropsBot";
+            notifyIcon1.BalloonTipClicked += notifyIcon1_BalloonTipClicked;
+
+        }
+
+        //balloon tip click
+        private void notifyIcon1_BalloonTipClicked(object sender, EventArgs e)
+        {
+            this.Show();
+            notifyIcon1.Visible = false;
+            WindowState = FormWindowState.Normal;
+        }
+
+        private void notifyIcon1_MouseClick(object sender, MouseEventArgs e)
+        {
+            //if mouseclick is left
+            if (e.Button == MouseButtons.Left)
+            {
+                this.Show();
+                notifyIcon1.Visible = false;
+                WindowState = FormWindowState.Normal;
+            }
+        }
+
+        private void Form1_Resize(object sender, EventArgs e)
+        {
+
+            if (WindowState == FormWindowState.Minimized && checkBoxMinimizeInTray.Checked)
+            {
+                putInTray();
+            }
+            else if (FormWindowState.Normal == this.WindowState)
+            { notifyIcon1.Visible = false; }
+
+        }
+
+        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Application.Exit();
+        }
+
+        private void putInTray()
+        {
+            this.Hide();
+            notifyIcon1.Visible = true;
+            notifyIcon1.ShowBalloonTip(1000);
+        }
+
+        private TabPage CreateTabPage(TwitchUser twitchUser)
+        {
+            var tabPage = new TabPage
+            {
+                Text = twitchUser.Login
+            };
+
+            tabPage.BackColor = Color.White;
+
+            var twitchUserLogger = new TextBox
+            {
+                Location = new Point(6, 6),
+                Multiline = true,
+                ReadOnly = true,
+                ScrollBars = ScrollBars.Vertical,
+                Size = new Size(578, 328)
+            };
+
+            var labelGame = new Label
+            {
+                BackColor = System.Drawing.Color.Transparent,
+                Location = new Point(6, 349),
+                Size = new Size(284, 35),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Text = "Game : N/A",
+            };
+
+            var labelDrop = new Label
+            {
+                BackColor = System.Drawing.Color.Transparent,
+                Location = new Point(6, 395),
+                Size = new Size(284, 35),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Text = $"Drop : N/A"
+            };
+
+            var labelPercentage = new Label
+            {
+                BackColor = System.Drawing.Color.Transparent,
+                Location = new Point(6, 453),
+                Size = new Size(578, 16),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Text = "-%"
+            };
+
+            var labelMinRemaining = new Label()
+            {
+                BackColor = System.Drawing.Color.Transparent,
+                Location = new Point(334, 453),
+                Size = new Size(250, 19),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Text = "Minutes remaining : -"
+            };
+
+            var progressBar = new ProgressBar()
+            {
+                Location = new Point(6, 475),
+                Size = new Size(578, 23),
+                Value = 0
+            };
+
+            tabPage.Controls.Add(twitchUserLogger);
+            tabPage.Controls.Add(labelGame);
+            tabPage.Controls.Add(labelDrop);
+            tabPage.Controls.Add(labelMinRemaining);
+            tabPage.Controls.Add(labelPercentage);
+            tabPage.Controls.Add(progressBar);
+
+            // Timer to update the controls periodically
+            var timer = new System.Windows.Forms.Timer
+            {
+                Interval = 1000
+            };
+
+            timer.Tick += (sender, e) =>
+                    {
+
+                        if (twitchUser.Status != BotStatus.Watching)
+                        {
+                            //reset every label
+                            labelGame.Text = $"Game : N/A";
+                            labelDrop.Text = $"Drop : N/A";
+                            labelPercentage.Text = "-%";
+                            labelMinRemaining.Text = "Minutes remaining : -";
+                            progressBar.Value = 0;
+
+                        }
+                        else if (twitchUser.Status == BotStatus.Seeking)
+                        {
+                            progressBar.Value = 0;
+                        }
+                        else
+                        {
+                            labelGame.Text = $"Game : {twitchUser.CurrentDropCampaign?.Game.DisplayName}";
+                            labelDrop.Text = $"Drop : {twitchUser.CurrentTimeBasedDrop?.Name}";
+
+                            if (twitchUser.CurrendDropCurrentSession != null && twitchUser.CurrendDropCurrentSession.requiredMinutesWatched > 0)
+                            {
+                                var percentage = (int)((twitchUser.CurrendDropCurrentSession.CurrentMinutesWatched / (double)twitchUser.CurrendDropCurrentSession.requiredMinutesWatched) * 100);
+
+                                progressBar.Value = percentage;
+                                labelPercentage.Text = $"{percentage}%";
+                                labelMinRemaining.Text = $"Minutes remaining : {twitchUser.CurrendDropCurrentSession.requiredMinutesWatched - twitchUser.CurrendDropCurrentSession.CurrentMinutesWatched}";
+                            }
+                        }
+                    };
+
+            timer.Start();
+
+            twitchUser.Logger.OnLog += (message) => AppendLog($"LOG: {message}");
+            twitchUser.Logger.OnError += (message) => AppendLog($"ERROR: {message}");
+            twitchUser.Logger.OnInfo += (message) => AppendLog($"INFO: {message}");
+
+            void AppendLog(string message)
+            {
+                if (twitchUserLogger.InvokeRequired)
+                {
+                    twitchUserLogger.Invoke(new Action(() =>
+                    {
+                        twitchUserLogger.AppendText($"[{DateTime.Now}] {message}{Environment.NewLine}");
+                    }));
+                }
+                else
+                {
+                    twitchUserLogger.AppendText($"[{DateTime.Now}] {message}{Environment.NewLine}");
+                }
+            }
+
+            return tabPage;
+        }
+
+        private void checkBoxStartup_CheckedChanged(object sender, EventArgs e)
+        {
+            //change appConfig
+            AppConfig config = AppConfig.GetConfig();
+
+            config.LaunchOnStartup = checkBoxStartup.Checked;
+
+            SetStartup(config.LaunchOnStartup);
+
+
+            AppConfig.SaveConfig(config);
+        }
+
+        private void SetStartup(bool enable)
+        {
+            RegistryKey rk = Registry.CurrentUser.OpenSubKey
+                ("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
+
+            if (enable)
+            {
+                rk.SetValue("TwitchDropsBot", Application.ExecutablePath.ToString());
+            }
+            else
+            {
+                rk.DeleteValue("TwitchDropsBot", false);
+            }
+
+        }
+
+        private void checkBoxFavourite_CheckedChanged(object sender, EventArgs e)
+        {
+            //change appConfig
+            AppConfig config = AppConfig.GetConfig();
+
+            config.OnlyFavouriteGames = checkBoxFavourite.Checked;
+
+            AppConfig.SaveConfig(config);
+        }
+
+        private void buttonAdd_Click(object sender, EventArgs e)
+        {
+            string gameName = textBoxNameOfGame.Text;
+
+            if (string.IsNullOrEmpty(gameName) || string.IsNullOrWhiteSpace(gameName))
+            {
+                return;
+            }
+
+            AppConfig config = AppConfig.GetConfig();
+
+            if (!config.FavouriteGames.Contains(gameName))
+            {
+                config.FavouriteGames.Add(gameName);
+            }
+
+            AppConfig.SaveConfig(config);
+
+            InitList();
+        }
+
+        private void buttonDelete_Click(object sender, EventArgs e)
+        {
+            if (FavGameListBox.SelectedItem != null)
+            {
+                string gameName = FavGameListBox.SelectedItem.ToString();
+
+                AppConfig config = AppConfig.GetConfig();
+
+                if (config.FavouriteGames.Contains(gameName))
+                {
+                    config.FavouriteGames.Remove(gameName);
+                }
+
+                AppConfig.SaveConfig(config);
+
+                InitList();
+            }
+        }
+
+        private void buttonUp_Click(object sender, EventArgs e)
+        {
+            if (FavGameListBox.SelectedItem != null && FavGameListBox.SelectedIndex > 0)
+            {
+                int index = FavGameListBox.SelectedIndex;
+                string item = FavGameListBox.SelectedItem.ToString();
+
+                AppConfig config = AppConfig.GetConfig();
+
+                config.FavouriteGames.RemoveAt(index);
+                config.FavouriteGames.Insert(index - 1, item);
+
+                AppConfig.SaveConfig(config);
+
+                InitList();
+                FavGameListBox.SelectedIndex = index - 1;
+            }
+        }
+
+        private void buttonDown_Click(object sender, EventArgs e)
+        {
+            if (FavGameListBox.SelectedItem != null && FavGameListBox.SelectedIndex < FavGameListBox.Items.Count - 1)
+            {
+                int index = FavGameListBox.SelectedIndex;
+                string item = FavGameListBox.SelectedItem.ToString();
+
+                AppConfig config = AppConfig.GetConfig();
+
+                config.FavouriteGames.RemoveAt(index);
+                config.FavouriteGames.Insert(index + 1, item);
+
+                AppConfig.SaveConfig(config);
+
+                InitList();
+                FavGameListBox.SelectedIndex = index + 1;
+            }
+        }
+
+        private void buttonAddNewAccount_Click(object sender, EventArgs e)
+        {
+            // Open auth device popup
+            AuthDevice authDevice = new AuthDevice();
+            authDevice.ShowDialog();
+
+            // Create a bot for the new user
+            AppConfig config = AppConfig.GetConfig();
+            ConfigUser user = config.Users.Last();
+            TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId);
+
+            Bot bot = new Bot(twitchUser);
+
+            Task.Run(async () =>
+            {
+                while (true)
+                {
+                    try
+                    {
+                        await bot.StartAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        SystemLogger.Error(ex);
+                        await Task.Delay(300000);
+                    }
+                }
+            });
+
+            tabControl1.TabPages.Add(CreateTabPage(twitchUser));
+        }
+
+        private void buttonPutInTray_Click(object sender, EventArgs e)
+        {
+            putInTray();
+        }
+
+        private void CheckBoxMinimizeInTrayCheckedChanged(object sender, EventArgs e)
+        {
+            //change appConfig
+            AppConfig config = AppConfig.GetConfig();
+
+            config.MinimizeInTray = checkBoxMinimizeInTray.Checked;
+
+            AppConfig.SaveConfig(config);
+        }
+
+    }
+}
+

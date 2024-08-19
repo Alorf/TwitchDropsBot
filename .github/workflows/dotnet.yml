@@ -13,12 +13,12 @@ jobs:
         kind: ['linux', 'windows', 'winforms']
         include:
           - kind: linux
-            version : Terminal
+            version : Console
             os: ubuntu-latest
             target: linux-x64
             project: TwitchDropsBot.Console/TwitchDropsBot.Console.csproj
           - kind: windows
-            version : Terminal
+            version : Console
             os: windows-latest
             target: win-x64
             project: TwitchDropsBot.Console/TwitchDropsBot.Console.csproj

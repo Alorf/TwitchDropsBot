@@ -13,14 +13,17 @@ jobs:
         kind: ['linux', 'windows', 'winforms']
         include:
           - kind: linux
+            version : Terminal
             os: ubuntu-latest
             target: linux-x64
             project: TwitchDropsBot.Console/TwitchDropsBot.Console.csproj
           - kind: windows
+            version : Terminal
             os: windows-latest
             target: win-x64
             project: TwitchDropsBot.Console/TwitchDropsBot.Console.csproj
           - kind: winforms
+            version : WinForms
             os: windows-latest
             target: win-x64
             project: TwitchDropsBot.WinForms/TwitchDropsBot.WinForms.csproj
@@ -38,7 +41,7 @@ jobs:
         shell: bash
         run: |
           tag=$(git describe --tags --abbrev=0)
-          release_name="TwitchDropsBot-$tag-${{ matrix.kind }}-${{ matrix.target }}"
+          release_name="TwitchDropsBot-${{ matrix.version }}-${{ matrix.target }}-$tag"
           
           if [ "${{ matrix.kind }}" == "winforms" ]; then
             framework="net8.0-windows"

@@ -46,11 +46,13 @@ jobs:
           if [ "${{ matrix.kind }}" == "winforms" ]; then
             framework="net8.0-windows"
             # Build with native libraries for self-extract
-            dotnet publish ${{ matrix.project }} -f $framework -r "${{ matrix.target }}" -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -c Release -o "$release_name" --self-contained
+            dotnet publish ${{ matrix.project }} -f $framework -r "${{ matrix.target }}" -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -c Release -o "$release_name"
           else
             framework="net8.0"
-            dotnet publish ${{ matrix.project }} -f $framework -r "${{ matrix.target }}" -p:PublishSingleFile=true -c Release -o "$release_name" --self-contained
+            dotnet publish ${{ matrix.project }} -f $framework -r "${{ matrix.target }}" -p:PublishSingleFile=true -c Release -o "$release_name"
           fi
+
+          find "$release_name" -name '*.sln' -delete
 
           # Pack files
           if [ "${{ matrix.target }}" == "win-x64" ]; then

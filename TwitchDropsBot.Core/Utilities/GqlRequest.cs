@@ -186,6 +186,19 @@ public class GqlRequest
                                         }
                                     }
                                 }
+                                gameEventDrops {
+                                    id
+                                    name
+                                    game {
+                                        id
+                                        slug
+                                        displayName
+                                        boxArtURL
+                                    }
+                                    isConnected
+                                    totalCount
+                                    lastAwardedAt
+                               }
                             }
                         }
                     }

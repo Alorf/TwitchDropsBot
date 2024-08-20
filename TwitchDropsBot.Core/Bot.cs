@@ -22,6 +22,9 @@ public class Bot
         List<DropCampaign> dropCampaigns = await twitchUser.GqlRequest.FetchDropsAsync();
         // Get inventory
         Inventory? inventory = await twitchUser.GqlRequest.FetchInventoryDropsAsync();
+
+        
+        Console.WriteLine(inventory.GameEventDrops.Count);
         
         if (inventory?.DropCampaignsInProgress != null)
         {

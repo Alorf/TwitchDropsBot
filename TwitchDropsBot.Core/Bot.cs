@@ -23,9 +23,6 @@ public class Bot
         // Get inventory
         Inventory? inventory = await twitchUser.GqlRequest.FetchInventoryDropsAsync();
 
-        
-        Console.WriteLine(inventory.GameEventDrops.Count);
-        
         if (inventory?.DropCampaignsInProgress != null)
         {
             bool haveClaimed = false;

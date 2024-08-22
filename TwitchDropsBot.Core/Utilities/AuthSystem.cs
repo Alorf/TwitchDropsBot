@@ -31,7 +31,7 @@ public class AuthSystem
     {
         for (int i = 0; i < 10; i++)
         {
-            await Task.Delay(5000);
+            await Task.Delay(TimeSpan.FromSeconds(5));
 
             var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Post, "https://id.twitch.tv/oauth2/token");

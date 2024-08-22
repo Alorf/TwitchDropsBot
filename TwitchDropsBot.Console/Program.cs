@@ -15,28 +15,33 @@ while (config.Users.Count == 0)
     config = AppConfig.GetConfig();
 }
 
+TimeSpan waitingTime;
 foreach (ConfigUser user in config.Users)
 {
     TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId);
 
     Bot bot = new Bot(twitchUser);
+
     while (true)
     {
         try
         {
             await bot.StartAsync();
+            waitingTime = TimeSpan.FromSeconds(20);
         }
         catch (NoBroadcasterOrNoCampaignFound ex)
         {
             twitchUser.Logger.Info(ex.Message);
             twitchUser.Logger.Info("Waiting for 5 minutes before trying again.");
+            waitingTime = TimeSpan.FromMinutes(5);
         }
         catch (Exception ex)
         {
             twitchUser.Logger.Error(ex);
+            waitingTime = TimeSpan.FromMinutes(5);
         }
 
-        await Task.Delay(300000);
+        await Task.Delay(waitingTime);
     }
 }
 

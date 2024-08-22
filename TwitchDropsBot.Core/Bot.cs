@@ -41,7 +41,7 @@ public class Bot
 
             if (haveClaimed)
             {
-                await Task.Delay(20 * 1000);
+                await Task.Delay(TimeSpan.FromSeconds(20));
             }
         }
 
@@ -109,7 +109,7 @@ public class Bot
             {
                 await twitchUser.WatchStreamAsync(broadcaster.Login);
                 twitchUser.StreamURL = null;
-                await Task.Delay(20 * 1000);
+                await Task.Delay(TimeSpan.FromSeconds(20));
 
                 dropCurrentSession =
                     await twitchUser.GqlRequest.FetchCurrentSessionContextAsync(broadcaster);
@@ -130,7 +130,7 @@ public class Bot
                 timeBasedDropFound = true;
             }
 
-            await Task.Delay(2000);
+            await Task.Delay(TimeSpan.FromSeconds(2));
         } while (!timeBasedDropFound);
 
         await WatchStreamAsync(broadcaster, dropCurrentSession);
@@ -182,7 +182,7 @@ public class Bot
             twitchUser.Logger.Log(
                 $"Waiting 20 seconds... {minuteWatched}/{dropCurrentSession.requiredMinutesWatched} minutes watched.");
             
-            await Task.Delay(20 * 1000);
+            await Task.Delay(TimeSpan.FromSeconds(20));
         }
     }
 

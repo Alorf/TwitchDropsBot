@@ -409,7 +409,7 @@ public class GqlRequest
                 
                 twitchUser.Logger.Error($"Failed to execute the query {name} (attempt {i+1}/{limit}).");
                 
-                await Task.Delay(5000);
+                await Task.Delay(TimeSpan.FromSeconds(5));
             }    
         }
 

@@ -12,6 +12,7 @@ public class TwitchUser
     public GqlRequest GqlRequest { get; set; }
     public List<string> FavouriteGames { get; set; }
     public bool OnlyFavouriteGames { get; set; }
+    public bool OnlyConnectedAccounts { get; set; }
     public DropCampaign? CurrentDropCampaign { get; set; }
     public TimeBasedDrop? CurrentTimeBasedDrop { get; set; }
     public AbstractBroadcaster? CurrentBroadcaster { get; set; }

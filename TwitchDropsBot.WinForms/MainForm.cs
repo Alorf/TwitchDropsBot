@@ -27,6 +27,7 @@ namespace TwitchDropsBot.WinForms
             checkBoxFavourite.Checked = config.OnlyFavouriteGames;
             checkBoxStartup.Checked = config.LaunchOnStartup;
             checkBoxMinimizeInTray.Checked = config.MinimizeInTray;
+            checkBoxConnectedAccounts.Checked = config.OnlyConnectedAccounts;
 
             while (config.Users.Count == 0)
             {
@@ -51,30 +52,7 @@ namespace TwitchDropsBot.WinForms
                 Bot bot = new Bot(twitchUser);
                 TimeSpan waitingTime;
 
-                Task.Run(async () =>
-                {
-                    while (true)
-                    {
-                        try
-                        {
-                            await bot.StartAsync();
-                            waitingTime = TimeSpan.FromSeconds(20);
-                        }
-                        catch (NoBroadcasterOrNoCampaignFound ex)
-                        {
-                            twitchUser.Logger.Info(ex.Message);
-                            twitchUser.Logger.Info("Waiting for 5 minutes before trying again.");
-                            waitingTime = TimeSpan.FromMinutes(5);
-                        }
-                        catch (Exception ex)
-                        {
-                            twitchUser.Logger.Error(ex);
-                            waitingTime = TimeSpan.FromMinutes(5);
-                        }
-
-                        await Task.Delay(waitingTime);
-                    }
-                });
+                StartBot(twitchUser);
                 tabControl1.TabPages.Add(CreateTabPage(twitchUser));
 
                 InitList();
@@ -84,6 +62,39 @@ namespace TwitchDropsBot.WinForms
 #if DEBUG
             AllocConsole();
 #endif
+        }
+
+        private Task StartBot(TwitchUser twitchUser)
+        {
+            Bot bot = new Bot(twitchUser);
+            TimeSpan waitingTime;
+
+            return Task.Run(async () =>
+            {
+                while (true)
+                {
+                    try
+                    {
+                        await bot.StartAsync();
+                        waitingTime = TimeSpan.FromSeconds(20);
+                    }
+                    catch (NoBroadcasterOrNoCampaignFound ex)
+                    {
+                        twitchUser.Logger.Info(ex.Message);
+                        twitchUser.Logger.Info("Waiting for 5 minutes before trying again.");
+                        waitingTime = TimeSpan.FromMinutes(5);
+                    }
+                    catch (Exception ex)
+                    {
+                        twitchUser.Logger.Error(ex);
+                        waitingTime = TimeSpan.FromMinutes(5);
+                    }
+                    twitchUser.StreamURL = null;
+                    twitchUser.Status = BotStatus.Idle;
+
+                    await Task.Delay(waitingTime);
+                }
+            });
         }
 
         void InitList()
@@ -344,7 +355,7 @@ namespace TwitchDropsBot.WinForms
 
             AppConfig.SaveConfig(config);
 
-            InitList();
+            FavGameListBox.Items.Add(gameName);
         }
 
         private void buttonDelete_Click(object sender, EventArgs e)
@@ -362,7 +373,7 @@ namespace TwitchDropsBot.WinForms
 
                 AppConfig.SaveConfig(config);
 
-                InitList();
+                FavGameListBox.Items.Remove(gameName);
             }
         }
 
@@ -380,7 +391,8 @@ namespace TwitchDropsBot.WinForms
 
                 AppConfig.SaveConfig(config);
 
-                InitList();
+                FavGameListBox.Items.RemoveAt(index);
+                FavGameListBox.Items.Insert(index - 1, item);
                 FavGameListBox.SelectedIndex = index - 1;
             }
         }
@@ -399,7 +411,8 @@ namespace TwitchDropsBot.WinForms
 
                 AppConfig.SaveConfig(config);
 
-                InitList();
+                FavGameListBox.Items.RemoveAt(index);
+                FavGameListBox.Items.Insert(index + 1, item);
                 FavGameListBox.SelectedIndex = index + 1;
             }
         }
@@ -410,38 +423,18 @@ namespace TwitchDropsBot.WinForms
             AuthDevice authDevice = new AuthDevice();
             authDevice.ShowDialog();
 
+            if (authDevice.DialogResult == DialogResult.Cancel || authDevice.DialogResult == DialogResult.Abort)
+            {
+                authDevice.Dispose();
+                return;
+            }
+
             // Create a bot for the new user
             AppConfig config = AppConfig.GetConfig();
             ConfigUser user = config.Users.Last();
             TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId);
 
-            Bot bot = new Bot(twitchUser);
-            TimeSpan waitingTime;
-
-            Task.Run(async () =>
-            {
-                while (true)
-                {
-                    try
-                    {
-                        await bot.StartAsync();
-                        waitingTime = TimeSpan.FromSeconds(20);
-                    }
-                    catch (NoBroadcasterOrNoCampaignFound ex)
-                    {
-                        twitchUser.Logger.Info(ex.Message);
-                        twitchUser.Logger.Info("Waiting for 5 minutes before trying again.");
-                        waitingTime = TimeSpan.FromMinutes(5);
-                    }
-                    catch (Exception ex)
-                    {
-                        twitchUser.Logger.Error(ex);
-                        waitingTime = TimeSpan.FromMinutes(5);
-                    }
-
-                    await Task.Delay(waitingTime);
-                }
-            });
+            StartBot(twitchUser);
 
             tabControl1.TabPages.Add(CreateTabPage(twitchUser));
         }
@@ -461,6 +454,15 @@ namespace TwitchDropsBot.WinForms
             AppConfig.SaveConfig(config);
         }
 
+        private void checkBoxConnectedAccounts_CheckedChanged(object sender, EventArgs e)
+        {
+            //change appConfig
+            AppConfig config = AppConfig.GetConfig();
+
+            config.OnlyConnectedAccounts = checkBoxConnectedAccounts.Checked;
+
+            AppConfig.SaveConfig(config);
+        }
     }
 }
 

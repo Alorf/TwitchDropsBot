@@ -27,10 +27,14 @@ public class AuthSystem
         return JsonDocument.Parse(responseContent);
     }
     
-    public static async Task<JsonDocument?> CodeConfirmationAsync(string deviceCode)
+    public static async Task<JsonDocument?> CodeConfirmationAsync(string deviceCode, CancellationToken? token = null)
     {
         for (int i = 0; i < 10; i++)
         {
+            if (token != null && token.Value.IsCancellationRequested)
+            {
+                throw new OperationCanceledException();
+            }
             await Task.Delay(TimeSpan.FromSeconds(5));
 
             var client = new HttpClient();

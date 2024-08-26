@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 
 namespace TwitchDropsBot.Core.Object;
@@ -9,6 +10,7 @@ public class AppConfig
     public bool OnlyFavouriteGames { get; set; }
     public bool LaunchOnStartup { get; set; }
     public bool MinimizeInTray{ get; set; }
+    public bool OnlyConnectedAccounts { get; set; }
     public static TwitchClient TwitchClient { get; } = TwitchClientType.ANDROID_APP;
 
     public AppConfig()
@@ -24,7 +26,8 @@ public class AppConfig
     {
         var options = new JsonSerializerOptions
         {
-            WriteIndented = true
+            WriteIndented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 
         var jsonString = JsonSerializer.Serialize(config, options);

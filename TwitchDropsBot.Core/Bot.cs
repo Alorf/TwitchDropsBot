@@ -17,6 +17,9 @@ public class Bot
         AppConfig appConfig = AppConfig.GetConfig();
         twitchUser.FavouriteGames = appConfig.FavouriteGames;
         twitchUser.OnlyFavouriteGames = appConfig.OnlyFavouriteGames;
+        twitchUser.OnlyConnectedAccounts = appConfig.OnlyConnectedAccounts;
+
+        twitchUser.Status = BotStatus.Seeking;
 
         // Get drops campaign
         List<DropCampaign> dropCampaigns = await twitchUser.GqlRequest.FetchDropsAsync();
@@ -45,11 +48,14 @@ public class Bot
             }
         }
 
-        // 1. Filter out the drop campaigns that are connected to the account
-        dropCampaigns =
-            dropCampaigns
-                .Where(x => x.Self.IsAccountConnected)
-                .ToList();
+        if (twitchUser.OnlyConnectedAccounts)
+        {
+            // 1. Filter out the drop campaigns that are connected to the account
+            dropCampaigns =
+                dropCampaigns
+                    .Where(x => x.Self.IsAccountConnected)
+                    .ToList();
+        }
 
         // if appConfig only favourite on true
         if (twitchUser.OnlyFavouriteGames)
@@ -85,8 +91,6 @@ public class Bot
         TimeBasedDrop currentTimeBasedDrop;
         DropCurrentSession? dropCurrentSession;
 
-        twitchUser.Status = BotStatus.Seeking;
-
         do
         {
             var result = await SelectBroadcasterAsync(dropCampaigns);
@@ -104,7 +108,7 @@ public class Bot
 
             dropCurrentSession =
                 await twitchUser.GqlRequest.FetchCurrentSessionContextAsync(broadcaster);
-            
+
             if (string.IsNullOrEmpty(dropCurrentSession?.DropId))
             {
                 await twitchUser.WatchStreamAsync(broadcaster.Login);
@@ -133,22 +137,20 @@ public class Bot
             await Task.Delay(TimeSpan.FromSeconds(2));
         } while (!timeBasedDropFound);
 
+        twitchUser.Status = BotStatus.Watching;
         await WatchStreamAsync(broadcaster, dropCurrentSession);
-        twitchUser.StreamURL = null;
     }
 
     public async Task WatchStreamAsync(AbstractBroadcaster broadcaster, DropCurrentSession dropCurrentSession,
         int? minutes = null)
     {
-        twitchUser.Status = BotStatus.Watching;
-
         var minuteWatched = dropCurrentSession.CurrentMinutesWatched;
         twitchUser.CurrendDropCurrentSession = dropCurrentSession;
 
         while (minuteWatched <
                (minutes ?? dropCurrentSession.requiredMinutesWatched) || dropCurrentSession.requiredMinutesWatched == 0) // While all the drops are not claimed
         {
-            
+
             try
             {
                 await twitchUser.WatchStreamAsync(broadcaster.Login); // If not live, it will throw a 404 error    
@@ -178,10 +180,10 @@ public class Bot
             {
                 break;
             }
-            
+
             twitchUser.Logger.Log(
                 $"Waiting 20 seconds... {minuteWatched}/{dropCurrentSession.requiredMinutesWatched} minutes watched.");
-            
+
             await Task.Delay(TimeSpan.FromSeconds(20));
         }
     }
@@ -201,7 +203,7 @@ public class Bot
 
             List<Channel>? channels = dropcampaign.GetChannels();
 
-            if (channels != null)
+            if (channels != null || channels?.Count >= 10)
             {
                 foreach (var channel in channels)
                 {

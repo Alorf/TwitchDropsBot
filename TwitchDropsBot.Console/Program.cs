@@ -40,6 +40,8 @@ foreach (ConfigUser user in config.Users)
             twitchUser.Logger.Error(ex);
             waitingTime = TimeSpan.FromMinutes(5);
         }
+        twitchUser.StreamURL = null;
+        twitchUser.Status = BotStatus.Idle;
 
         await Task.Delay(waitingTime);
     }

@@ -42,6 +42,7 @@
             contextMenuStrip1 = new ContextMenuStrip(components);
             exitToolStripMenuItem = new ToolStripMenuItem();
             groupBox1 = new GroupBox();
+            checkBoxConnectedAccounts = new CheckBox();
             checkBoxMinimizeInTray = new CheckBox();
             buttonUp = new Button();
             buttonDown = new Button();
@@ -157,6 +158,7 @@
             // 
             // groupBox1
             // 
+            groupBox1.Controls.Add(checkBoxConnectedAccounts);
             groupBox1.Controls.Add(checkBoxMinimizeInTray);
             groupBox1.Controls.Add(buttonUp);
             groupBox1.Controls.Add(buttonDown);
@@ -176,10 +178,21 @@
             groupBox1.TabStop = false;
             groupBox1.Text = "Settings";
             // 
+            // checkBoxConnectedAccounts
+            // 
+            checkBoxConnectedAccounts.AutoSize = true;
+            checkBoxConnectedAccounts.Location = new Point(6, 80);
+            checkBoxConnectedAccounts.Name = "checkBoxConnectedAccounts";
+            checkBoxConnectedAccounts.Size = new Size(161, 19);
+            checkBoxConnectedAccounts.TabIndex = 14;
+            checkBoxConnectedAccounts.Text = "Only connected accounts";
+            checkBoxConnectedAccounts.UseVisualStyleBackColor = true;
+            checkBoxConnectedAccounts.CheckedChanged += checkBoxConnectedAccounts_CheckedChanged;
+            // 
             // checkBoxMinimizeInTray
             // 
             checkBoxMinimizeInTray.AutoSize = true;
-            checkBoxMinimizeInTray.Location = new Point(6, 80);
+            checkBoxMinimizeInTray.Location = new Point(6, 105);
             checkBoxMinimizeInTray.Name = "checkBoxMinimizeInTray";
             checkBoxMinimizeInTray.Size = new Size(149, 19);
             checkBoxMinimizeInTray.TabIndex = 13;
@@ -331,5 +344,6 @@
         private Button buttonUp;
         private Button buttonDown;
         private CheckBox checkBoxMinimizeInTray;
+        private CheckBox checkBoxConnectedAccounts;
     }
 }

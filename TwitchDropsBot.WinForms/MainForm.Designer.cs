@@ -1,4 +1,6 @@
-﻿namespace TwitchDropsBot.WinForms
+﻿using System.Windows.Forms;
+
+namespace TwitchDropsBot.WinForms
 {
     partial class MainForm
     {
@@ -54,6 +56,8 @@
             buttonPutInTray = new Button();
             checkBoxFavourite = new CheckBox();
             checkBoxStartup = new CheckBox();
+            ReloadButton = new Button();
+            tabControl1.SuspendLayout();
             tabPage1.SuspendLayout();
             contextMenuStrip1.SuspendLayout();
             groupBox1.SuspendLayout();
@@ -61,6 +65,7 @@
             // 
             // tabControl1
             // 
+            //tabControl1.Controls.Add(tabPage1);
             tabControl1.Dock = DockStyle.Right;
             tabControl1.Location = new Point(207, 0);
             tabControl1.Name = "tabControl1";
@@ -70,6 +75,7 @@
             // 
             // tabPage1
             // 
+            tabPage1.Controls.Add(ReloadButton);
             tabPage1.Controls.Add(labelMinRemaining);
             tabPage1.Controls.Add(labelDrop);
             tabPage1.Controls.Add(labelGame);
@@ -298,6 +304,15 @@
             checkBoxStartup.UseVisualStyleBackColor = true;
             checkBoxStartup.CheckedChanged += checkBoxStartup_CheckedChanged;
             // 
+            // ReloadButton
+            // 
+            ReloadButton.Location = new Point(296, 349);
+            ReloadButton.Name = "ReloadButton";
+            ReloadButton.Size = new Size(288, 35);
+            ReloadButton.TabIndex = 15;
+            ReloadButton.Text = "Add new account";
+            ReloadButton.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -312,6 +327,7 @@
             Text = "TwitchDropsBot";
             Load += Form1_Load;
             Resize += Form1_Resize;
+            tabControl1.ResumeLayout(false);
             tabPage1.ResumeLayout(false);
             tabPage1.PerformLayout();
             contextMenuStrip1.ResumeLayout(false);
@@ -345,5 +361,6 @@
         private Button buttonDown;
         private CheckBox checkBoxMinimizeInTray;
         private CheckBox checkBoxConnectedAccounts;
+        private Button ReloadButton;
     }
 }

@@ -51,8 +51,6 @@ namespace TwitchDropsBot.WinForms
 
         private void AuthDevice_Disposed(object sender, EventArgs e)
         {
-            Console.WriteLine("AuthDevice Disposed");
-            Console.WriteLine(cts != null);
             if (cts != null)
             {
                 cts.Cancel();

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using TwitchDropsBot.Core.Exception;
 using TwitchDropsBot.Core.Object;
 
@@ -26,12 +27,14 @@ public class Bot
         // Get inventory
         Inventory? inventory = await twitchUser.GqlRequest.FetchInventoryDropsAsync();
 
+        await CheckCancellation();
         if (inventory?.DropCampaignsInProgress != null)
         {
             bool haveClaimed = false;
             // For every timebased drop, check if it is claimed
             foreach (var dropCampaignInProgress in inventory.DropCampaignsInProgress)
             {
+                await CheckCancellation();
                 foreach (var timeBasedDrop in dropCampaignInProgress.TimeBasedDrops)
                 {
                     if (timeBasedDrop.Self.IsClaimed == false && timeBasedDrop.Self?.DropInstanceID != null)
@@ -48,6 +51,7 @@ public class Bot
             }
         }
 
+        await CheckCancellation();
         if (twitchUser.OnlyConnectedAccounts)
         {
             // 1. Filter out the drop campaigns that are connected to the account
@@ -69,6 +73,7 @@ public class Bot
             // Iterate over each DropCampaign
             foreach (var dropCampaign in dropCampaigns)
             {
+                await CheckCancellation();
                 dropCampaign.TimeBasedDrops.RemoveAll((x) =>
                     inventory.DropCampaignsInProgress.FirstOrDefault(y => y.Id == dropCampaign.Id)?.TimeBasedDrops
                         .First(t => t.Id == x.Id).Self.IsClaimed ?? false);
@@ -78,6 +83,7 @@ public class Bot
         dropCampaigns.RemoveAll((x) => x.TimeBasedDrops.Count == 0);
 
         // Order dropCampaigns by inventory.dropCampaignsInProgress
+        await CheckCancellation();
         dropCampaigns = dropCampaigns
             .OrderBy(x =>
                 twitchUser.FavouriteGames.IndexOf(x.Game.DisplayName) != -1
@@ -93,6 +99,7 @@ public class Bot
 
         do
         {
+            await CheckCancellation();
             var result = await SelectBroadcasterAsync(dropCampaigns);
             campaign = result.dropCampaign;
             broadcaster = result.broadcaster;
@@ -150,6 +157,7 @@ public class Bot
         while (minuteWatched <
                (minutes ?? dropCurrentSession.requiredMinutesWatched) || dropCurrentSession.requiredMinutesWatched == 0) // While all the drops are not claimed
         {
+            await CheckCancellation();
 
             try
             {
@@ -194,6 +202,7 @@ public class Bot
         AbstractBroadcaster broadcaster = null;
         foreach (var dropcampaign in dropCampaigns)
         {
+            await CheckCancellation();
             twitchUser.Logger.Log($"Checking {dropcampaign.Game.DisplayName}...");
 
             if (dropcampaign.Game == null)
@@ -207,6 +216,7 @@ public class Bot
             {
                 foreach (var channel in channels)
                 {
+                    await CheckCancellation();
                     var tempBroadcaster = await twitchUser.GqlRequest.FetchStreamInformationAsync(channel.Name);
 
                     if (tempBroadcaster == null)
@@ -242,5 +252,16 @@ public class Bot
         }
 
         return (null, null);
+    }
+
+    private async Task CheckCancellation()
+    {
+        Console.WriteLine("Checking cancellation");
+        Console.WriteLine(twitchUser.CancellationTokenSource != null);
+        Console.WriteLine(twitchUser.CancellationTokenSource?.Token.IsCancellationRequested);
+        if (twitchUser.CancellationTokenSource != null && twitchUser.CancellationTokenSource.Token.IsCancellationRequested)
+        {
+            throw new OperationCanceledException();
+        }
     }
 }

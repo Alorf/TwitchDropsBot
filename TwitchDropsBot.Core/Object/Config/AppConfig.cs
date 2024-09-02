@@ -31,12 +31,16 @@ public class AppConfig
         };
 
         var jsonString = JsonSerializer.Serialize(config, options);
-        File.WriteAllText("config.json", jsonString);
+        var filePath = Path.Combine(AppContext.BaseDirectory, "config.json");
+        File.WriteAllText(filePath, jsonString);
     }
 
     public static AppConfig GetConfig()
     {
-        if (!File.Exists("config.json"))
+        var filePath = Path.Combine(AppContext.BaseDirectory, "config.json");
+
+        Console.WriteLine(filePath);
+        if (!File.Exists(filePath))
         {
             return new AppConfig();
         }

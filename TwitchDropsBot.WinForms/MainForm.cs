@@ -49,9 +49,6 @@ namespace TwitchDropsBot.WinForms
             {
                 TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId);
 
-                Bot bot = new Bot(twitchUser);
-                TimeSpan waitingTime;
-
                 StartBot(twitchUser);
                 tabControl1.TabPages.Add(CreateTabPage(twitchUser));
 
@@ -68,7 +65,7 @@ namespace TwitchDropsBot.WinForms
         {
             Bot bot = new Bot(twitchUser);
             TimeSpan waitingTime;
-
+            twitchUser.CancellationTokenSource = new CancellationTokenSource();
             return Task.Run(async () =>
             {
                 while (true)
@@ -83,6 +80,12 @@ namespace TwitchDropsBot.WinForms
                         twitchUser.Logger.Info(ex.Message);
                         twitchUser.Logger.Info("Waiting for 5 minutes before trying again.");
                         waitingTime = TimeSpan.FromMinutes(5);
+                    }
+                    catch (OperationCanceledException ex)
+                    {
+                        twitchUser.Logger.Info(ex.Message);
+                        twitchUser.CancellationTokenSource = new CancellationTokenSource();
+                        waitingTime = TimeSpan.FromSeconds(10);
                     }
                     catch (Exception ex)
                     {
@@ -228,12 +231,30 @@ namespace TwitchDropsBot.WinForms
                 Value = 0
             };
 
+            var reloadButton = new Button
+            {
+                Location = new Point(296, 349),
+                Size = new Size(284, 35),
+                Text = "Reload",
+                UseVisualStyleBackColor = true
+            };
+
+            reloadButton.Click += (sender, e) =>
+            {
+                if (twitchUser.CancellationTokenSource != null && !twitchUser.CancellationTokenSource.IsCancellationRequested)
+                {
+                    twitchUser.Logger.Info("Reload requested");
+                    twitchUser.CancellationTokenSource?.Cancel();
+                }
+            };
+
             tabPage.Controls.Add(twitchUserLogger);
             tabPage.Controls.Add(labelGame);
             tabPage.Controls.Add(labelDrop);
             tabPage.Controls.Add(labelMinRemaining);
             tabPage.Controls.Add(labelPercentage);
             tabPage.Controls.Add(progressBar);
+            tabPage.Controls.Add(reloadButton);
 
             // Timer to update the controls periodically
             var timer = new System.Windows.Forms.Timer

@@ -29,7 +29,13 @@ foreach (ConfigUser user in config.Users)
             await bot.StartAsync();
             waitingTime = TimeSpan.FromSeconds(20);
         }
-        catch (NoBroadcasterOrNoCampaignFound ex)
+        catch (NoBroadcasterOrNoCampaignLeft ex)
+        {
+            twitchUser.Logger.Info(ex.Message);
+            twitchUser.Logger.Info("Waiting for 5 minutes before trying again.");
+            waitingTime = TimeSpan.FromMinutes(5);
+        }
+        catch (StreamOffline ex)
         {
             twitchUser.Logger.Info(ex.Message);
             twitchUser.Logger.Info("Waiting for 5 minutes before trying again.");

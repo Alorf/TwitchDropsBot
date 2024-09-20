@@ -39,7 +39,6 @@ public class AppConfig
     {
         var filePath = Path.Combine(AppContext.BaseDirectory, "config.json");
 
-        Console.WriteLine(filePath);
         if (!File.Exists(filePath))
         {
             return new AppConfig();

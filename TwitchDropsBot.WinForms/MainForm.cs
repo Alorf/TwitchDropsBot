@@ -53,7 +53,6 @@ namespace TwitchDropsBot.WinForms
                 tabControl1.TabPages.Add(CreateTabPage(twitchUser));
 
                 InitList();
-
             }
 
 #if DEBUG
@@ -75,7 +74,13 @@ namespace TwitchDropsBot.WinForms
                         await bot.StartAsync();
                         waitingTime = TimeSpan.FromSeconds(20);
                     }
-                    catch (NoBroadcasterOrNoCampaignFound ex)
+                    catch (NoBroadcasterOrNoCampaignLeft ex)
+                    {
+                        twitchUser.Logger.Info(ex.Message);
+                        twitchUser.Logger.Info("Waiting for 5 minutes before trying again.");
+                        waitingTime = TimeSpan.FromMinutes(5);
+                    }
+                    catch (StreamOffline ex)
                     {
                         twitchUser.Logger.Info(ex.Message);
                         twitchUser.Logger.Info("Waiting for 5 minutes before trying again.");
@@ -92,6 +97,7 @@ namespace TwitchDropsBot.WinForms
                         twitchUser.Logger.Error(ex);
                         waitingTime = TimeSpan.FromMinutes(5);
                     }
+
                     twitchUser.StreamURL = null;
                     twitchUser.Status = BotStatus.Idle;
 
@@ -124,7 +130,6 @@ namespace TwitchDropsBot.WinForms
             notifyIcon1.BalloonTipText = "The application has been put in the tray";
             notifyIcon1.Text = "TwitchDropsBot";
             notifyIcon1.BalloonTipClicked += notifyIcon1_BalloonTipClicked;
-
         }
 
         //balloon tip click
@@ -148,14 +153,14 @@ namespace TwitchDropsBot.WinForms
 
         private void Form1_Resize(object sender, EventArgs e)
         {
-
             if (WindowState == FormWindowState.Minimized && checkBoxMinimizeInTray.Checked)
             {
                 putInTray();
             }
             else if (FormWindowState.Normal == this.WindowState)
-            { notifyIcon1.Visible = false; }
-
+            {
+                notifyIcon1.Visible = false;
+            }
         }
 
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
@@ -241,7 +246,8 @@ namespace TwitchDropsBot.WinForms
 
             reloadButton.Click += (sender, e) =>
             {
-                if (twitchUser.CancellationTokenSource != null && !twitchUser.CancellationTokenSource.IsCancellationRequested)
+                if (twitchUser.CancellationTokenSource != null &&
+                    !twitchUser.CancellationTokenSource.IsCancellationRequested)
                 {
                     twitchUser.Logger.Info("Reload requested");
                     twitchUser.CancellationTokenSource?.Cancel();
@@ -263,37 +269,43 @@ namespace TwitchDropsBot.WinForms
             };
 
             timer.Tick += (sender, e) =>
-                    {
+            {
+                switch (twitchUser.Status)
+                {
+                    case BotStatus.Idle:
+                    case BotStatus.Seeking:
+                        // reset every label
+                        labelGame.Text = $"Game : N/A";
+                        labelDrop.Text = $"Drop : N/A";
+                        labelPercentage.Text = "-%";
+                        labelMinRemaining.Text = "Minutes remaining : -";
+                        progressBar.Value = 0;
+                        break;
+                    default:
+                        labelGame.Text = $"Game : {twitchUser.CurrentDropCampaign?.Game.DisplayName}";
+                        labelDrop.Text = $"Drop : {twitchUser.CurrentTimeBasedDrop?.Name}";
 
-                        if (twitchUser.Status != BotStatus.Watching)
+                        if (twitchUser.CurrendDropCurrentSession != null &&
+                            twitchUser.CurrendDropCurrentSession.requiredMinutesWatched > 0)
                         {
-                            //reset every label
-                            labelGame.Text = $"Game : N/A";
-                            labelDrop.Text = $"Drop : N/A";
-                            labelPercentage.Text = "-%";
-                            labelMinRemaining.Text = "Minutes remaining : -";
-                            progressBar.Value = 0;
+                            var percentage = (int)((twitchUser.CurrendDropCurrentSession.CurrentMinutesWatched /
+                                                    (double)twitchUser.CurrendDropCurrentSession
+                                                        .requiredMinutesWatched) * 100);
 
-                        }
-                        else if (twitchUser.Status == BotStatus.Seeking)
-                        {
-                            progressBar.Value = 0;
-                        }
-                        else
-                        {
-                            labelGame.Text = $"Game : {twitchUser.CurrentDropCampaign?.Game.DisplayName}";
-                            labelDrop.Text = $"Drop : {twitchUser.CurrentTimeBasedDrop?.Name}";
-
-                            if (twitchUser.CurrendDropCurrentSession != null && twitchUser.CurrendDropCurrentSession.requiredMinutesWatched > 0)
+                            if (percentage > 100) // for some reason it gave me 101 sometimes
                             {
-                                var percentage = (int)((twitchUser.CurrendDropCurrentSession.CurrentMinutesWatched / (double)twitchUser.CurrendDropCurrentSession.requiredMinutesWatched) * 100);
-
-                                progressBar.Value = percentage;
-                                labelPercentage.Text = $"{percentage}%";
-                                labelMinRemaining.Text = $"Minutes remaining : {twitchUser.CurrendDropCurrentSession.requiredMinutesWatched - twitchUser.CurrendDropCurrentSession.CurrentMinutesWatched}";
+                                percentage = 100;
                             }
+
+                            progressBar.Value = percentage;
+                            labelPercentage.Text = $"{percentage}%";
+                            labelMinRemaining.Text =
+                                $"Minutes remaining : {twitchUser.CurrendDropCurrentSession.requiredMinutesWatched - twitchUser.CurrendDropCurrentSession.CurrentMinutesWatched}";
                         }
-                    };
+
+                        break;
+                }
+            };
 
             timer.Start();
 
@@ -345,7 +357,6 @@ namespace TwitchDropsBot.WinForms
             {
                 rk.DeleteValue("TwitchDropsBot", false);
             }
-
         }
 
         private void checkBoxFavourite_CheckedChanged(object sender, EventArgs e)
@@ -362,8 +373,12 @@ namespace TwitchDropsBot.WinForms
         {
             string gameName = textBoxNameOfGame.Text;
 
-            if (string.IsNullOrEmpty(gameName) || string.IsNullOrWhiteSpace(gameName))
+            if (string.IsNullOrEmpty(gameName) || string.IsNullOrWhiteSpace(gameName) || FavGameListBox.Items.Contains(gameName))
             {
+                if (FavGameListBox.Items.Contains(gameName))
+                {
+                    FavGameListBox.SelectedItem = gameName;
+                }
                 return;
             }
 
@@ -377,6 +392,7 @@ namespace TwitchDropsBot.WinForms
             AppConfig.SaveConfig(config);
 
             FavGameListBox.Items.Add(gameName);
+            FavGameListBox.SelectedItem = gameName;
         }
 
         private void buttonDelete_Click(object sender, EventArgs e)
@@ -486,4 +502,3 @@ namespace TwitchDropsBot.WinForms
         }
     }
 }
-

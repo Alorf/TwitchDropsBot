@@ -9,4 +9,9 @@ public class Game
     public Stream Streams { get; set; }
         
     public bool IsFavorite { get; set; }
+    
+    public override string ToString()
+    {
+        return DisplayName;
+    }
 }

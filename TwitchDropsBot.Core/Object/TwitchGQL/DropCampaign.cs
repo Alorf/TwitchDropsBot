@@ -1,11 +1,6 @@
-namespace TwitchDropsBot.Core.Object;
-
-public class DropCampaign
+namespace TwitchDropsBot.Core.Object.TwitchGQL;
+public class DropCampaign : AbstractCampaign
 {
-    public string Id { get; set; }
-    public string Name { get; set; }
-    public Game? Game { get; set; }
-    public string Status { get; set; }
     public DateTime StartAt { get; set; }
     public DateTime EndAt { get; set; }
     public Self Self { get; set; }

@@ -8,6 +8,7 @@ using System.Windows.Forms;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using TwitchDropsBot.Core.Object.Config;
 
 namespace TwitchDropsBot.WinForms
 {
@@ -282,7 +283,7 @@ namespace TwitchDropsBot.WinForms
                         progressBar.Value = 0;
                         break;
                     default:
-                        labelGame.Text = $"Game : {twitchUser.CurrentDropCampaign?.Game.DisplayName}";
+                        labelGame.Text = $"Game : {twitchUser.CurrentCampaign?.Game.DisplayName}";
                         labelDrop.Text = $"Drop : {twitchUser.CurrentTimeBasedDrop?.Name}";
 
                         if (twitchUser.CurrendDropCurrentSession != null &&

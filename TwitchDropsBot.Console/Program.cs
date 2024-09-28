@@ -2,6 +2,7 @@
 using TwitchDropsBot.Core;
 using TwitchDropsBot.Core.Exception;
 using TwitchDropsBot.Core.Object;
+using TwitchDropsBot.Core.Object.Config;
 using TwitchDropsBot.Core.Utilities;
 
 AppConfig config = AppConfig.GetConfig();

@@ -1,8 +1,10 @@
-namespace TwitchDropsBot.Core.Object;
+namespace TwitchDropsBot.Core.Object.TwitchGQL;
 
 public class ResponseType
 {
     public User User { get; set; }
+
+    public List<RewardCampaignsAvailableToUser> RewardCampaignsAvailableToUser { get; set; }
     
     public User CurrentUser { get; set; }    
     

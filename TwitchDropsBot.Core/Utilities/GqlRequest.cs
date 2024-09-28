@@ -2,7 +2,10 @@
 using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.SystemTextJson;
 using System.Net.Http.Headers;
+using System.Text.Json;
 using TwitchDropsBot.Core.Object;
+using TwitchDropsBot.Core.Object.Config;
+using TwitchDropsBot.Core.Object.TwitchGQL;
 
 namespace TwitchDropsBot.Core.Utilities;
 
@@ -215,6 +218,86 @@ public class GqlRequest
         return resp?.Data.User.Inventory;
     }
 
+    public async Task<List<RewardCampaignsAvailableToUser>> FetchRewardCampaignsAvailableToUserAsync()
+    {
+        var query = new GraphQLRequest
+        {
+            Query = @"
+                    query {
+                        rewardCampaignsAvailableToUser {
+                            id,
+                            name,
+                            brand,
+                            startsAt,
+                            endsAt,
+                            status,
+                            summary,
+                            instructions,
+                            externalURL,
+                            rewardValueURLParam,
+                            aboutURL,
+                            isSitewide,
+                            game {
+                                id,
+                                slug,
+                                displayName
+                            },
+                            unlockRequirements {
+                                subsGoal,
+                                minuteWatchedGoal
+                            },
+                            image {
+                                    image1xURL
+                            },
+                            rewards {
+                                id,
+                                name,
+                                bannerImage {
+                                    image1xURL
+                                },
+                                thumbnailImage, {
+                                    image1xURL
+                                },
+                                earnableUntil,
+                                redemptionInstructions,
+                                redemptionURL
+                            },
+                        }
+                    }
+                "
+        };
+
+        dynamic? resp = await DoGQLRequestAsync(query, null, "FetchRewardCampaignsAvailableToUser");
+
+        if (resp != null)
+        {
+            
+            List<RewardCampaignsAvailableToUser> rewardCampaigns = resp.Data.RewardCampaignsAvailableToUser;
+
+            rewardCampaigns = rewardCampaigns.FindAll(rewardCampaign => rewardCampaign.UnlockRequirements?.MinuteWatchedGoal != 0);
+
+            foreach (var rewardCampaign in rewardCampaigns)
+            {
+                if (rewardCampaign.Game != null)
+                {
+                    List<string> favGames = twitchUser.FavouriteGames;
+                    foreach (var favGame in favGames)
+                    {
+                        if (rewardCampaign.Game.DisplayName.ToLower().Equals(favGame.ToLower()) ||
+                            rewardCampaign.Game.Slug.ToLower().Equals(favGame.ToLower()))
+                        {
+                            rewardCampaign.Game.IsFavorite = true;
+                        }
+                    }
+                }
+            }
+
+            return rewardCampaigns;
+        }
+
+        return new List<RewardCampaignsAvailableToUser>();
+    }
+
     public async Task<Game?> FetchDirectoryPageGameAsync(string slug)
     {
         var query = new GraphQLRequest
@@ -408,6 +491,7 @@ public class GqlRequest
                 }
                 
                 twitchUser.Logger.Error($"Failed to execute the query {name} (attempt {i+1}/{limit}).");
+                SystemLogger.Error(e.Message);
                 
                 await Task.Delay(TimeSpan.FromSeconds(5));
             }    

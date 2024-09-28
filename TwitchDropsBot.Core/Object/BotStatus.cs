@@ -1,16 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace TwitchDropsBot.Core.Object;
 
-namespace TwitchDropsBot.Core.Object
+public enum BotStatus
 {
-    public enum BotStatus
-    {
-        Idle,
-        Seeking,
-        Watching,
-        Error
-    }
+    Idle,
+    Seeking,
+    Watching,
+    Error
 }
+

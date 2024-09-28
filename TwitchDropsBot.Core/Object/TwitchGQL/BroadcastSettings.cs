@@ -1,6 +1,4 @@
-namespace TwitchDropsBot.Core.Object;
-
-
+namespace TwitchDropsBot.Core.Object.TwitchGQL;
 public class BroadcastSettings
 {
     public string Id { get; set; }

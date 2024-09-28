@@ -1,4 +1,4 @@
-namespace TwitchDropsBot.Core.Object;
+namespace TwitchDropsBot.Core.Object.Config;
 
 public class ConfigUser
 {

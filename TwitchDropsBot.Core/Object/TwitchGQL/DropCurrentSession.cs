@@ -1,7 +1,4 @@
-using System.Text.Json.Serialization;
-
-namespace TwitchDropsBot.Core.Object;
-
+namespace TwitchDropsBot.Core.Object.TwitchGQL;
 public class DropCurrentSession
 {
     public string? DropId { get; set; }

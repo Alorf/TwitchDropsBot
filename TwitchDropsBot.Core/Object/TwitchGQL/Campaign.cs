@@ -1,5 +1,4 @@
-namespace TwitchDropsBot.Core.Object;
-
+namespace TwitchDropsBot.Core.Object.TwitchGQL;
 public class Campaign
 {
     public string Id { get; set; }

@@ -1,6 +1,6 @@
 using System.Net;
 using System.Text.Json;
-using TwitchDropsBot.Core.Object;
+using TwitchDropsBot.Core.Object.Config;
 
 namespace TwitchDropsBot.Core.Utilities;
 

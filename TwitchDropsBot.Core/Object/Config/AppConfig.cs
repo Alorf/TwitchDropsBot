@@ -1,7 +1,7 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 
-namespace TwitchDropsBot.Core.Object;
+namespace TwitchDropsBot.Core.Object.Config;
 
 public class AppConfig
 {

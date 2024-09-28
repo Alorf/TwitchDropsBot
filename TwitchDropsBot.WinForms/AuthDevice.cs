@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text.Json;
 using TwitchDropsBot.Core;
-using TwitchDropsBot.Core.Object;
+using TwitchDropsBot.Core.Object.Config;
 using TwitchDropsBot.Core.Utilities;
 
 namespace TwitchDropsBot.WinForms
@@ -45,7 +45,7 @@ namespace TwitchDropsBot.WinForms
             }
             catch (OperationCanceledException)
             {
-                Console.WriteLine("Operation Cancelled");
+                SystemLogger.Info("Operation Cancelled");
             }
         }
 

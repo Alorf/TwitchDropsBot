@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using TwitchDropsBot.Core.Utilities;
+using TwitchDropsBot.Core.Object.TwitchGQL;
 
 namespace TwitchDropsBot.Core.Object;
 
@@ -13,7 +14,7 @@ public class TwitchUser
     public List<string> FavouriteGames { get; set; }
     public bool OnlyFavouriteGames { get; set; }
     public bool OnlyConnectedAccounts { get; set; }
-    public DropCampaign? CurrentDropCampaign { get; set; }
+    public AbstractCampaign? CurrentCampaign { get; set; }
     public TimeBasedDrop? CurrentTimeBasedDrop { get; set; }
     public AbstractBroadcaster? CurrentBroadcaster { get; set; }
     public DropCurrentSession? CurrendDropCurrentSession { get; set; }

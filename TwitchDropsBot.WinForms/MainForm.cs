@@ -18,11 +18,6 @@ namespace TwitchDropsBot.WinForms
         {
             InitializeComponent();
 
-            if (!File.Exists("config.json"))
-            {
-                AppConfig.SaveConfig(new AppConfig());
-            };
-
             AppConfig config = AppConfig.GetConfig();
 
             checkBoxFavourite.Checked = config.OnlyFavouriteGames;

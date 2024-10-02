@@ -6,7 +6,12 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>images\logo.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="images\logo.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\TwitchDropsBot.Core\TwitchDropsBot.Core.csproj" />

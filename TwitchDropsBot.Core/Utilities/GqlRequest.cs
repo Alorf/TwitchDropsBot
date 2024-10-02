@@ -321,6 +321,7 @@ public class GqlRequest
                     broadcasterLanguages = new List<string>(),
                     systemFilters = new List<string>() { "DROPS_ENABLED" }
                 },
+                includeIsDJ = true,
                 sortTypeIsRecency = false,
                 limit = 30,
                 includePreviewBlur = true,
@@ -329,7 +330,7 @@ public class GqlRequest
             {
                 ["persistedQuery"] = new Dictionary<string, object>
                 {
-                    ["sha256Hash"] = "e303f59d4836d19e66cb0f5a1efe15fbe2a1c02d314ad4f09982e825950b293d",
+                    ["sha256Hash"] = "c7c9d5aad09155c4161d2382092dc44610367f3536aac39019ec2582ae5065f9",
                     ["version"] = 1
                 }
             }
@@ -351,13 +352,14 @@ public class GqlRequest
                 login,
                 isVod = false,
                 vodID = "",
-                playerType = "site"
+                platform = "web",
+                playerType = "site",
             },
             Extensions = new Dictionary<string, object?>
             {
                 ["persistedQuery"] = new Dictionary<string, object>
                 {
-                    ["sha256Hash"] = "3093517e37e4f4cb48906155bcd894150aef92617939236d2508f3375ab732ce",
+                    ["sha256Hash"] = "ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9",
                     ["version"] = 1
                 }
             }
@@ -478,7 +480,7 @@ public class GqlRequest
                         twitchUser.Logger.Info(error.Message);
                     }
 
-                    return null;
+                    throw new System.Exception();
                 }
                 
                 return graphQLResponse;
@@ -491,7 +493,7 @@ public class GqlRequest
                 }
                 
                 twitchUser.Logger.Error($"Failed to execute the query {name} (attempt {i+1}/{limit}).");
-                SystemLogger.Error(e.Message);
+                SystemLogger.Error($"(${e.Message})");
                 
                 await Task.Delay(TimeSpan.FromSeconds(5));
             }    

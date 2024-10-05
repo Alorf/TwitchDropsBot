@@ -122,7 +122,7 @@ public class Bot
                 dropCurrentSession =
                     await twitchUser.GqlRequest.FetchCurrentSessionContextAsync(broadcaster);
 
-                if (string.IsNullOrEmpty(dropCurrentSession?.DropId))
+                if (string.IsNullOrEmpty(dropCurrentSession?.DropId) || dropCurrentSession.CurrentMinutesWatched == dropCurrentSession.requiredMinutesWatched)
                 {
                     await twitchUser.WatchStreamAsync(broadcaster.Login);
                     twitchUser.StreamURL = null;

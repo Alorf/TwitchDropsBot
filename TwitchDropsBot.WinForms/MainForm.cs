@@ -73,13 +73,13 @@ namespace TwitchDropsBot.WinForms
                     catch (NoBroadcasterOrNoCampaignLeft ex)
                     {
                         twitchUser.Logger.Info(ex.Message);
-                        twitchUser.Logger.Info("Waiting for 5 minutes before trying again.");
+                        twitchUser.Logger.Info("Waiting 5 minutes before trying again.");
                         waitingTime = TimeSpan.FromMinutes(5);
                     }
                     catch (StreamOffline ex)
                     {
                         twitchUser.Logger.Info(ex.Message);
-                        twitchUser.Logger.Info("Waiting for 5 minutes before trying again.");
+                        twitchUser.Logger.Info("Waiting 5 minutes before trying again.");
                         waitingTime = TimeSpan.FromMinutes(5);
                     }
                     catch (OperationCanceledException ex)

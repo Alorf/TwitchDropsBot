@@ -44,7 +44,7 @@ public class AppConfig
             return new AppConfig();
         }
 
-        var jsonString = File.ReadAllText("config.json");
+        var jsonString = File.ReadAllText(filePath);
         return JsonSerializer.Deserialize<AppConfig>(jsonString);
     }
 

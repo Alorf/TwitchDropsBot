@@ -1,4 +1,5 @@
-﻿using GraphQL;
+﻿using System.Collections.ObjectModel;
+using GraphQL;
 using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.SystemTextJson;
 using System.Net.Http.Headers;
@@ -16,6 +17,7 @@ public class GqlRequest
     private TwitchUser twitchUser;
     private string clientSessionId;
     private string userAgent;
+    public static RangeObservableCollection<string> GameList { get; set; } = new RangeObservableCollection<string>();
 
     public GqlRequest(TwitchUser twitchUser)
     {
@@ -102,19 +104,24 @@ public class GqlRequest
             var dropCampaigns = resp.Data.User.DropCampaigns;
             
             dropCampaigns = ((List<DropCampaign>) dropCampaigns).FindAll(dropCampaign => dropCampaign is { Status: "ACTIVE" });
-            
-            List<string> favGames = twitchUser.FavouriteGames;
-            foreach (var favGame in favGames)
+            List<string> tempList = new List<string>();
+
+            foreach (var dropCampaign in dropCampaigns)
             {
-                foreach (var dropCampaign in dropCampaigns)
+                if (twitchUser.FavouriteGames.Any(favGame => favGame.Equals(dropCampaign.Game.DisplayName, StringComparison.OrdinalIgnoreCase)))
                 {
-                    if (dropCampaign.Game.DisplayName.ToLower().Equals(favGame.ToLower()) ||
-                        dropCampaign.Game.Slug.ToLower().Equals(favGame.ToLower()))
+                    dropCampaign.Game.IsFavorite = true;
+                }
+                else
+                {
+                    if (!GameList.Contains(dropCampaign.Game.DisplayName))
                     {
-                        dropCampaign.Game.IsFavorite = true;
+                        tempList.Add(dropCampaign.Game.DisplayName);
                     }
                 }
             }
+
+            GameList.AddRange(tempList);
 
             return dropCampaigns;
         }
@@ -276,21 +283,24 @@ public class GqlRequest
 
             rewardCampaigns = rewardCampaigns.FindAll(rewardCampaign => rewardCampaign.UnlockRequirements?.MinuteWatchedGoal != 0);
 
+            List<string> tempList = new List<string>();
+
             foreach (var rewardCampaign in rewardCampaigns)
             {
-                if (rewardCampaign.Game != null)
+                if (twitchUser.FavouriteGames.Any(favGame => favGame.Equals(rewardCampaign.Game.DisplayName, StringComparison.OrdinalIgnoreCase)))
                 {
-                    List<string> favGames = twitchUser.FavouriteGames;
-                    foreach (var favGame in favGames)
+                    rewardCampaign.Game.IsFavorite = true;
+                }
+                else
+                {
+                    if (!GameList.Contains(rewardCampaign.Game.DisplayName))
                     {
-                        if (rewardCampaign.Game.DisplayName.ToLower().Equals(favGame.ToLower()) ||
-                            rewardCampaign.Game.Slug.ToLower().Equals(favGame.ToLower()))
-                        {
-                            rewardCampaign.Game.IsFavorite = true;
-                        }
+                        tempList.Add(rewardCampaign.Game.DisplayName);
                     }
                 }
             }
+
+            GameList.AddRange(tempList);
 
             return rewardCampaigns;
         }

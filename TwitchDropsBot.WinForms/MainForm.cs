@@ -9,11 +9,14 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using TwitchDropsBot.Core.Object.Config;
+using TwitchDropsBot.Core.Utilities;
 
 namespace TwitchDropsBot.WinForms
 {
     public partial class MainForm : Form
     {
+        private AutoCompleteStringCollection autoCompleteCollection;
+
         public MainForm()
         {
             InitializeComponent();
@@ -24,6 +27,16 @@ namespace TwitchDropsBot.WinForms
             checkBoxStartup.Checked = config.LaunchOnStartup;
             checkBoxMinimizeInTray.Checked = config.MinimizeInTray;
             checkBoxConnectedAccounts.Checked = config.OnlyConnectedAccounts;
+
+
+            textBoxNameOfGame.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+            textBoxNameOfGame.AutoCompleteSource = AutoCompleteSource.CustomSource;
+            autoCompleteCollection = new AutoCompleteStringCollection();
+            textBoxNameOfGame.AutoCompleteCustomSource = autoCompleteCollection;
+            GqlRequest.GameList.CollectionChanged += (sender, e) =>
+            {
+                UpdateAutoCompleteCollection(GqlRequest.GameList);
+            };
 
             while (config.Users.Count == 0)
             {
@@ -54,6 +67,19 @@ namespace TwitchDropsBot.WinForms
 #if DEBUG
             AllocConsole();
 #endif
+        }
+
+        private void UpdateAutoCompleteCollection(ObservableCollection<string> gameList)
+        {
+            if (InvokeRequired)
+            {
+                Invoke(new Action(() => UpdateAutoCompleteCollection(gameList)));
+            }
+            else
+            {
+                autoCompleteCollection.Clear();
+                autoCompleteCollection.AddRange(gameList.ToArray());
+            }
         }
 
         private Task StartBot(TwitchUser twitchUser)
@@ -388,6 +414,7 @@ namespace TwitchDropsBot.WinForms
             AppConfig.SaveConfig(config);
 
             FavGameListBox.Items.Add(gameName);
+            autoCompleteCollection.Remove(gameName);
             FavGameListBox.SelectedItem = gameName;
         }
 
@@ -407,6 +434,7 @@ namespace TwitchDropsBot.WinForms
                 AppConfig.SaveConfig(config);
 
                 FavGameListBox.Items.Remove(gameName);
+                autoCompleteCollection.Add(gameName);
             }
         }
 

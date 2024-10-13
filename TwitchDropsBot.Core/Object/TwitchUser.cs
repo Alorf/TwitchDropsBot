@@ -22,6 +22,7 @@ public class TwitchUser
     public Logger Logger { get; set; }
     public string? StreamURL { get; set; }
     public CancellationTokenSource? CancellationTokenSource { get; set; }
+    public Inventory? Inventory { get; set; }
 
     public TwitchUser(string login, string id, string clientSecret, string uniqueId)
     {

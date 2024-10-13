@@ -34,6 +34,7 @@ namespace TwitchDropsBot.WinForms
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             tabControl1 = new TabControl();
             tabPage1 = new TabPage();
+            ReloadButton = new Button();
             labelMinRemaining = new Label();
             labelDrop = new Label();
             labelGame = new Label();
@@ -56,7 +57,7 @@ namespace TwitchDropsBot.WinForms
             buttonPutInTray = new Button();
             checkBoxFavourite = new CheckBox();
             checkBoxStartup = new CheckBox();
-            ReloadButton = new Button();
+            groupBox2 = new GroupBox();
             tabControl1.SuspendLayout();
             tabPage1.SuspendLayout();
             contextMenuStrip1.SuspendLayout();
@@ -65,16 +66,17 @@ namespace TwitchDropsBot.WinForms
             // 
             // tabControl1
             // 
+            tabControl1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             //tabControl1.Controls.Add(tabPage1);
-            tabControl1.Dock = DockStyle.Right;
             tabControl1.Location = new Point(207, 0);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
-            tabControl1.Size = new Size(600, 534);
+            tabControl1.Size = new Size(853, 534);
             tabControl1.TabIndex = 1;
             // 
             // tabPage1
             // 
+            tabPage1.Controls.Add(groupBox2);
             tabPage1.Controls.Add(ReloadButton);
             tabPage1.Controls.Add(labelMinRemaining);
             tabPage1.Controls.Add(labelDrop);
@@ -85,10 +87,19 @@ namespace TwitchDropsBot.WinForms
             tabPage1.Location = new Point(4, 24);
             tabPage1.Name = "tabPage1";
             tabPage1.Padding = new Padding(3);
-            tabPage1.Size = new Size(592, 506);
+            tabPage1.Size = new Size(845, 506);
             tabPage1.TabIndex = 0;
             tabPage1.Text = "tabPage1";
             tabPage1.UseVisualStyleBackColor = true;
+            // 
+            // ReloadButton
+            // 
+            ReloadButton.Location = new Point(296, 349);
+            ReloadButton.Name = "ReloadButton";
+            ReloadButton.Size = new Size(288, 35);
+            ReloadButton.TabIndex = 15;
+            ReloadButton.Text = "Add new account";
+            ReloadButton.UseVisualStyleBackColor = true;
             // 
             // labelMinRemaining
             // 
@@ -304,20 +315,20 @@ namespace TwitchDropsBot.WinForms
             checkBoxStartup.UseVisualStyleBackColor = true;
             checkBoxStartup.CheckedChanged += checkBoxStartup_CheckedChanged;
             // 
-            // ReloadButton
+            // groupBox2
             // 
-            ReloadButton.Location = new Point(296, 349);
-            ReloadButton.Name = "ReloadButton";
-            ReloadButton.Size = new Size(288, 35);
-            ReloadButton.TabIndex = 15;
-            ReloadButton.Text = "Add new account";
-            ReloadButton.UseVisualStyleBackColor = true;
+            groupBox2.Location = new Point(590, 0);
+            groupBox2.Name = "groupBox2";
+            groupBox2.Size = new Size(255, 506);
+            groupBox2.TabIndex = 16;
+            groupBox2.TabStop = false;
+            groupBox2.Text = "groupBox2";
             // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(807, 534);
+            ClientSize = new Size(1060, 534);
             Controls.Add(groupBox1);
             Controls.Add(tabControl1);
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -362,5 +373,6 @@ namespace TwitchDropsBot.WinForms
         private CheckBox checkBoxMinimizeInTray;
         private CheckBox checkBoxConnectedAccounts;
         private Button ReloadButton;
+        private GroupBox groupBox2;
     }
 }

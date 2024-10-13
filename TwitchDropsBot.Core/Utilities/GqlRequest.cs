@@ -201,6 +201,7 @@ public class GqlRequest
                                     isConnected
                                     totalCount
                                     lastAwardedAt
+                                    imageURL
                                }
                             }
                         }

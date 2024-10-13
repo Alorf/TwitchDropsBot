@@ -17,6 +17,8 @@ namespace TwitchDropsBot.WinForms
         public MainForm()
         {
             InitializeComponent();
+            this.SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
+            this.UpdateStyles();
 
             AppConfig config = AppConfig.GetConfig();
 
@@ -172,6 +174,13 @@ namespace TwitchDropsBot.WinForms
         }
 
         private TabPage CreateTabPage(TwitchUser twitchUser)
+        {
+            var userTab = new TwitchUserTab(twitchUser);
+
+            return userTab.TabPage;
+        }
+
+        private TabPage CreateTabbPage(TwitchUser twitchUser)
         {
             var tabPage = new TabPage
             {

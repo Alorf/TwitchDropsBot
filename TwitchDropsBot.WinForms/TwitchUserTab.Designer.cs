@@ -28,29 +28,36 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             twitchLoggerTextBox = new TextBox();
             tempTabControl = new TabControl();
             currentTabPage = new TabPage();
-            groupBox2 = new GroupBox();
-            flowLayoutPanel1 = new CustomFlowLayoutPanel();
-            ReloadButton = new Button();
+            Bot = new GroupBox();
+            tableLayoutPanel1 = new TableLayoutPanel();
             labelMinRemaining = new Label();
+            labelPercentage = new Label();
+            ReloadButton = new Button();
             labelDrop = new Label();
             labelGame = new Label();
-            labelPercentage = new Label();
             progressBar = new ProgressBar();
+            groupBox2 = new GroupBox();
+            inventoryListView = new ListView();
+            dropsInventoryImageList = new ImageList(components);
             tempTabControl.SuspendLayout();
             currentTabPage.SuspendLayout();
+            Bot.SuspendLayout();
+            tableLayoutPanel1.SuspendLayout();
             groupBox2.SuspendLayout();
             SuspendLayout();
             // 
             // twitchLoggerTextBox
             // 
-            twitchLoggerTextBox.Location = new Point(6, 6);
+            twitchLoggerTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            twitchLoggerTextBox.Location = new Point(6, 15);
             twitchLoggerTextBox.Multiline = true;
             twitchLoggerTextBox.Name = "twitchLoggerTextBox";
             twitchLoggerTextBox.ReadOnly = true;
-            twitchLoggerTextBox.Size = new Size(578, 328);
+            twitchLoggerTextBox.Size = new Size(578, 324);
             twitchLoggerTextBox.TabIndex = 1;
             // 
             // tempTabControl
@@ -65,14 +72,8 @@
             // 
             // currentTabPage
             // 
+            currentTabPage.Controls.Add(Bot);
             currentTabPage.Controls.Add(groupBox2);
-            currentTabPage.Controls.Add(ReloadButton);
-            currentTabPage.Controls.Add(labelMinRemaining);
-            currentTabPage.Controls.Add(labelDrop);
-            currentTabPage.Controls.Add(labelGame);
-            currentTabPage.Controls.Add(labelPercentage);
-            currentTabPage.Controls.Add(twitchLoggerTextBox);
-            currentTabPage.Controls.Add(progressBar);
             currentTabPage.Location = new Point(4, 24);
             currentTabPage.Name = "currentTabPage";
             currentTabPage.Padding = new Padding(3);
@@ -81,79 +82,134 @@
             currentTabPage.Text = "tabPage1";
             currentTabPage.UseVisualStyleBackColor = true;
             // 
-            // groupBox2
+            // Bot
             // 
-            groupBox2.Controls.Add(flowLayoutPanel1);
-            groupBox2.Location = new Point(590, 0);
-            groupBox2.Name = "groupBox2";
-            groupBox2.Size = new Size(256, 506);
-            groupBox2.TabIndex = 16;
-            groupBox2.TabStop = false;
-            groupBox2.Text = "Inventory";
+            Bot.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            Bot.Controls.Add(tableLayoutPanel1);
+            Bot.Controls.Add(ReloadButton);
+            Bot.Controls.Add(labelDrop);
+            Bot.Controls.Add(labelGame);
+            Bot.Controls.Add(progressBar);
+            Bot.Controls.Add(twitchLoggerTextBox);
+            Bot.Dock = DockStyle.Fill;
+            Bot.Location = new Point(3, 3);
+            Bot.Name = "Bot";
+            Bot.Size = new Size(590, 500);
+            Bot.TabIndex = 17;
+            Bot.TabStop = false;
+            Bot.Text = "Bot";
             // 
-            // flowLayoutPanel1
+            // tableLayoutPanel1
             // 
-            flowLayoutPanel1.AutoScroll = true;
-            flowLayoutPanel1.FlowDirection = FlowDirection.TopDown;
-            flowLayoutPanel1.Location = new Point(6, 22);
-            flowLayoutPanel1.Name = "flowLayoutPanel1";
-            flowLayoutPanel1.RightToLeft = RightToLeft.No;
-            flowLayoutPanel1.Size = new Size(243, 476);
-            flowLayoutPanel1.TabIndex = 0;
-            flowLayoutPanel1.WrapContents = false;
+            tableLayoutPanel1.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            tableLayoutPanel1.ColumnCount = 3;
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34.9603F));
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.53564F));
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 31.5040569F));
+            tableLayoutPanel1.Controls.Add(labelMinRemaining, 2, 0);
+            tableLayoutPanel1.Controls.Add(labelPercentage, 1, 0);
+            tableLayoutPanel1.Location = new Point(3, 449);
+            tableLayoutPanel1.Name = "tableLayoutPanel1";
+            tableLayoutPanel1.RowCount = 1;
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            tableLayoutPanel1.Size = new Size(581, 19);
+            tableLayoutPanel1.TabIndex = 28;
+            // 
+            // labelMinRemaining
+            // 
+            labelMinRemaining.Anchor = AnchorStyles.None;
+            labelMinRemaining.AutoSize = true;
+            labelMinRemaining.Location = new Point(428, 2);
+            labelMinRemaining.Name = "labelMinRemaining";
+            labelMinRemaining.Size = new Size(121, 15);
+            labelMinRemaining.TabIndex = 24;
+            labelMinRemaining.Text = "Minutes remaining : -";
+            // 
+            // labelPercentage
+            // 
+            labelPercentage.Anchor = AnchorStyles.Top | AnchorStyles.Bottom;
+            labelPercentage.AutoSize = true;
+            labelPercentage.Location = new Point(287, 0);
+            labelPercentage.Name = "labelPercentage";
+            labelPercentage.Size = new Size(25, 19);
+            labelPercentage.TabIndex = 29;
+            labelPercentage.Text = "- %";
+            labelPercentage.TextAlign = ContentAlignment.MiddleRight;
             // 
             // ReloadButton
             // 
-            ReloadButton.Location = new Point(296, 349);
+            ReloadButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            ReloadButton.Location = new Point(296, 342);
             ReloadButton.Name = "ReloadButton";
             ReloadButton.Size = new Size(288, 35);
-            ReloadButton.TabIndex = 15;
+            ReloadButton.TabIndex = 27;
             ReloadButton.Text = "Reload";
             ReloadButton.UseVisualStyleBackColor = true;
             ReloadButton.Click += ReloadButton_Click;
             // 
-            // labelMinRemaining
-            // 
-            labelMinRemaining.Location = new Point(334, 453);
-            labelMinRemaining.Name = "labelMinRemaining";
-            labelMinRemaining.Size = new Size(250, 19);
-            labelMinRemaining.TabIndex = 6;
-            labelMinRemaining.Text = "Minutes remaining : -";
-            labelMinRemaining.TextAlign = ContentAlignment.MiddleCenter;
-            // 
             // labelDrop
             // 
-            labelDrop.Location = new Point(6, 395);
+            labelDrop.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            labelDrop.Location = new Point(6, 388);
             labelDrop.Name = "labelDrop";
             labelDrop.Size = new Size(284, 35);
-            labelDrop.TabIndex = 5;
+            labelDrop.TabIndex = 25;
             labelDrop.Text = "Drop : N/A";
             labelDrop.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // labelGame
             // 
-            labelGame.Location = new Point(6, 349);
+            labelGame.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            labelGame.Location = new Point(6, 342);
             labelGame.Name = "labelGame";
             labelGame.Size = new Size(284, 35);
-            labelGame.TabIndex = 4;
+            labelGame.TabIndex = 24;
             labelGame.Text = "Game : N/A";
             labelGame.TextAlign = ContentAlignment.MiddleLeft;
             // 
-            // labelPercentage
-            // 
-            labelPercentage.Location = new Point(6, 453);
-            labelPercentage.Name = "labelPercentage";
-            labelPercentage.Size = new Size(578, 16);
-            labelPercentage.TabIndex = 3;
-            labelPercentage.Text = "-%";
-            labelPercentage.TextAlign = ContentAlignment.MiddleCenter;
-            // 
             // progressBar
             // 
-            progressBar.Location = new Point(6, 475);
+            progressBar.Dock = DockStyle.Bottom;
+            progressBar.Location = new Point(3, 474);
             progressBar.Name = "progressBar";
-            progressBar.Size = new Size(578, 23);
-            progressBar.TabIndex = 0;
+            progressBar.Size = new Size(584, 23);
+            progressBar.TabIndex = 22;
+            // 
+            // groupBox2
+            // 
+            groupBox2.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            groupBox2.Controls.Add(inventoryListView);
+            groupBox2.Dock = DockStyle.Right;
+            groupBox2.Location = new Point(593, 3);
+            groupBox2.Name = "groupBox2";
+            groupBox2.RightToLeft = RightToLeft.Yes;
+            groupBox2.Size = new Size(249, 500);
+            groupBox2.TabIndex = 16;
+            groupBox2.TabStop = false;
+            groupBox2.Text = "Inventory";
+            // 
+            // inventoryListView
+            // 
+            inventoryListView.Alignment = ListViewAlignment.Left;
+            inventoryListView.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            inventoryListView.BorderStyle = BorderStyle.None;
+            inventoryListView.FullRowSelect = true;
+            inventoryListView.HeaderStyle = ColumnHeaderStyle.None;
+            inventoryListView.Location = new Point(6, 15);
+            inventoryListView.MultiSelect = false;
+            inventoryListView.Name = "inventoryListView";
+            inventoryListView.RightToLeft = RightToLeft.No;
+            inventoryListView.ShowItemToolTips = true;
+            inventoryListView.Size = new Size(240, 479);
+            inventoryListView.TabIndex = 0;
+            inventoryListView.UseCompatibleStateImageBehavior = false;
+            inventoryListView.View = View.Details;
+            // 
+            // dropsInventoryImageList
+            // 
+            dropsInventoryImageList.ColorDepth = ColorDepth.Depth32Bit;
+            dropsInventoryImageList.ImageSize = new Size(16, 16);
+            dropsInventoryImageList.TransparentColor = Color.Transparent;
             // 
             // TwitchUserTab
             // 
@@ -164,7 +220,10 @@
             Size = new Size(853, 534);
             tempTabControl.ResumeLayout(false);
             currentTabPage.ResumeLayout(false);
-            currentTabPage.PerformLayout();
+            Bot.ResumeLayout(false);
+            Bot.PerformLayout();
+            tableLayoutPanel1.ResumeLayout(false);
+            tableLayoutPanel1.PerformLayout();
             groupBox2.ResumeLayout(false);
             ResumeLayout(false);
         }
@@ -175,12 +234,15 @@
         private TabControl tempTabControl;
         private TabPage currentTabPage;
         private GroupBox groupBox2;
+        private ImageList dropsInventoryImageList;
+        private GroupBox Bot;
         private Button ReloadButton;
-        private Label labelMinRemaining;
         private Label labelDrop;
         private Label labelGame;
-        private Label labelPercentage;
         private ProgressBar progressBar;
-        private CustomFlowLayoutPanel flowLayoutPanel1;
+        private TableLayoutPanel tableLayoutPanel1;
+        private Label labelPercentage;
+        private Label labelMinRemaining;
+        private ListView inventoryListView;
     }
 }

@@ -33,14 +33,6 @@ namespace TwitchDropsBot.WinForms
             components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             tabControl1 = new TabControl();
-            tabPage1 = new TabPage();
-            ReloadButton = new Button();
-            labelMinRemaining = new Label();
-            labelDrop = new Label();
-            labelGame = new Label();
-            labelPercentage = new Label();
-            textBox1 = new TextBox();
-            progressBar1 = new ProgressBar();
             notifyIcon1 = new NotifyIcon(components);
             contextMenuStrip1 = new ContextMenuStrip(components);
             exitToolStripMenuItem = new ToolStripMenuItem();
@@ -57,9 +49,7 @@ namespace TwitchDropsBot.WinForms
             buttonPutInTray = new Button();
             checkBoxFavourite = new CheckBox();
             checkBoxStartup = new CheckBox();
-            groupBox2 = new GroupBox();
             tabControl1.SuspendLayout();
-            tabPage1.SuspendLayout();
             contextMenuStrip1.SuspendLayout();
             groupBox1.SuspendLayout();
             SuspendLayout();
@@ -67,91 +57,11 @@ namespace TwitchDropsBot.WinForms
             // tabControl1
             // 
             tabControl1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            //tabControl1.Controls.Add(tabPage1);
             tabControl1.Location = new Point(207, 0);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
             tabControl1.Size = new Size(853, 534);
             tabControl1.TabIndex = 1;
-            // 
-            // tabPage1
-            // 
-            tabPage1.Controls.Add(groupBox2);
-            tabPage1.Controls.Add(ReloadButton);
-            tabPage1.Controls.Add(labelMinRemaining);
-            tabPage1.Controls.Add(labelDrop);
-            tabPage1.Controls.Add(labelGame);
-            tabPage1.Controls.Add(labelPercentage);
-            tabPage1.Controls.Add(textBox1);
-            tabPage1.Controls.Add(progressBar1);
-            tabPage1.Location = new Point(4, 24);
-            tabPage1.Name = "tabPage1";
-            tabPage1.Padding = new Padding(3);
-            tabPage1.Size = new Size(845, 506);
-            tabPage1.TabIndex = 0;
-            tabPage1.Text = "tabPage1";
-            tabPage1.UseVisualStyleBackColor = true;
-            // 
-            // ReloadButton
-            // 
-            ReloadButton.Location = new Point(296, 349);
-            ReloadButton.Name = "ReloadButton";
-            ReloadButton.Size = new Size(288, 35);
-            ReloadButton.TabIndex = 15;
-            ReloadButton.Text = "Add new account";
-            ReloadButton.UseVisualStyleBackColor = true;
-            // 
-            // labelMinRemaining
-            // 
-            labelMinRemaining.Location = new Point(334, 453);
-            labelMinRemaining.Name = "labelMinRemaining";
-            labelMinRemaining.Size = new Size(250, 19);
-            labelMinRemaining.TabIndex = 6;
-            labelMinRemaining.Text = "Minutes remaining : -";
-            labelMinRemaining.TextAlign = ContentAlignment.MiddleCenter;
-            // 
-            // labelDrop
-            // 
-            labelDrop.Location = new Point(6, 395);
-            labelDrop.Name = "labelDrop";
-            labelDrop.Size = new Size(284, 35);
-            labelDrop.TabIndex = 5;
-            labelDrop.Text = "Drop :";
-            labelDrop.TextAlign = ContentAlignment.MiddleLeft;
-            // 
-            // labelGame
-            // 
-            labelGame.Location = new Point(6, 349);
-            labelGame.Name = "labelGame";
-            labelGame.Size = new Size(284, 35);
-            labelGame.TabIndex = 4;
-            labelGame.Text = "Game :";
-            labelGame.TextAlign = ContentAlignment.MiddleLeft;
-            // 
-            // labelPercentage
-            // 
-            labelPercentage.Location = new Point(6, 453);
-            labelPercentage.Name = "labelPercentage";
-            labelPercentage.Size = new Size(578, 16);
-            labelPercentage.TabIndex = 3;
-            labelPercentage.Text = "-%";
-            labelPercentage.TextAlign = ContentAlignment.MiddleCenter;
-            // 
-            // textBox1
-            // 
-            textBox1.Location = new Point(6, 6);
-            textBox1.Multiline = true;
-            textBox1.Name = "textBox1";
-            textBox1.ReadOnly = true;
-            textBox1.Size = new Size(578, 328);
-            textBox1.TabIndex = 1;
-            // 
-            // progressBar1
-            // 
-            progressBar1.Location = new Point(6, 475);
-            progressBar1.Name = "progressBar1";
-            progressBar1.Size = new Size(578, 23);
-            progressBar1.TabIndex = 0;
             // 
             // notifyIcon1
             // 
@@ -219,6 +129,7 @@ namespace TwitchDropsBot.WinForms
             // 
             // buttonUp
             // 
+            buttonUp.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             buttonUp.Location = new Point(6, 441);
             buttonUp.Name = "buttonUp";
             buttonUp.Size = new Size(60, 23);
@@ -229,6 +140,7 @@ namespace TwitchDropsBot.WinForms
             // 
             // buttonDown
             // 
+            buttonDown.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             buttonDown.Location = new Point(70, 441);
             buttonDown.Name = "buttonDown";
             buttonDown.Size = new Size(60, 23);
@@ -239,6 +151,7 @@ namespace TwitchDropsBot.WinForms
             // 
             // buttonAdd
             // 
+            buttonAdd.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             buttonAdd.Location = new Point(118, 237);
             buttonAdd.Name = "buttonAdd";
             buttonAdd.Size = new Size(75, 23);
@@ -249,6 +162,7 @@ namespace TwitchDropsBot.WinForms
             // 
             // textBoxNameOfGame
             // 
+            textBoxNameOfGame.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             textBoxNameOfGame.Location = new Point(6, 237);
             textBoxNameOfGame.Name = "textBoxNameOfGame";
             textBoxNameOfGame.Size = new Size(106, 23);
@@ -256,6 +170,7 @@ namespace TwitchDropsBot.WinForms
             // 
             // FavGameListBox
             // 
+            FavGameListBox.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             FavGameListBox.FormattingEnabled = true;
             FavGameListBox.ItemHeight = 15;
             FavGameListBox.Location = new Point(6, 266);
@@ -265,6 +180,7 @@ namespace TwitchDropsBot.WinForms
             // 
             // buttonDelete
             // 
+            buttonDelete.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             buttonDelete.Location = new Point(134, 441);
             buttonDelete.Name = "buttonDelete";
             buttonDelete.Size = new Size(60, 23);
@@ -275,6 +191,7 @@ namespace TwitchDropsBot.WinForms
             // 
             // buttonAddNewAccount
             // 
+            buttonAddNewAccount.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             buttonAddNewAccount.Location = new Point(6, 470);
             buttonAddNewAccount.Name = "buttonAddNewAccount";
             buttonAddNewAccount.Size = new Size(189, 23);
@@ -285,6 +202,7 @@ namespace TwitchDropsBot.WinForms
             // 
             // buttonPutInTray
             // 
+            buttonPutInTray.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             buttonPutInTray.Location = new Point(6, 499);
             buttonPutInTray.Name = "buttonPutInTray";
             buttonPutInTray.Size = new Size(189, 23);
@@ -315,15 +233,6 @@ namespace TwitchDropsBot.WinForms
             checkBoxStartup.UseVisualStyleBackColor = true;
             checkBoxStartup.CheckedChanged += checkBoxStartup_CheckedChanged;
             // 
-            // groupBox2
-            // 
-            groupBox2.Location = new Point(590, 0);
-            groupBox2.Name = "groupBox2";
-            groupBox2.Size = new Size(255, 506);
-            groupBox2.TabIndex = 16;
-            groupBox2.TabStop = false;
-            groupBox2.Text = "groupBox2";
-            // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -331,16 +240,13 @@ namespace TwitchDropsBot.WinForms
             ClientSize = new Size(1060, 534);
             Controls.Add(groupBox1);
             Controls.Add(tabControl1);
-            FormBorderStyle = FormBorderStyle.FixedDialog;
             Icon = (Icon)resources.GetObject("$this.Icon");
-            MaximizeBox = false;
+            MinimumSize = new Size(1076, 573);
             Name = "MainForm";
             Text = "TwitchDropsBot";
             Load += Form1_Load;
             Resize += Form1_Resize;
             tabControl1.ResumeLayout(false);
-            tabPage1.ResumeLayout(false);
-            tabPage1.PerformLayout();
             contextMenuStrip1.ResumeLayout(false);
             groupBox1.ResumeLayout(false);
             groupBox1.PerformLayout();
@@ -357,22 +263,13 @@ namespace TwitchDropsBot.WinForms
         private CheckBox checkBoxStartup;
         private Button buttonPutInTray;
         private Button buttonAddNewAccount;
-        private TabPage tabPage1;
-        private ProgressBar progressBar1;
-        private TextBox textBox1;
         private Button buttonDelete;
         private ListBox FavGameListBox;
-        private Label labelPercentage;
-        private Label labelDrop;
-        private Label labelGame;
-        private Label labelMinRemaining;
         private Button buttonAdd;
         private TextBox textBoxNameOfGame;
         private Button buttonUp;
         private Button buttonDown;
         private CheckBox checkBoxMinimizeInTray;
         private CheckBox checkBoxConnectedAccounts;
-        private Button ReloadButton;
-        private GroupBox groupBox2;
     }
 }

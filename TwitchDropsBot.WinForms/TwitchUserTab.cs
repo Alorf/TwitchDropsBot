@@ -9,7 +9,6 @@ namespace TwitchDropsBot.WinForms
     public partial class TwitchUserTab : UserControl
     {
         private readonly TwitchUser twitchUser;
-        private Boolean flag;
 
         public TabPage TabPage => currentTabPage;
 
@@ -22,7 +21,6 @@ namespace TwitchDropsBot.WinForms
             twitchUser.PropertyChanged += TwitchUser_PropertyChanged;
 
             currentTabPage.Text = twitchUser.Login;
-            flag = true;
 
             twitchUser.Logger.OnLog += (message) => AppendLog($"LOG: {message}");
             twitchUser.Logger.OnError += (message) => AppendLog($"ERROR: {message}");
@@ -42,6 +40,15 @@ namespace TwitchDropsBot.WinForms
             {
                 UpdateProgress();
             }
+
+            if (e.PropertyName == nameof(TwitchUser.Inventory))
+            {
+                if (twitchUser?.Inventory != null)
+                {
+                    twitchUser.Logger.Info("Inventory requested");
+                    await LoadInventoryAsync();
+                }
+            }
         }
 
         public async Task UpdateUI(BotStatus status)
@@ -58,14 +65,8 @@ namespace TwitchDropsBot.WinForms
                     labelMinRemaining.Invoke((System.Windows.Forms.MethodInvoker)(() => labelMinRemaining.Text = $"Minutes remaining : -"));
                     progressBar.Invoke((System.Windows.Forms.MethodInvoker)(() => progressBar.Value = 0));
 
-                    if (flag && twitchUser.Inventory != null)
-                    {
-                        twitchUser.Logger.Info("Inventory requested");
-                        await LoadInventoryAsync();
-                    }
                     break;
                 default:
-                    flag = true;
                     labelGame.Invoke((System.Windows.Forms.MethodInvoker)(() => labelGame.Text = $"Game : {twitchUser.CurrentCampaign?.Game.DisplayName}"));
                     labelDrop.Invoke((System.Windows.Forms.MethodInvoker)(() => labelDrop.Text = $"Drop : {twitchUser.CurrentTimeBasedDrop?.Name}"));
                     break;
@@ -109,6 +110,8 @@ namespace TwitchDropsBot.WinForms
             }
         }
 
+        
+
         private void InitializeListView()
         {
             dropsInventoryImageList.ImageSize = new System.Drawing.Size(64, 64);
@@ -142,7 +145,7 @@ namespace TwitchDropsBot.WinForms
             }
 
             ListViewGroup group = new ListViewGroup(groupName, HorizontalAlignment.Left);
-            group.CollapsedState = ListViewGroupCollapsedState.Expanded;
+            group.CollapsedState = ListViewGroupCollapsedState.Collapsed;
             if (inventoryListView.InvokeRequired)
             {
                 inventoryListView.Invoke(new Action(() =>
@@ -162,7 +165,6 @@ namespace TwitchDropsBot.WinForms
 
         private async Task LoadInventoryAsync()
         {
-            flag = false;
             List<ListViewItem> items = new List<ListViewItem>();
             var inventoryItems = twitchUser.Inventory?.GameEventDrops?.OrderBy(drop => drop.lastAwardedAt).Reverse().ToList() ?? new List<GameEventDrop>();
             var dropCampaignsInProgress = twitchUser.Inventory?.DropCampaignsInProgress;
@@ -176,8 +178,8 @@ namespace TwitchDropsBot.WinForms
                     {
                         var url = dropCampaign.Game.BoxArtURL;
                         //replace width and height
-                        url = url.Replace("{width}", "64");
-                        url = url.Replace("{height}", "64");
+                        url = url.Replace("{width}", "16");
+                        url = url.Replace("{height}", "16");
 
                         await DownloadImageFromWeb(url, dropCampaign.Game.Slug, gameImageList);
 
@@ -194,8 +196,8 @@ namespace TwitchDropsBot.WinForms
                                 Group = group
                             };
                             lst.SubItems.Add($"{timeBasedDrop.Name}\n{timeBasedDrop.Self.CurrentMinutesWatched}/{timeBasedDrop.RequiredMinutesWatched} minutes watched");
-                            lst.SubItems.Add(timeBasedDrop.Self.IsClaimed ? "\u2714" : "\u26A0");
-                            lst.ToolTipText = timeBasedDrop.Self.IsClaimed ? "Claimed" : "Account not connected";
+                            lst.SubItems.Add(timeBasedDrop.Self.IsClaimed ? "\u2714" : "\u274C");
+                            lst.ToolTipText = timeBasedDrop.Self.IsClaimed ? "Claimed" : "Not claimed";
 
                             itemList.Add(lst);
                         }

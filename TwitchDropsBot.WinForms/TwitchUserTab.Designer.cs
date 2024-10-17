@@ -58,6 +58,7 @@
             twitchLoggerTextBox.Multiline = true;
             twitchLoggerTextBox.Name = "twitchLoggerTextBox";
             twitchLoggerTextBox.ReadOnly = true;
+            twitchLoggerTextBox.ScrollBars = ScrollBars.Vertical;
             twitchLoggerTextBox.Size = new Size(578, 324);
             twitchLoggerTextBox.TabIndex = 1;
             // 

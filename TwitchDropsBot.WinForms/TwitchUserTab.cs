@@ -29,8 +29,6 @@ namespace TwitchDropsBot.WinForms
 
         private async void TwitchUser_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
-            Console.WriteLine(e.PropertyName);
-
             if (e.PropertyName == nameof(TwitchUser.Status))
             {
                 await UpdateUI(twitchUser.Status);

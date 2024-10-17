@@ -216,7 +216,14 @@ public class GqlRequest
         
         dynamic? resp = await DoGQLRequestAsync(query, null, "FetchInventoryDrops");
 
-        return resp?.Data.User.Inventory;
+        Inventory inventory = resp?.Data.User.Inventory;
+
+        foreach (var dropCampaign in inventory.DropCampaignsInProgress)
+        {
+            dropCampaign.TimeBasedDrops = dropCampaign.TimeBasedDrops.OrderBy(drop => drop.RequiredMinutesWatched).ToList();
+        }
+
+        return inventory;
     }
 
     public async Task<List<RewardCampaignsAvailableToUser>> FetchRewardCampaignsAvailableToUserAsync()

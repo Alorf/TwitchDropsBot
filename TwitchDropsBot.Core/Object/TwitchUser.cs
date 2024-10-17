@@ -56,7 +56,19 @@ public class TwitchUser : INotifyPropertyChanged
     public Logger Logger { get; set; }
     public string? StreamURL { get; set; }
     public CancellationTokenSource? CancellationTokenSource { get; set; }
-    public Inventory? Inventory { get; set; }
+    private Inventory _inventory;
+    public Inventory Inventory
+    {
+        get => this._inventory;
+        set
+        {
+            if (_inventory != value)
+            {
+                _inventory = value;
+                OnPropertyChanged();
+            }
+        }
+    }
 
     public Action<string>? OnStatusChanged { get; set; }
 

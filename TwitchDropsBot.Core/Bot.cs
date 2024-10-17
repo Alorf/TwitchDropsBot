@@ -182,7 +182,7 @@ public class Bot
         int stuckCounter = 0;
         int previousMinuteWatched = 0;
         var minuteWatched = dropCurrentSession.CurrentMinutesWatched;
-        twitchUser.CurrendDropCurrentSession = dropCurrentSession;
+        twitchUser.CurrentDropCurrentSession = dropCurrentSession;
 
         while (minuteWatched <
                (minutes ?? dropCurrentSession.requiredMinutesWatched) || dropCurrentSession.requiredMinutesWatched == 0) // While all the drops are not claimed
@@ -205,7 +205,7 @@ public class Bot
                 dropCurrentSession =
                     await twitchUser.GqlRequest.FetchCurrentSessionContextAsync(broadcaster);
 
-                twitchUser.CurrendDropCurrentSession = dropCurrentSession;
+                twitchUser.CurrentDropCurrentSession = dropCurrentSession;
             }
             catch (System.Exception e)
             {

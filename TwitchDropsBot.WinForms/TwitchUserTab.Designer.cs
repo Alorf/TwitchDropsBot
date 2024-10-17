@@ -43,6 +43,7 @@
             groupBox2 = new GroupBox();
             inventoryListView = new ListView();
             dropsInventoryImageList = new ImageList(components);
+            gameImageList = new ImageList(components);
             tempTabControl.SuspendLayout();
             currentTabPage.SuspendLayout();
             Bot.SuspendLayout();
@@ -211,6 +212,12 @@
             dropsInventoryImageList.ImageSize = new Size(16, 16);
             dropsInventoryImageList.TransparentColor = Color.Transparent;
             // 
+            // gameImageList
+            // 
+            gameImageList.ColorDepth = ColorDepth.Depth32Bit;
+            gameImageList.ImageSize = new Size(16, 16);
+            gameImageList.TransparentColor = Color.Transparent;
+            // 
             // TwitchUserTab
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -244,5 +251,6 @@
         private Label labelPercentage;
         private Label labelMinRemaining;
         private ListView inventoryListView;
+        private ImageList gameImageList;
     }
 }

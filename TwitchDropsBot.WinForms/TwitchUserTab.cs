@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.ComponentModel;
+using System.Reflection;
 using System.Windows.Forms;
 using TwitchDropsBot.Core.Object;
 using TwitchDropsBot.Core.Object.TwitchGQL;
@@ -9,7 +10,6 @@ namespace TwitchDropsBot.WinForms
     {
         private readonly TwitchUser twitchUser;
         private Boolean flag;
-        private Dictionary<string, ListViewItem> itemDictionary = new Dictionary<string, ListViewItem>();
 
         public TabPage TabPage => currentTabPage;
 
@@ -19,93 +19,103 @@ namespace TwitchDropsBot.WinForms
             InitializeListView();
 
             this.twitchUser = twitchUser;
+            twitchUser.PropertyChanged += TwitchUser_PropertyChanged;
+
             currentTabPage.Text = twitchUser.Login;
             flag = true;
-
-            Start();
-        }
-
-        public void Start()
-        {
-            // Timer to update the controls periodically
-            var timer = new System.Windows.Forms.Timer
-            {
-                Interval = 1000
-            };
-
-            timer.Tick += async (sender, e) =>
-            {
-                switch (twitchUser.Status)
-                {
-                    case BotStatus.Idle:
-                    case BotStatus.Seeking:
-                        // reset every label
-                        labelGame.Text = $"Game : N/A";
-                        labelDrop.Text = $"Drop : N/A";
-                        labelPercentage.Text = "-%";
-                        labelMinRemaining.Text = "Minutes remaining : -";
-                        progressBar.Value = 0;
-
-                        if (flag && twitchUser.Inventory != null)
-                        {
-                            twitchUser.Logger.Info("Inventory requested");
-                            await LoadInventoryAsync();
-                        }
-                        break;
-                    default:
-                        flag = true;
-                        labelGame.Text = $"Game : {twitchUser.CurrentCampaign?.Game.DisplayName}";
-                        labelDrop.Text = $"Drop : {twitchUser.CurrentTimeBasedDrop?.Name}";
-
-                        if (twitchUser.CurrendDropCurrentSession != null &&
-                            twitchUser.CurrendDropCurrentSession.requiredMinutesWatched > 0)
-                        {
-                            var percentage = (int)((twitchUser.CurrendDropCurrentSession.CurrentMinutesWatched /
-                                                    (double)twitchUser.CurrendDropCurrentSession
-                                                        .requiredMinutesWatched) * 100);
-
-                            if (percentage > 100) // for some reason it gave me 101 sometimes
-                            {
-                                percentage = 100;
-                            }
-
-                            progressBar.Value = percentage;
-                            labelPercentage.Text = $"{percentage}%";
-                            labelMinRemaining.Text =
-                                $"Minutes remaining : {twitchUser.CurrendDropCurrentSession.requiredMinutesWatched - twitchUser.CurrendDropCurrentSession.CurrentMinutesWatched}";
-                        }
-
-                        break;
-                }
-            };
-
-            timer.Start();
 
             twitchUser.Logger.OnLog += (message) => AppendLog($"LOG: {message}");
             twitchUser.Logger.OnError += (message) => AppendLog($"ERROR: {message}");
             twitchUser.Logger.OnInfo += (message) => AppendLog($"INFO: {message}");
+        }
 
-            void AppendLog(string message)
+        private async void TwitchUser_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            Console.WriteLine(e.PropertyName);
+
+            if (e.PropertyName == nameof(TwitchUser.Status))
             {
-                if (twitchLoggerTextBox.InvokeRequired)
-                {
-                    twitchLoggerTextBox.Invoke(new Action(() =>
+                await UpdateUI(twitchUser.Status);
+            }
+
+            if (e.PropertyName == nameof(TwitchUser.CurrentDropCurrentSession))
+            {
+                UpdateProgress();
+            }
+        }
+
+        public async Task UpdateUI(BotStatus status)
+        {
+
+            switch (twitchUser.Status)
+            {
+                case BotStatus.Idle:
+                case BotStatus.Seeking:
+                    // reset every label
+                    labelGame.Invoke((System.Windows.Forms.MethodInvoker)(() => labelGame.Text = $"Game : N/A"));
+                    labelDrop.Invoke((System.Windows.Forms.MethodInvoker)(() => labelDrop.Text = $"Drop : N/A"));
+                    labelDrop.Invoke((System.Windows.Forms.MethodInvoker)(() => labelPercentage.Text = $"-%"));
+                    labelMinRemaining.Invoke((System.Windows.Forms.MethodInvoker)(() => labelMinRemaining.Text = $"Minutes remaining : -"));
+                    progressBar.Invoke((System.Windows.Forms.MethodInvoker)(() => progressBar.Value = 0));
+
+                    if (flag && twitchUser.Inventory != null)
                     {
-                        twitchLoggerTextBox.AppendText($"[{DateTime.Now}] {message}{Environment.NewLine}");
-                    }));
-                }
-                else
+                        twitchUser.Logger.Info("Inventory requested");
+                        await LoadInventoryAsync();
+                    }
+                    break;
+                default:
+                    flag = true;
+                    labelGame.Invoke((System.Windows.Forms.MethodInvoker)(() => labelGame.Text = $"Game : {twitchUser.CurrentCampaign?.Game.DisplayName}"));
+                    labelDrop.Invoke((System.Windows.Forms.MethodInvoker)(() => labelDrop.Text = $"Drop : {twitchUser.CurrentTimeBasedDrop?.Name}"));
+                    break;
+            }
+        }
+
+        private void AppendLog(string message)
+        {
+            if (twitchLoggerTextBox.InvokeRequired)
+            {
+                twitchLoggerTextBox.Invoke(new Action(() =>
                 {
                     twitchLoggerTextBox.AppendText($"[{DateTime.Now}] {message}{Environment.NewLine}");
+                }));
+            }
+            else
+            {
+                twitchLoggerTextBox.AppendText($"[{DateTime.Now}] {message}{Environment.NewLine}");
+            }
+        }
+
+
+        private void UpdateProgress()
+        {
+            if (twitchUser.CurrentDropCurrentSession != null &&
+                twitchUser.CurrentDropCurrentSession.requiredMinutesWatched > 0)
+            {
+                var percentage = (int)((twitchUser.CurrentDropCurrentSession.CurrentMinutesWatched /
+                                        (double)twitchUser.CurrentDropCurrentSession
+                                            .requiredMinutesWatched) * 100);
+
+                if (percentage > 100) // for some reason it gave me 101 sometimes
+                {
+                    percentage = 100;
                 }
+
+                progressBar.Invoke((System.Windows.Forms.MethodInvoker)(() => progressBar.Value = percentage));
+                labelPercentage.Invoke((System.Windows.Forms.MethodInvoker)(() => labelPercentage.Text = $"{percentage}%"));
+                labelMinRemaining.Invoke((System.Windows.Forms.MethodInvoker)(() => labelMinRemaining.Text =
+                                           $"Minutes remaining : {twitchUser.CurrentDropCurrentSession.requiredMinutesWatched - twitchUser.CurrentDropCurrentSession.CurrentMinutesWatched}"));
             }
         }
 
         private void InitializeListView()
         {
             dropsInventoryImageList.ImageSize = new System.Drawing.Size(64, 64);
+            gameImageList.ImageSize = new System.Drawing.Size(16, 16);
             inventoryListView.LargeImageList = dropsInventoryImageList;
             inventoryListView.SmallImageList = dropsInventoryImageList;
+            inventoryListView.GroupImageList = gameImageList;
 
             // Add columns with initial width
             inventoryListView.Columns.Add("Name", (int)(inventoryListView.Width * 0.3)); // 30% of ListView width
@@ -122,7 +132,7 @@ namespace TwitchDropsBot.WinForms
             };
         }
 
-        private ListViewGroup AddGroup(string groupName)
+        private ListViewGroup AddGroup(string groupName, string? slug = null)
         {
             var ifExist = inventoryListView.Groups.Cast<ListViewGroup>().FirstOrDefault(group => group.Header == groupName); ;
 
@@ -137,12 +147,14 @@ namespace TwitchDropsBot.WinForms
             {
                 inventoryListView.Invoke(new Action(() =>
                 {
+                    group.TitleImageKey = slug;
                     inventoryListView.Groups.Add(group);
                 }));
             }
             else
             {
                 inventoryListView.Groups.Add(group);
+                group.TitleImageKey = groupName;
             }
 
             return group;
@@ -162,7 +174,14 @@ namespace TwitchDropsBot.WinForms
                     List<ListViewItem> itemList = new List<ListViewItem>();
                     foreach (var dropCampaign in dropCampaignsInProgress)
                     {
-                        await DownloadImageFromWeb(dropCampaign.Game.BoxArtURL, dropCampaign.Game.Slug, dropsInventoryImageList);
+                        var url = dropCampaign.Game.BoxArtURL;
+                        //replace width and height
+                        url = url.Replace("{width}", "64");
+                        url = url.Replace("{height}", "64");
+
+                        await DownloadImageFromWeb(url, dropCampaign.Game.Slug, gameImageList);
+
+                        var group = AddGroup(dropCampaign.Game.Name, dropCampaign.Game.Slug);
 
                         foreach (var timeBasedDrop in dropCampaign.TimeBasedDrops)
                         {
@@ -172,14 +191,13 @@ namespace TwitchDropsBot.WinForms
                             ListViewItem lst = new ListViewItem
                             {
                                 ImageKey = timeBasedDrop.Id,
-                                Group = AddGroup(dropCampaign.Game.Name)
+                                Group = group
                             };
                             lst.SubItems.Add($"{timeBasedDrop.Name}\n{timeBasedDrop.Self.CurrentMinutesWatched}/{timeBasedDrop.RequiredMinutesWatched} minutes watched");
                             lst.SubItems.Add(timeBasedDrop.Self.IsClaimed ? "\u2714" : "\u26A0");
                             lst.ToolTipText = timeBasedDrop.Self.IsClaimed ? "Claimed" : "Account not connected";
 
                             itemList.Add(lst);
-                            itemDictionary[timeBasedDrop.Id] = lst; // Add to dictionary
                         }
                     }
                     return itemList;
@@ -210,7 +228,6 @@ namespace TwitchDropsBot.WinForms
                         lst.ToolTipText = inventoryItem.IsConnected ? "Claimed" : "Account not connected";
 
                         itemList.Add(lst);
-                        itemDictionary[inventoryItem.Id] = lst; // Add to dictionary
                     }
                     return itemList;
                 });
@@ -269,6 +286,5 @@ namespace TwitchDropsBot.WinForms
                 twitchUser.CancellationTokenSource?.Cancel();
             }
         }
-
     }
 }

@@ -290,11 +290,11 @@ namespace TwitchDropsBot.WinForms
                         labelGame.Text = $"Game : {twitchUser.CurrentCampaign?.Game.DisplayName}";
                         labelDrop.Text = $"Drop : {twitchUser.CurrentTimeBasedDrop?.Name}";
 
-                        if (twitchUser.CurrendDropCurrentSession != null &&
-                            twitchUser.CurrendDropCurrentSession.requiredMinutesWatched > 0)
+                        if (twitchUser.CurrentDropCurrentSession != null &&
+                            twitchUser.CurrentDropCurrentSession.requiredMinutesWatched > 0)
                         {
-                            var percentage = (int)((twitchUser.CurrendDropCurrentSession.CurrentMinutesWatched /
-                                                    (double)twitchUser.CurrendDropCurrentSession
+                            var percentage = (int)((twitchUser.CurrentDropCurrentSession.CurrentMinutesWatched /
+                                                    (double)twitchUser.CurrentDropCurrentSession
                                                         .requiredMinutesWatched) * 100);
 
                             if (percentage > 100) // for some reason it gave me 101 sometimes
@@ -305,7 +305,7 @@ namespace TwitchDropsBot.WinForms
                             progressBar.Value = percentage;
                             labelPercentage.Text = $"{percentage}%";
                             labelMinRemaining.Text =
-                                $"Minutes remaining : {twitchUser.CurrendDropCurrentSession.requiredMinutesWatched - twitchUser.CurrendDropCurrentSession.CurrentMinutesWatched}";
+                                $"Minutes remaining : {twitchUser.CurrentDropCurrentSession.requiredMinutesWatched - twitchUser.CurrentDropCurrentSession.CurrentMinutesWatched}";
                         }
 
                         break;

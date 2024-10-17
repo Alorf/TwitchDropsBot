@@ -1,11 +1,21 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using TwitchDropsBot.Core.Utilities;
 using TwitchDropsBot.Core.Object.TwitchGQL;
+using System.Net.NetworkInformation;
+using System.Runtime.CompilerServices;
 
 namespace TwitchDropsBot.Core.Object;
 
-public class TwitchUser
+public class TwitchUser : INotifyPropertyChanged
 {
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    protected void OnPropertyChanged([CallerMemberName] string propertyName = null!)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
     public string Login { get; set; }
     public string Id { get; set; }
     public string ClientSecret { get; set; }
@@ -17,12 +27,38 @@ public class TwitchUser
     public AbstractCampaign? CurrentCampaign { get; set; }
     public TimeBasedDrop? CurrentTimeBasedDrop { get; set; }
     public AbstractBroadcaster? CurrentBroadcaster { get; set; }
-    public DropCurrentSession? CurrendDropCurrentSession { get; set; }
-    public BotStatus Status { get; set; }
+    private DropCurrentSession? _currentDropCurrentSession;
+    public DropCurrentSession? CurrentDropCurrentSession
+    {
+        get => this._currentDropCurrentSession;
+        set
+        {
+            if (_currentDropCurrentSession != value)
+            {
+                _currentDropCurrentSession = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+    private BotStatus _status;
+    public BotStatus Status
+    {
+        get => this._status;
+        set
+        {
+            if (_status != value)
+            {
+                _status = value;
+                OnPropertyChanged();
+            }
+        }
+    }
     public Logger Logger { get; set; }
     public string? StreamURL { get; set; }
     public CancellationTokenSource? CancellationTokenSource { get; set; }
     public Inventory? Inventory { get; set; }
+
+    public Action<string>? OnStatusChanged { get; set; }
 
     public TwitchUser(string login, string id, string clientSecret, string uniqueId)
     {

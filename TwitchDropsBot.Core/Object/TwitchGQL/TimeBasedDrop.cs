@@ -9,4 +9,5 @@ public class TimeBasedDrop
     public int RequiredMinutesWatched { get; set; }
     public Self Self { get; set; }
     public Campaign Campaign { get; set; }
+    public List<BenefitEdge> BenefitEdges { get; set; }
 }

@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "TwitchDropsBot.GTK": {
+      "commandName": "Project"
+    },
+    "WSL": {
+      "commandName": "WSL2",
+      "distributionName": ""
+    }
+  }
+}

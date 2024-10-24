@@ -1,8 +1,12 @@
+using Gdk;
 using Gtk;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Data;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using TwitchDropsBot.Core.Object;
 using TwitchDropsBot.Core.Object.TwitchGQL;
@@ -10,33 +14,48 @@ using UI = Gtk.Builder.ObjectAttribute;
 
 namespace TwitchDropsBot.GTK
 {
-    internal class TwitchUserTab : Window
+    internal class TwitchUserTab : Gtk.Window
     {
         private readonly TwitchUser twitchUser;
+        private readonly object logLock = new object(); // Lock object for synchronization
 
         [UI] private Notebook userNotebook = null;
         [UI] private Label gameLabel = null;
-        [UI] private Button reloadButton = null;
         [UI] private Label dropLabel = null;
         [UI] private Label minutesRemainingLabel = null;
         [UI] private Label percentageLabel = null;
+        [UI] private TextView twitchLoggerTextView = null;
         [UI] private LevelBar levelBar = null;
         [UI] private TreeView inventoryTreeView = null;
-        [UI] private ListStore inventoryListStore = null;
 
         public TwitchUserTab(TwitchUser twitchUser) : this(new Builder("TwitchUserTab.glade"))
         {
             this.twitchUser = twitchUser;
             twitchUser.PropertyChanged += TwitchUser_PropertyChanged;
 
+            twitchUser.Logger.OnLog += (message) => AppendLog($"LOG: {message}");
+            twitchUser.Logger.OnError += (message) => AppendLog($"ERROR: {message}");
+            twitchUser.Logger.OnInfo += (message) => AppendLog($"INFO: {message}");
+        }
+
+        private void AppendLog(string message)
+        {
+            lock (logLock)
+            {
+                Application.Invoke(delegate
+                {
+                    var buffer = twitchLoggerTextView.Buffer;
+                    buffer.Text += $"[{DateTime.Now}] {message}{Environment.NewLine}";
+                    twitchLoggerTextView.ScrollToIter(buffer.EndIter, 0, false, 0, 0);
+                });
+            }
         }
 
         private TwitchUserTab(Builder builder) : base(builder.GetRawOwnedObject("TwitchUserTab"))
         {
             builder.Autoconnect(this);
 
-
-            DeleteEvent += Window_DeleteEvent;
+            this.DeleteEvent += Window_DeleteEvent;
         }
 
         private void Window_DeleteEvent(object sender, DeleteEventArgs a)
@@ -81,24 +100,25 @@ namespace TwitchDropsBot.GTK
 
         public async Task UpdateUI(BotStatus status)
         {
-
-            switch (twitchUser.Status)
+            await Task.Run(() =>
             {
-                case BotStatus.Idle:
-                case BotStatus.Seeking:
-                    // reset every label
-                    gameLabel.Text = "Game : N/A";
-                    dropLabel.Text = "Drop : N/A";
-                    percentageLabel.Text = "-%";
-                    minutesRemainingLabel.Text = "Minutes remaining : -";
-                    levelBar.Value = 0;
-
-                    break;
-                default:
-                    gameLabel.Text = $"Game : {twitchUser.CurrentCampaign?.Game.DisplayName}";
-                    dropLabel.Text = $"Drop : {twitchUser.CurrentTimeBasedDrop?.Name}";
-                    break;
-            }
+                switch (twitchUser.Status)
+                {
+                    case BotStatus.Idle:
+                    case BotStatus.Seeking:
+                        // reset every label
+                        gameLabel.Text = "Game : N/A";
+                        dropLabel.Text = "Drop : N/A";
+                        percentageLabel.Text = "-%";
+                        minutesRemainingLabel.Text = "Minutes remaining : -";
+                        levelBar.Value = 0;
+                        break;
+                    default:
+                        gameLabel.Text = $"Game : {twitchUser.CurrentCampaign?.Game.DisplayName}";
+                        dropLabel.Text = $"Drop : {twitchUser.CurrentTimeBasedDrop?.Name}";
+                        break;
+                }
+            });
         }
 
         private void UpdateProgress()
@@ -122,60 +142,125 @@ namespace TwitchDropsBot.GTK
             }
         }
 
-        private async Task LoadInventoryAsync()
+        private void InitializeInventoryTreeView(TreeStore inventoryTreeStore)
         {
-            try
+            inventoryTreeView.Model = inventoryTreeStore;
+
+            // Ensure TreeView columns are set up
+            if (inventoryTreeView.Columns.Length == 0)
             {
-                var items = new ListStore(typeof(string), typeof(string), typeof(string));
-                var inventoryItems = twitchUser.Inventory?.GameEventDrops?.OrderBy(drop => drop.lastAwardedAt).Reverse().ToList() ?? new List<GameEventDrop>();
-                var dropCampaignsInProgress = twitchUser.Inventory?.DropCampaignsInProgress;
+                var imageColumn = new TreeViewColumn();
+                var imageCell = new CellRendererPixbuf();
+                imageColumn.PackStart(imageCell, true);
+                imageColumn.AddAttribute(imageCell, "pixbuf", 0);
 
-                if (dropCampaignsInProgress != null)
-                {
-                    foreach (var dropCampaign in dropCampaignsInProgress)
-                    {
-                        var group = AddGroup(dropCampaign.Game.Name);
+                var nameColumn = new TreeViewColumn();
+                var nameCell = new CellRendererText();
+                nameColumn.PackStart(nameCell, true);
+                nameColumn.AddAttribute(nameCell, "text", 1);
 
-                        foreach (var timeBasedDrop in dropCampaign.TimeBasedDrops)
-                        {
-                            items.AppendValues(timeBasedDrop.Name, $"{timeBasedDrop.Self.CurrentMinutesWatched}/{timeBasedDrop.RequiredMinutesWatched} minutes watched", timeBasedDrop.Self.IsClaimed ? "\u2714" : "\u274C");
-                        }
-                    }
-                }
+                var descriptionColumn = new TreeViewColumn();
+                var descriptionCell = new CellRendererText();
+                descriptionColumn.PackStart(descriptionCell, false);
+                descriptionColumn.AddAttribute(descriptionCell, "text", 2);
 
-                if (inventoryItems != null)
-                {
-                    foreach (var inventoryItem in inventoryItems)
-                    {
-                        items.AppendValues(inventoryItem.Name, "", inventoryItem.IsConnected ? "\u2714" : "\u26A0");
-                    }
-                }
-
-                Application.Invoke(delegate
-                {
-                    try
-                    {
-                        inventoryListStore.Clear();
-                        inventoryListStore = items;
-                        inventoryTreeView.Model = inventoryListStore; // Ensure the TreeView model is updated
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Error updating TreeView: {ex.Message}");
-                    }
-                });
+                inventoryTreeView.AppendColumn(imageColumn);
+                inventoryTreeView.AppendColumn(nameColumn);
+                inventoryTreeView.AppendColumn(descriptionColumn);
+                inventoryTreeView.SizeAllocated += (o, args) => SetColumnWidths();
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error loading inventory: {ex.Message}");
-            }
+
+            // Hide column headers
+            inventoryTreeView.HeadersVisible = false;
         }
 
-        private TreeViewColumn AddGroup(string groupName)
+        void SetColumnWidths()
         {
-            var column = new TreeViewColumn { Title = groupName };
-            inventoryTreeView.AppendColumn(column);
-            return column;
+            int totalWidth = inventoryTreeView.Allocation.Width;
+
+            // Calculate widths based on percentages
+            int imageColumnWidth = (int)(totalWidth * 0.45); // 20%
+            int nameColumnWidth = (int)(totalWidth * 0.45); // 40%
+            int descriptionColumnWidth = (int)(totalWidth * 0.10); // 40%
+
+            var nameCell = inventoryTreeView.Columns[1].Cells[0] as CellRendererText;
+            nameCell.WrapMode = Pango.WrapMode.Word;
+            nameCell.WrapWidth = descriptionColumnWidth;
+
+            // Set the widths
+            inventoryTreeView.Columns[0].FixedWidth = imageColumnWidth;
+            inventoryTreeView.Columns[1].FixedWidth = nameColumnWidth;
+            inventoryTreeView.Columns[2].FixedWidth = descriptionColumnWidth;
+        }
+
+        private async Task LoadInventoryAsync()
+        {
+            var inventoryTreeStore = new TreeStore(typeof(Pixbuf), typeof(string), typeof(string));
+            InitializeInventoryTreeView(inventoryTreeStore);
+
+            // Assuming twitchUser.Inventory is a collection of items with Name, Description, and ImageURL properties
+            var inventoryItems = twitchUser.Inventory?.GameEventDrops?.OrderBy(drop => drop.lastAwardedAt).Reverse().ToList() ?? new List<GameEventDrop>();
+            var dropCampaignsInProgress = twitchUser.Inventory?.DropCampaignsInProgress;
+            var itemsList = new List<IinventorySystem>();
+
+            if (dropCampaignsInProgress != null)
+            {
+                var timeBasedDrops = await Task.Run(() =>
+                {
+                    var itemList = new ConcurrentBag<TimeBasedDrop>();
+
+                    Parallel.ForEach(dropCampaignsInProgress, dropCampaign =>
+                    {
+                        foreach (var timeBasedDrop in dropCampaign.TimeBasedDrops)
+                        {
+                            timeBasedDrop.Game = dropCampaign.Game;
+                            itemList.Add(timeBasedDrop);
+                        }
+                    });
+
+                    return itemList.ToList();
+                });
+
+                itemsList.AddRange(timeBasedDrops);
+            }
+
+            itemsList.AddRange(inventoryItems);
+
+            Application.Invoke(async delegate
+            {
+                Dictionary<string, TreeIter> gameGroups = new Dictionary<string, TreeIter>();
+
+                foreach (var item in itemsList)
+                {
+                    Pixbuf imagePixbuf = await DownloadImageFromWeb(item.GetImage());
+                    imagePixbuf = imagePixbuf.ScaleSimple(64, 64, InterpType.Bilinear);
+
+                    var gameName = item.GetGroup();
+                    if (!gameGroups.ContainsKey(gameName))
+                    {
+                        // Create a new group for the game
+                        var gameIter = inventoryTreeStore.AppendValues(null, gameName, null);
+                        gameGroups[gameName] = gameIter;
+                    }
+
+                    inventoryTreeStore.AppendValues(gameGroups[gameName], imagePixbuf, item.GetName(), item.GetStatus());
+                }
+            });
+
+            inventoryTreeView.ShowAll();
+        }
+
+        private async Task<Pixbuf> DownloadImageFromWeb(string imageUrl)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                var response = await client.GetAsync(imageUrl);
+                response.EnsureSuccessStatusCode();
+                using (var respStream = await response.Content.ReadAsStreamAsync())
+                {
+                    return new Pixbuf(respStream);
+                }
+            }
         }
     }
 }

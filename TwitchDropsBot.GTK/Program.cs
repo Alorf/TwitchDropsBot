@@ -16,6 +16,8 @@ namespace TwitchDropsBot.GTK
             var win = new MainWindow();
             app.AddWindow(win);
 
+            win.Icon = new Gdk.Pixbuf("images/logo.png");
+
             win.Show();
             Application.Run();
         }

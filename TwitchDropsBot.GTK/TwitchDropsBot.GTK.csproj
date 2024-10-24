@@ -13,11 +13,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="images\logo.ico" />
+    <None Remove="images\logo.png" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="images\logo.ico" />
+    <Content Include="images\logo.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

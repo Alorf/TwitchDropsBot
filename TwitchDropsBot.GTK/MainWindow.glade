@@ -2,12 +2,100 @@
 <!-- Generated with glade 3.38.2 -->
 <interface>
   <requires lib="gtk+" version="3.18"/>
+  <object class="GtkDialog" id="AuthDeviceDialog">
+    <property name="can-focus">False</property>
+    <property name="type-hint">dialog</property>
+    <child internal-child="vbox">
+      <object class="GtkBox">
+        <property name="can-focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox">
+            <property name="can-focus">False</property>
+            <property name="layout-style">end</property>
+            <child>
+              <object class="GtkButton" id="closeButton">
+                <property name="label" translatable="yes">Close</property>
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkBox">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="hexpand">True</property>
+            <property name="vexpand">True</property>
+            <property name="orientation">vertical</property>
+            <property name="homogeneous">True</property>
+            <child>
+              <object class="GtkLinkButton" id="linkButton">
+                <property name="label" translatable="yes">https://www.twitch.tv/activate</property>
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+                <property name="relief">none</property>
+                <property name="uri">https://www.twitch.tv/activate</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="codeLabel">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="label" translatable="yes">Code </property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="statusLabel">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="label" translatable="yes">Waiting for user to authenticate...</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
   <object class="GtkWindow" id="MainWindow">
     <property name="can-focus">False</property>
     <property name="title" translatable="yes">TwitchDropsBot</property>
     <property name="default-width">1076</property>
     <property name="default-height">573</property>
-    <property name="icon-name">computer</property>
     <child>
       <object class="GtkBox">
         <property name="visible">True</property>
@@ -33,7 +121,7 @@
                 <property name="orientation">vertical</property>
                 <property name="spacing">4</property>
                 <child>
-                  <object class="GtkCheckButton">
+                  <object class="GtkCheckButton" id="launchOnStartupCheckbox">
                     <property name="label" translatable="yes">Launch on startup</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
@@ -48,7 +136,7 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkCheckButton">
+                  <object class="GtkCheckButton" id="onlyFavouritesCheckbox">
                     <property name="label" translatable="yes">Only favourites games</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
@@ -63,7 +151,7 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkCheckButton">
+                  <object class="GtkCheckButton" id="onlyConnectedCheckbox">
                     <property name="label" translatable="yes">Only connected account</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
@@ -78,7 +166,7 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkCheckButton">
+                  <object class="GtkCheckButton" id="putInTrayCheckbox">
                     <property name="label" translatable="yes">Put in tray on minimize</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
@@ -114,7 +202,7 @@
                     <property name="can-focus">False</property>
                     <property name="spacing">4</property>
                     <child>
-                      <object class="GtkEntry">
+                      <object class="GtkEntry" id="nameOfGameTextBox">
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="hexpand">True</property>
@@ -126,7 +214,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkButton">
+                      <object class="GtkButton" id="addGameButton">
                         <property name="label" translatable="yes">Add</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
@@ -147,12 +235,25 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkLabel">
+                  <object class="GtkScrolledWindow">
                     <property name="width-request">189</property>
                     <property name="height-request">169</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
-                    <property name="label" translatable="yes">label</property>
+                    <property name="shadow-type">in</property>
+                    <child>
+                      <object class="GtkViewport">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <child>
+                          <object class="GtkListBox" id="favGameListBox">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="hexpand">True</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -166,7 +267,7 @@
                     <property name="can-focus">False</property>
                     <property name="spacing">4</property>
                     <child>
-                      <object class="GtkButton">
+                      <object class="GtkButton" id="upButton">
                         <property name="label" translatable="yes">Up</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
@@ -180,7 +281,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkButton">
+                      <object class="GtkButton" id="downButton">
                         <property name="label" translatable="yes">Down</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
@@ -194,7 +295,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkButton">
+                      <object class="GtkButton" id="deleteButton">
                         <property name="label" translatable="yes">Delete</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
@@ -215,7 +316,7 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkButton">
+                  <object class="GtkButton" id="addAccountButton">
                     <property name="label" translatable="yes">Add new account</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
@@ -228,7 +329,7 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkButton">
+                  <object class="GtkButton" id="putInTrayButton">
                     <property name="label" translatable="yes">Put in tray</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>

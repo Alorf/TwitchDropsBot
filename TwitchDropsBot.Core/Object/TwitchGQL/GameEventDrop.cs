@@ -1,5 +1,5 @@
 ﻿namespace TwitchDropsBot.Core.Object.TwitchGQL;
-public class GameEventDrop : IinventorySystem
+public class GameEventDrop : IInventorySystem
 {
     public string Id { get; set; }
     public string Name { get; set; }
@@ -8,6 +8,16 @@ public class GameEventDrop : IinventorySystem
     public bool IsConnected { get; set; }
     public int? TotalCount { get; set; }
     public DateTime lastAwardedAt { get; set; }
+
+    public string? GetGameImageUrl()
+    {
+        return null;
+    }
+
+    public string? GetGameSlug()
+    {
+        return "inventory";
+    }
 
     public string GetGroup()
     {

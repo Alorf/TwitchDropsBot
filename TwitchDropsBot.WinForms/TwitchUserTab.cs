@@ -1,4 +1,6 @@
-﻿using System.ComponentModel;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Reflection;
 using System.Windows.Forms;
 using TwitchDropsBot.Core.Object;
@@ -9,7 +11,6 @@ namespace TwitchDropsBot.WinForms
     public partial class TwitchUserTab : UserControl
     {
         private readonly TwitchUser twitchUser;
-
         public TabPage TabPage => currentTabPage;
 
         public TwitchUserTab(TwitchUser twitchUser)
@@ -86,7 +87,6 @@ namespace TwitchDropsBot.WinForms
             }
         }
 
-
         private void UpdateProgress()
         {
             if (twitchUser.CurrentDropCurrentSession != null &&
@@ -107,8 +107,6 @@ namespace TwitchDropsBot.WinForms
                                            $"Minutes remaining : {twitchUser.CurrentDropCurrentSession.requiredMinutesWatched - twitchUser.CurrentDropCurrentSession.CurrentMinutesWatched}"));
             }
         }
-
-        
 
         private void InitializeListView()
         {
@@ -133,29 +131,38 @@ namespace TwitchDropsBot.WinForms
             };
         }
 
-        private ListViewGroup AddGroup(string groupName, string? slug = null)
+        private async Task<ListViewGroup> AddGroup(IInventorySystem item)
         {
-            var ifExist = inventoryListView.Groups.Cast<ListViewGroup>().FirstOrDefault(group => group.Header == groupName); ;
+            var ifExist = inventoryListView.Groups.Cast<ListViewGroup>().FirstOrDefault(group => group.Header == item.GetGroup());
 
             if (ifExist != null)
             {
                 return ifExist;
             }
 
-            ListViewGroup group = new ListViewGroup(groupName, HorizontalAlignment.Left);
+            if (item.GetGameImageUrl() != null)
+            {
+                var url = item.GetGameImageUrl();
+                //replace width and height
+                url = url.Replace("{width}", "16");
+                url = url.Replace("{height}", "16");
+
+                await DownloadImageFromWeb(item, gameImageList, item.GetGameSlug());
+            }
+
+            ListViewGroup group = new ListViewGroup(item.GetGroup(), HorizontalAlignment.Left);
+            group.TitleImageKey = item.GetGameSlug();
             group.CollapsedState = ListViewGroupCollapsedState.Collapsed;
             if (inventoryListView.InvokeRequired)
             {
                 inventoryListView.Invoke(new Action(() =>
                 {
-                    group.TitleImageKey = slug;
                     inventoryListView.Groups.Add(group);
                 }));
             }
             else
             {
                 inventoryListView.Groups.Add(group);
-                group.TitleImageKey = groupName;
             }
 
             return group;
@@ -163,104 +170,86 @@ namespace TwitchDropsBot.WinForms
 
         private async Task LoadInventoryAsync()
         {
-            List<ListViewItem> items = new List<ListViewItem>();
-            var inventoryItems = twitchUser.Inventory?.GameEventDrops?.OrderBy(drop => drop.lastAwardedAt).Reverse().ToList() ?? new List<GameEventDrop>();
+            List<IInventorySystem> inventoryItems = new List<IInventorySystem>();
+            var gameEventDrops = twitchUser.Inventory?.GameEventDrops?.OrderBy(drop => drop.lastAwardedAt).Reverse().ToList() ?? new List<GameEventDrop>();
             var dropCampaignsInProgress = twitchUser.Inventory?.DropCampaignsInProgress;
 
             if (dropCampaignsInProgress != null)
             {
-                var timeBasedDrops = await Task.Run(async () =>
+                var timeBasedDrops = await Task.Run(() =>
                 {
-                    List<ListViewItem> itemList = new List<ListViewItem>();
-                    foreach (var dropCampaign in dropCampaignsInProgress)
+                    var itemList = new ConcurrentBag<TimeBasedDrop>();
+
+                    Parallel.ForEach(dropCampaignsInProgress, dropCampaign =>
                     {
-                        var url = dropCampaign.Game.BoxArtURL;
-                        //replace width and height
-                        url = url.Replace("{width}", "16");
-                        url = url.Replace("{height}", "16");
-
-                        await DownloadImageFromWeb(url, dropCampaign.Game.Slug, gameImageList);
-
-                        var group = AddGroup(dropCampaign.Game.Name, dropCampaign.Game.Slug);
-
                         foreach (var timeBasedDrop in dropCampaign.TimeBasedDrops)
                         {
-                            // Download images from the web
-                            await DownloadImageFromWeb(timeBasedDrop.BenefitEdges[0].Benefit.ImageAssetURL, timeBasedDrop.Id, dropsInventoryImageList);
-
-                            ListViewItem lst = new ListViewItem
-                            {
-                                ImageKey = timeBasedDrop.Id,
-                                Group = group
-                            };
-                            lst.SubItems.Add($"{timeBasedDrop.Name}\n{timeBasedDrop.Self.CurrentMinutesWatched}/{timeBasedDrop.RequiredMinutesWatched} minutes watched");
-                            lst.SubItems.Add(timeBasedDrop.Self.IsClaimed ? "\u2714" : "\u274C");
-                            lst.ToolTipText = timeBasedDrop.Self.IsClaimed ? "Claimed" : "Not claimed";
-
-                            itemList.Add(lst);
+                            timeBasedDrop.Game = dropCampaign.Game;
+                            itemList.Add(timeBasedDrop);
                         }
-                    }
-                    return itemList;
+                    });
+
+                    return itemList.ToList();
                 });
 
-                items.AddRange(timeBasedDrops);
+                inventoryItems.AddRange(timeBasedDrops);
             }
 
-            if (inventoryItems != null)
+            inventoryItems.AddRange(gameEventDrops);
+
+            // Create and add groups first
+            var groupTasks = inventoryItems.Select(async inventoryItem =>
             {
-                var gameEventDrops = await Task.Run(async () =>
-                {
-                    var group = AddGroup("Inventory");
+                return await AddGroup(inventoryItem);
+            });
 
-                    List<ListViewItem> itemList = new List<ListViewItem>();
-                    foreach (var inventoryItem in inventoryItems)
-                    {
-                        // Download images from the web
-                        await DownloadImageFromWeb(inventoryItem.ImageURL, inventoryItem.Id, dropsInventoryImageList);
+            var groups = await Task.WhenAll(groupTasks);
 
-                        ListViewItem lst = new ListViewItem
-                        {
-                            ImageKey = inventoryItem.Id,
-                            Group = group
-                        };
-                        lst.SubItems.Add($"{inventoryItem.Name}");
-                        lst.SubItems.Add(inventoryItem.IsConnected ? "\u2714" : "\u26A0");
-                        lst.ToolTipText = inventoryItem.IsConnected ? "Claimed" : "Account not connected";
-
-                        itemList.Add(lst);
-                    }
-                    return itemList;
-                });
-
-                items.AddRange(gameEventDrops);
-            }
-
-            if (items.Count != 0)
+            // Create and add items
+            var itemTasks = inventoryItems.Select(async inventoryItem =>
             {
-                if (inventoryListView.InvokeRequired)
+                // Download the item's image
+                await DownloadImageFromWeb(inventoryItem, dropsInventoryImageList);
+
+                // Attribute the correct group to the item
+                var group = groups.First(g => g.Header == inventoryItem.GetGroup());
+
+                ListViewItem listViewItem = new ListViewItem()
                 {
-                    inventoryListView.Invoke(new Action(() =>
-                    {
-                        inventoryListView.Items.Clear();
-                        inventoryListView.Items.AddRange(items.ToArray());
-                        inventoryListView.AutoResizeColumn(2, ColumnHeaderAutoResizeStyle.ColumnContent);
-                    }));
-                }
-                else
+                    Group = group,
+                    ImageKey = inventoryItem.Id
+                };
+                listViewItem.SubItems.Add(inventoryItem.GetName());
+                listViewItem.SubItems.Add(inventoryItem.GetStatus());
+
+                return listViewItem;
+            });
+
+            var listViewItemsResult = await Task.WhenAll(itemTasks);
+
+            if (inventoryListView.InvokeRequired)
+            {
+                inventoryListView.Invoke(new Action(() =>
                 {
                     inventoryListView.Items.Clear();
-                    inventoryListView.Items.AddRange(items.ToArray());
+                    inventoryListView.Items.AddRange(listViewItemsResult.ToArray());
                     inventoryListView.AutoResizeColumn(2, ColumnHeaderAutoResizeStyle.ColumnContent);
-                }
+                }));
             }
-
+            else
+            {
+                inventoryListView.Items.Clear();
+                inventoryListView.Items.AddRange(listViewItemsResult.ToArray());
+                inventoryListView.AutoResizeColumn(2, ColumnHeaderAutoResizeStyle.ColumnContent);
+            }
         }
 
-        private async Task DownloadImageFromWeb(string imageUrl, string key, ImageList il)
+        private async Task DownloadImageFromWeb(IInventorySystem item, ImageList il, string? slug = null)
         {
+            var key = slug ?? item.Id;
             using (HttpClient client = new HttpClient())
             {
-                var response = await client.GetAsync(imageUrl);
+                var response = await client.GetAsync(item.GetImage());
                 response.EnsureSuccessStatusCode();
                 using (var respStream = await response.Content.ReadAsStreamAsync())
                 {

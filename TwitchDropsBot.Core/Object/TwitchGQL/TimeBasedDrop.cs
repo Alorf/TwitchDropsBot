@@ -1,6 +1,6 @@
 namespace TwitchDropsBot.Core.Object.TwitchGQL;
 
-public class TimeBasedDrop : IinventorySystem
+public class TimeBasedDrop : IInventorySystem
 {
     public string Id { get; set; }
     public string Name { get; set; }
@@ -11,11 +11,20 @@ public class TimeBasedDrop : IinventorySystem
     public Campaign Campaign { get; set; }
     public List<BenefitEdge> BenefitEdges { get; set; }
     public Game? Game { get; set; }
+    public string? GetGameImageUrl()
+    {
+        return Game?.BoxArtURL;
+    }
+    public string? GetGameSlug()
+    {
+        return Game?.Slug;
+    }
 
     public string GetGroup()
     {
         return Game?.DisplayName ?? Game?.Name ?? "Unknown";
     }
+
 
     public string GetImage()
     {

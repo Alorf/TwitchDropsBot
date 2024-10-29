@@ -133,7 +133,13 @@ namespace TwitchDropsBot.WinForms
 
         private async Task<ListViewGroup> AddGroup(IInventorySystem item)
         {
-            var ifExist = inventoryListView.Groups.Cast<ListViewGroup>().FirstOrDefault(group => group.Header == item.GetGroup());
+            ListViewGroup ifExist = null;
+
+            // Use a lock to ensure thread safety if this method is called from multiple threads
+            lock (inventoryListView.Groups)
+            {
+                ifExist = inventoryListView.Groups.Cast<ListViewGroup>().FirstOrDefault(group => group.Header == item.GetGroup());
+            }
 
             if (ifExist != null)
             {
@@ -143,30 +149,41 @@ namespace TwitchDropsBot.WinForms
             if (item.GetGameImageUrl() != null)
             {
                 var url = item.GetGameImageUrl();
-                //replace width and height
+                // Replace width and height
                 url = url.Replace("{width}", "16");
                 url = url.Replace("{height}", "16");
 
                 await DownloadImageFromWeb(item, gameImageList, item.GetGameSlug());
             }
 
-            ListViewGroup group = new ListViewGroup(item.GetGroup(), HorizontalAlignment.Left);
-            group.TitleImageKey = item.GetGameSlug();
-            group.CollapsedState = ListViewGroupCollapsedState.Collapsed;
+            ListViewGroup group = new ListViewGroup(item.GetGroup(), HorizontalAlignment.Left)
+            {
+                TitleImageKey = item.GetGameSlug(),
+                CollapsedState = ListViewGroupCollapsedState.Collapsed
+            };
+
+            // Add the new group to the collection
             if (inventoryListView.InvokeRequired)
             {
                 inventoryListView.Invoke(new Action(() =>
                 {
-                    inventoryListView.Groups.Add(group);
+                    lock (inventoryListView.Groups)
+                    {
+                        inventoryListView.Groups.Add(group);
+                    }
                 }));
             }
             else
             {
-                inventoryListView.Groups.Add(group);
+                lock (inventoryListView.Groups)
+                {
+                    inventoryListView.Groups.Add(group);
+                }
             }
 
             return group;
         }
+
 
         private async Task LoadInventoryAsync()
         {

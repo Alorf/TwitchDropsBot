@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Windows.Forms;
 using TwitchDropsBot.Core.Object;
 using TwitchDropsBot.Core.Object.TwitchGQL;
+using Action = System.Action;
 
 namespace TwitchDropsBot.WinForms
 {

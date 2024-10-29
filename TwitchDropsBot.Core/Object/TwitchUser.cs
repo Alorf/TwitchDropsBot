@@ -1,9 +1,10 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using TwitchDropsBot.Core.Utilities;
 using TwitchDropsBot.Core.Object.TwitchGQL;
-using System.Net.NetworkInformation;
-using System.Runtime.CompilerServices;
+using Discord.Webhook;
+using Discord;
 
 namespace TwitchDropsBot.Core.Object;
 
@@ -71,6 +72,24 @@ public class TwitchUser : INotifyPropertyChanged
     }
 
     public Action<string>? OnStatusChanged { get; set; }
+    private DiscordWebhookClient? discordWebhookClient { get; set; }
+    private string? _discordWebhookURl;
+    public string? DiscordWebhookURl
+    {
+        get
+        {
+            return _discordWebhookURl;
+        }
+        set
+        {
+            if (value != null)
+            {
+                _discordWebhookURl = value;
+                discordWebhookClient = new DiscordWebhookClient(_discordWebhookURl);
+                InitNotifications();
+            }
+        }
+    }
 
     public TwitchUser(string login, string id, string clientSecret, string uniqueId)
     {
@@ -85,6 +104,45 @@ public class TwitchUser : INotifyPropertyChanged
         FavouriteGames = new List<string>();
         OnlyFavouriteGames = false;
         StreamURL = null;
+    }
+
+    private void InitNotifications()
+    {
+        Logger.OnLog += async (message) =>
+            {
+                await SendWebhookAsync(new List<Embed>
+                {
+                    new EmbedBuilder()
+                        .WithTitle($"Log - {Login}")
+                        .WithDescription(message)
+                        .WithColor(Color.Green)
+                        .Build()
+                });
+            };
+
+            Logger.OnInfo += async (message) =>
+            {
+                await SendWebhookAsync(new List<Embed>
+                {
+                    new EmbedBuilder()
+                        .WithTitle($"Info - {Login}")
+                        .WithDescription(message)
+                        .WithColor(Color.Gold)
+                        .Build()
+                });
+            };
+
+            Logger.OnError += async (message) =>
+            {
+                await SendWebhookAsync(new List<Embed>
+                {
+                    new EmbedBuilder()
+                        .WithTitle($"Error - {Login}")
+                        .WithDescription(message)
+                        .WithColor(Color.Red)
+                        .Build()
+                });
+            };
     }
 
     /*
@@ -125,5 +183,18 @@ public class TwitchUser : INotifyPropertyChanged
         // Download the stream with head request
         HttpResponseMessage response3 = await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, lastLine2));
         response3.EnsureSuccessStatusCode();
+    }
+
+    public async Task SendWebhookAsync(List<Embed> embeds)
+    {
+        if (discordWebhookClient == null)
+        {
+            return;
+        }
+
+        foreach (var embed in embeds)
+        {
+            await discordWebhookClient.SendMessageAsync(embeds: new[] { embed }, avatarUrl: embed.Thumbnail.ToString());
+        }
     }
 }

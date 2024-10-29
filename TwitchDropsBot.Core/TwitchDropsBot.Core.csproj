@@ -7,6 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="Discord.Net.Webhook" Version="3.16.0" />
       <PackageReference Include="GraphQL.Client" Version="6.1.0" />
       <PackageReference Include="GraphQL.Client.Serializer.SystemTextJson" Version="6.1.0" />
       <PackageReference Include="System.Text.Json" Version="8.0.5" />

@@ -1,8 +1,11 @@
+using Discord.Webhook;
+using Discord;
 using System.Diagnostics;
 using TwitchDropsBot.Core.Exception;
 using TwitchDropsBot.Core.Object;
 using TwitchDropsBot.Core.Object.Config;
 using TwitchDropsBot.Core.Object.TwitchGQL;
+using Game = TwitchDropsBot.Core.Object.TwitchGQL.Game;
 
 namespace TwitchDropsBot.Core;
 
@@ -127,6 +130,7 @@ public class Bot
 
                 if (string.IsNullOrEmpty(dropCurrentSession?.DropId) || dropCurrentSession.CurrentMinutesWatched == dropCurrentSession.requiredMinutesWatched)
                 {
+                    twitchUser.Logger.Log($"No time based drop found, watching 20sec to init the drop...");
                     await twitchUser.WatchStreamAsync(broadcaster.Login);
                     twitchUser.StreamURL = null;
                     await Task.Delay(TimeSpan.FromSeconds(20));
@@ -142,13 +146,13 @@ public class Bot
                     // idk why but sometimes CurrentMinutesWatched is > requiredMinutesWatched for some reason
                     if (currentTimeBasedDrop == null || dropCurrentSession?.CurrentMinutesWatched >= dropCurrentSession?.requiredMinutesWatched)
                     {
+                        twitchUser.Logger.Log($"Time based drop not found, skipping");
                         var toDelete = thingsToWatch.Find(x => x.Id == dropCampaign.Id);
                         thingsToWatch.Remove(toDelete);
                     }
                     else
                     {
                         twitchUser.Logger.Log($"Time based drops : {currentTimeBasedDrop?.Name}");
-
 
                         timeBasedDropFound = true;
                     }
@@ -167,7 +171,7 @@ public class Bot
                         timeBasedDropFound = true;
                     }
                 }
-            } 
+            }
 
             await Task.Delay(TimeSpan.FromSeconds(2));
         } while (!timeBasedDropFound);
@@ -244,6 +248,8 @@ public class Bot
 
             await Task.Delay(TimeSpan.FromSeconds(20));
         }
+
+        await NotifiateAsync();
     }
 
     public async Task<(AbstractCampaign? campaign, AbstractBroadcaster? broadcaster)> SelectBroadcasterAsync(
@@ -290,7 +296,7 @@ public class Bot
             }
 
             // Search for channel that potentially have the drops
-            Game game = await twitchUser.GqlRequest.FetchDirectoryPageGameAsync(campaign.Game.Slug);
+            Game game = await twitchUser.GqlRequest.FetchDirectoryPageGameAsync(campaign.Game.Slug, campaign is DropCampaign);
 
             // Select the channel that have the most viewers
             game.Streams.Edges = game.Streams.Edges.OrderByDescending(x => x.Node.ViewersCount).ToList();
@@ -332,6 +338,34 @@ public class Bot
                 await Task.Delay(TimeSpan.FromSeconds(20));
             }
         }
+    }
+
+    private async Task NotifiateAsync()
+    {
+        var notifications = await twitchUser.GqlRequest.FetchNotificationsAsync(1);
+
+        List<Embed> embeds = new List<Embed>();
+
+        foreach (var edge in notifications.Edges)
+        {
+            //Search for the first action with the type "click"
+            var action = edge.Node.Actions.FirstOrDefault(x => x.Type == "click");
+
+            var description = System.Net.WebUtility.HtmlDecode(edge.Node.Body);
+
+            Embed embed = new EmbedBuilder()
+                .WithTitle("You received a new item!")
+                .WithDescription(edge.Node.Body)
+                .WithColor(new Color(2326507))
+                .WithThumbnailUrl(edge.Node.ThumbnailURL)
+                .WithUrl(action.Url)
+                .Build();
+
+            embeds.Add(embed);
+        }
+
+        await twitchUser.SendWebhookAsync(embeds);
+
     }
 
     private async Task CheckCancellation()

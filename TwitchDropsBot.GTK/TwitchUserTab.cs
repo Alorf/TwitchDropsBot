@@ -24,6 +24,7 @@ namespace TwitchDropsBot.GTK
         [UI] private Label dropLabel = null;
         [UI] private Label minutesRemainingLabel = null;
         [UI] private Label percentageLabel = null;
+        [UI] private Button reloadButton = null;
         [UI] private TextView twitchLoggerTextView = null;
         [UI] private LevelBar levelBar = null;
         [UI] private TreeView inventoryTreeView = null;
@@ -32,23 +33,31 @@ namespace TwitchDropsBot.GTK
         {
             this.twitchUser = twitchUser;
             twitchUser.PropertyChanged += TwitchUser_PropertyChanged;
+            reloadButton.Clicked += ReloadButton_Click;
 
             twitchUser.Logger.OnLog += (message) => AppendLog($"LOG: {message}");
             twitchUser.Logger.OnError += (message) => AppendLog($"ERROR: {message}");
             twitchUser.Logger.OnInfo += (message) => AppendLog($"INFO: {message}");
         }
-
-        private void AppendLog(string message)
+        private void ReloadButton_Click(object sender, EventArgs e)
         {
-            lock (logLock)
+            if (twitchUser.CancellationTokenSource != null &&
+                !twitchUser.CancellationTokenSource.IsCancellationRequested)
             {
-                Application.Invoke(delegate
-                {
-                    var buffer = twitchLoggerTextView.Buffer;
-                    buffer.Text += $"[{DateTime.Now}] {message}{Environment.NewLine}";
-                    twitchLoggerTextView.ScrollToIter(buffer.EndIter, 0, false, 0, 0);
-                });
+                twitchUser.Logger.Info("Reload requested");
+                twitchUser.CancellationTokenSource?.Cancel();
             }
+        }
+
+        private Task AppendLog(string message)
+        {
+            Application.Invoke(delegate
+            {
+                var buffer = twitchLoggerTextView.Buffer;
+                buffer.Text += $"[{DateTime.Now}] {message}{Environment.NewLine}";
+                twitchLoggerTextView.ScrollToIter(buffer.EndIter, 0, false, 0, 0);
+            });
+            return Task.CompletedTask;
         }
 
         private TwitchUserTab(Builder builder) : base(builder.GetRawOwnedObject("TwitchUserTab"))
@@ -198,10 +207,9 @@ namespace TwitchDropsBot.GTK
             var inventoryTreeStore = new TreeStore(typeof(Pixbuf), typeof(string), typeof(string));
             InitializeInventoryTreeView(inventoryTreeStore);
 
-            // Assuming twitchUser.Inventory is a collection of items with Name, Description, and ImageURL properties
-            var inventoryItems = twitchUser.Inventory?.GameEventDrops?.OrderBy(drop => drop.lastAwardedAt).Reverse().ToList() ?? new List<GameEventDrop>();
+            List<IInventorySystem> inventoryItems = new List<IInventorySystem>();
+            var gameEventDrops = twitchUser.Inventory?.GameEventDrops?.OrderBy(drop => drop.lastAwardedAt).Reverse().ToList() ?? new List<GameEventDrop>();
             var dropCampaignsInProgress = twitchUser.Inventory?.DropCampaignsInProgress;
-            var itemsList = new List<IinventorySystem>();
 
             if (dropCampaignsInProgress != null)
             {
@@ -221,33 +229,47 @@ namespace TwitchDropsBot.GTK
                     return itemList.ToList();
                 });
 
-                itemsList.AddRange(timeBasedDrops);
+                inventoryItems.AddRange(timeBasedDrops);
             }
 
-            itemsList.AddRange(inventoryItems);
+            inventoryItems.AddRange(gameEventDrops);
 
-            Application.Invoke(async delegate
+            Application.Invoke(delegate
             {
                 Dictionary<string, TreeIter> gameGroups = new Dictionary<string, TreeIter>();
+                List<Task<(Pixbuf, IInventorySystem)>> downloadTasks = new List<Task<(Pixbuf, IInventorySystem)>>();
 
-                foreach (var item in itemsList)
+                foreach (var item in inventoryItems)
                 {
-                    Pixbuf imagePixbuf = await DownloadImageFromWeb(item.GetImage());
-                    imagePixbuf = imagePixbuf.ScaleSimple(64, 64, InterpType.Bilinear);
-
-                    var gameName = item.GetGroup();
-                    if (!gameGroups.ContainsKey(gameName))
+                    downloadTasks.Add(Task.Run(async () =>
                     {
-                        // Create a new group for the game
-                        var gameIter = inventoryTreeStore.AppendValues(null, gameName, null);
-                        gameGroups[gameName] = gameIter;
-                    }
-
-                    inventoryTreeStore.AppendValues(gameGroups[gameName], imagePixbuf, item.GetName(), item.GetStatus());
+                        var imagePixbuf = await DownloadImageFromWeb(item.GetImage());
+                        imagePixbuf = imagePixbuf.ScaleSimple(64, 64, InterpType.Bilinear);
+                        return (imagePixbuf, item);
+                    }));
                 }
-            });
 
-            inventoryTreeView.ShowAll();
+                Task.WhenAll(downloadTasks).ContinueWith(t =>
+                {
+                    Application.Invoke(delegate
+                    {
+                        foreach (var task in t.Result)
+                        {
+                            var (imagePixbuf, item) = task;
+                            var gameName = item.GetGroup();
+                            if (!gameGroups.ContainsKey(gameName))
+                            {
+                                // Create a new group for the game
+                                var gameIter = inventoryTreeStore.AppendValues(null, gameName, null);
+                                gameGroups[gameName] = gameIter;
+                            }
+
+                            inventoryTreeStore.AppendValues(gameGroups[gameName], imagePixbuf, item.GetName(), item.GetStatus());
+                        }
+                        inventoryTreeView.ShowAll();
+                    });
+                });
+            });
         }
 
         private async Task<Pixbuf> DownloadImageFromWeb(string imageUrl)

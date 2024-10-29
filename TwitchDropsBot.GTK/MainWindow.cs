@@ -39,6 +39,8 @@ namespace TwitchDropsBot.GTK
         {
             AppConfig config = AppConfig.GetConfig();
 
+            addAccountButton.Clicked += buttonAddNewAccount_Click;
+
             // Set the checkbox values
             launchOnStartupCheckbox.Active = config.LaunchOnStartup;
             onlyFavouritesCheckbox.Active = config.OnlyFavouriteGames;
@@ -83,6 +85,33 @@ namespace TwitchDropsBot.GTK
 
             InitEvents();
             InitButtons();
+        }
+
+        private void buttonAddNewAccount_Click(object sender, EventArgs e)
+        {
+            AuthDevice authDevice = new AuthDevice();
+            ResponseType response = (ResponseType)authDevice.Run();
+
+            switch (response)
+            {
+                case ResponseType.DeleteEvent:
+                    authDevice.Destroy();
+                    Application.Quit();
+                    break;
+                default:
+                    authDevice.Destroy();
+                    break;
+            }
+
+            // Create a bot for the new user
+            AppConfig config = AppConfig.GetConfig();
+            ConfigUser user = config.Users.Last();
+            TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId);
+
+            StartBot(twitchUser);
+
+            usersNotebook.AppendPage(CreateTabPage(twitchUser), new Label(twitchUser.Login));
+            usersNotebook.ShowAll();
         }
 
         private void InitEvents()
@@ -168,7 +197,7 @@ namespace TwitchDropsBot.GTK
                 newRow.ShowAll();
                 favGameListBox.Add(newRow);
                 favGameListBox.ShowAll();
-                favGameListBox.SelectRow(newRow);
+                SelectGameInList(gameName);
             };
 
             deleteButton.Clicked += (sender, args) =>
@@ -250,6 +279,7 @@ namespace TwitchDropsBot.GTK
 
         private void SelectGameInList(string gameName)
         {
+            favGameListBox.UnselectAll();
             foreach (ListBoxRow row in favGameListBox.Children)
             {
                 if (((Label)row.Child).Text == gameName)
@@ -361,7 +391,6 @@ namespace TwitchDropsBot.GTK
                 }
             });
         }
-
         private Widget CreateTabPage(TwitchUser twitchUser)
         {
             //return userNotebook first page

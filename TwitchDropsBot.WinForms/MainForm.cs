@@ -17,6 +17,8 @@ namespace TwitchDropsBot.WinForms
         public MainForm()
         {
             InitializeComponent();
+            this.SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
+            this.UpdateStyles();
 
             AppConfig config = AppConfig.GetConfig();
 
@@ -174,158 +176,9 @@ namespace TwitchDropsBot.WinForms
 
         private TabPage CreateTabPage(TwitchUser twitchUser)
         {
-            var tabPage = new TabPage
-            {
-                Text = twitchUser.Login
-            };
+            var userTab = new TwitchUserTab(twitchUser);
 
-            tabPage.BackColor = Color.White;
-
-            var twitchUserLogger = new TextBox
-            {
-                Location = new Point(6, 6),
-                Multiline = true,
-                ReadOnly = true,
-                ScrollBars = ScrollBars.Vertical,
-                Size = new Size(578, 328)
-            };
-
-            var labelGame = new Label
-            {
-                BackColor = System.Drawing.Color.Transparent,
-                Location = new Point(6, 349),
-                Size = new Size(284, 35),
-                TextAlign = ContentAlignment.MiddleLeft,
-                Text = "Game : N/A",
-            };
-
-            var labelDrop = new Label
-            {
-                BackColor = System.Drawing.Color.Transparent,
-                Location = new Point(6, 395),
-                Size = new Size(284, 35),
-                TextAlign = ContentAlignment.MiddleLeft,
-                Text = $"Drop : N/A"
-            };
-
-            var labelPercentage = new Label
-            {
-                BackColor = System.Drawing.Color.Transparent,
-                Location = new Point(6, 453),
-                Size = new Size(578, 16),
-                TextAlign = ContentAlignment.MiddleCenter,
-                Text = "-%"
-            };
-
-            var labelMinRemaining = new Label()
-            {
-                BackColor = System.Drawing.Color.Transparent,
-                Location = new Point(334, 453),
-                Size = new Size(250, 19),
-                TextAlign = ContentAlignment.MiddleCenter,
-                Text = "Minutes remaining : -"
-            };
-
-            var progressBar = new ProgressBar()
-            {
-                Location = new Point(6, 475),
-                Size = new Size(578, 23),
-                Value = 0
-            };
-
-            var reloadButton = new Button
-            {
-                Location = new Point(296, 349),
-                Size = new Size(284, 35),
-                Text = "Reload",
-                UseVisualStyleBackColor = true
-            };
-
-            reloadButton.Click += (sender, e) =>
-            {
-                if (twitchUser.CancellationTokenSource != null &&
-                    !twitchUser.CancellationTokenSource.IsCancellationRequested)
-                {
-                    twitchUser.Logger.Info("Reload requested");
-                    twitchUser.CancellationTokenSource?.Cancel();
-                }
-            };
-
-            tabPage.Controls.Add(twitchUserLogger);
-            tabPage.Controls.Add(labelGame);
-            tabPage.Controls.Add(labelDrop);
-            tabPage.Controls.Add(labelMinRemaining);
-            tabPage.Controls.Add(labelPercentage);
-            tabPage.Controls.Add(progressBar);
-            tabPage.Controls.Add(reloadButton);
-
-            // Timer to update the controls periodically
-            var timer = new System.Windows.Forms.Timer
-            {
-                Interval = 1000
-            };
-
-            timer.Tick += (sender, e) =>
-            {
-                switch (twitchUser.Status)
-                {
-                    case BotStatus.Idle:
-                    case BotStatus.Seeking:
-                        // reset every label
-                        labelGame.Text = $"Game : N/A";
-                        labelDrop.Text = $"Drop : N/A";
-                        labelPercentage.Text = "-%";
-                        labelMinRemaining.Text = "Minutes remaining : -";
-                        progressBar.Value = 0;
-                        break;
-                    default:
-                        labelGame.Text = $"Game : {twitchUser.CurrentCampaign?.Game.DisplayName}";
-                        labelDrop.Text = $"Drop : {twitchUser.CurrentTimeBasedDrop?.Name}";
-
-                        if (twitchUser.CurrendDropCurrentSession != null &&
-                            twitchUser.CurrendDropCurrentSession.requiredMinutesWatched > 0)
-                        {
-                            var percentage = (int)((twitchUser.CurrendDropCurrentSession.CurrentMinutesWatched /
-                                                    (double)twitchUser.CurrendDropCurrentSession
-                                                        .requiredMinutesWatched) * 100);
-
-                            if (percentage > 100) // for some reason it gave me 101 sometimes
-                            {
-                                percentage = 100;
-                            }
-
-                            progressBar.Value = percentage;
-                            labelPercentage.Text = $"{percentage}%";
-                            labelMinRemaining.Text =
-                                $"Minutes remaining : {twitchUser.CurrendDropCurrentSession.requiredMinutesWatched - twitchUser.CurrendDropCurrentSession.CurrentMinutesWatched}";
-                        }
-
-                        break;
-                }
-            };
-
-            timer.Start();
-
-            twitchUser.Logger.OnLog += (message) => AppendLog($"LOG: {message}");
-            twitchUser.Logger.OnError += (message) => AppendLog($"ERROR: {message}");
-            twitchUser.Logger.OnInfo += (message) => AppendLog($"INFO: {message}");
-
-            void AppendLog(string message)
-            {
-                if (twitchUserLogger.InvokeRequired)
-                {
-                    twitchUserLogger.Invoke(new Action(() =>
-                    {
-                        twitchUserLogger.AppendText($"[{DateTime.Now}] {message}{Environment.NewLine}");
-                    }));
-                }
-                else
-                {
-                    twitchUserLogger.AppendText($"[{DateTime.Now}] {message}{Environment.NewLine}");
-                }
-            }
-
-            return tabPage;
+            return userTab.TabPage;
         }
 
         private void checkBoxStartup_CheckedChanged(object sender, EventArgs e)

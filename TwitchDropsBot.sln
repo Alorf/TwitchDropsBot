@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TwitchDropsBot.Core", "Twit
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TwitchDropsBot.Console", "TwitchDropsBot.Console\TwitchDropsBot.Console.csproj", "{8D2953E1-9C01-495B-898D-F33899419CDC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchDropsBot.WinForms", "TwitchDropsBot.WinForms\TwitchDropsBot.WinForms.csproj", "{74C16BFF-14D3-4BDB-AC11-C7AC2D2994A2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TwitchDropsBot.WinForms", "TwitchDropsBot.WinForms\TwitchDropsBot.WinForms.csproj", "{74C16BFF-14D3-4BDB-AC11-C7AC2D2994A2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

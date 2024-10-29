@@ -25,7 +25,6 @@ public class Bot
         twitchUser.OnlyFavouriteGames = appConfig.OnlyFavouriteGames;
         twitchUser.OnlyConnectedAccounts = appConfig.OnlyConnectedAccounts;
 
-        twitchUser.Status = BotStatus.Seeking;
 
         // Get drops campaign
         List<DropCampaign> dropCampaigns = await twitchUser.GqlRequest.FetchDropsAsync();
@@ -33,6 +32,10 @@ public class Bot
         List<RewardCampaignsAvailableToUser> rewardCampaignsAvailableToUser = await twitchUser.GqlRequest.FetchRewardCampaignsAvailableToUserAsync();
         // Get inventory
         Inventory? inventory = await twitchUser.GqlRequest.FetchInventoryDropsAsync();
+        twitchUser.Inventory = inventory;
+
+        twitchUser.Status = BotStatus.Seeking;
+
 
         List<AbstractCampaign> thingsToWatch = new List<AbstractCampaign>();
 
@@ -183,7 +186,7 @@ public class Bot
         int stuckCounter = 0;
         int previousMinuteWatched = 0;
         var minuteWatched = dropCurrentSession.CurrentMinutesWatched;
-        twitchUser.CurrendDropCurrentSession = dropCurrentSession;
+        twitchUser.CurrentDropCurrentSession = dropCurrentSession;
 
         while (minuteWatched <
                (minutes ?? dropCurrentSession.requiredMinutesWatched) || dropCurrentSession.requiredMinutesWatched == 0) // While all the drops are not claimed
@@ -206,7 +209,7 @@ public class Bot
                 dropCurrentSession =
                     await twitchUser.GqlRequest.FetchCurrentSessionContextAsync(broadcaster);
 
-                twitchUser.CurrendDropCurrentSession = dropCurrentSession;
+                twitchUser.CurrentDropCurrentSession = dropCurrentSession;
             }
             catch (System.Exception e)
             {

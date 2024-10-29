@@ -44,6 +44,7 @@ namespace TwitchDropsBot.WinForms
             foreach (ConfigUser user in config.Users)
             {
                 TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId);
+                twitchUser.DiscordWebhookURl = config.WebhookURL;
 
                 StartBot(twitchUser);
                 tabControl1.TabPages.Add(CreateTabPage(twitchUser));
@@ -466,6 +467,7 @@ namespace TwitchDropsBot.WinForms
             AppConfig config = AppConfig.GetConfig();
             ConfigUser user = config.Users.Last();
             TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId);
+            twitchUser.DiscordWebhookURl = config.WebhookURL;
 
             StartBot(twitchUser);
 

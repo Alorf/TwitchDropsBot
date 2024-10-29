@@ -1,8 +1,11 @@
+using Discord.Webhook;
+using Discord;
 using System.Diagnostics;
 using TwitchDropsBot.Core.Exception;
 using TwitchDropsBot.Core.Object;
 using TwitchDropsBot.Core.Object.Config;
 using TwitchDropsBot.Core.Object.TwitchGQL;
+using Game = TwitchDropsBot.Core.Object.TwitchGQL.Game;
 
 namespace TwitchDropsBot.Core;
 
@@ -242,6 +245,8 @@ public class Bot
 
             await Task.Delay(TimeSpan.FromSeconds(20));
         }
+
+        await NotifiateAsync();
     }
 
     public async Task<(AbstractCampaign? campaign, AbstractBroadcaster? broadcaster)> SelectBroadcasterAsync(
@@ -330,6 +335,34 @@ public class Bot
                 await Task.Delay(TimeSpan.FromSeconds(20));
             }
         }
+    }
+
+    private async Task NotifiateAsync()
+    {
+        var notifications = await twitchUser.GqlRequest.FetchNotificationsAsync(1);
+
+        List<Embed> embeds = new List<Embed>();
+
+        foreach (var edge in notifications.Edges)
+        {
+            //Search for the first action with the type "click"
+            var action = edge.Node.Actions.FirstOrDefault(x => x.Type == "click");
+
+            var description = System.Net.WebUtility.HtmlDecode(edge.Node.Body);
+
+            Embed embed = new EmbedBuilder()
+                .WithTitle("You received a new item!")
+                .WithDescription(edge.Node.Body)
+                .WithColor(new Color(2326507))
+                .WithThumbnailUrl(edge.Node.ThumbnailURL)
+                .WithUrl(action.Url)
+                .Build();
+
+            embeds.Add(embed);
+        }
+
+        await twitchUser.SendWebhookAsync(embeds);
+
     }
 
     private async Task CheckCancellation()

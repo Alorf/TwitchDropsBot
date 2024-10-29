@@ -12,6 +12,8 @@ public class User : AbstractBroadcaster
 
     public DropCurrentSession DropCurrentSession { get; set; }
 
+    public Notifications Notifications { get; set; }
+
     public Inventory Inventory { get; set; }
 
     public bool IsLive()

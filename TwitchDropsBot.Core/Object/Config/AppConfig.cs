@@ -11,6 +11,7 @@ public class AppConfig
     public bool LaunchOnStartup { get; set; }
     public bool MinimizeInTray{ get; set; }
     public bool OnlyConnectedAccounts { get; set; }
+    public string? WebhookURL { get; set; }
     public static TwitchClient TwitchClient { get; } = TwitchClientType.ANDROID_APP;
 
     public AppConfig()

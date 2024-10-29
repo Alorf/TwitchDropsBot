@@ -230,6 +230,36 @@ public class GqlRequest
         return inventory;
     }
 
+    public async Task<Notifications?> FetchNotificationsAsync(int? limit = 10)
+    {
+        var query = new GraphQLRequest
+        {
+            OperationName = "OnsiteNotifications_ListNotifications",
+            Variables = new
+            {
+                cursor = "",
+                displayType = "VIEWER",
+                language = "en",
+                limit,
+                shouldLoadLastBroadcast = false
+            },
+            Extensions = new Dictionary<string, object?>
+            {
+                ["persistedQuery"] = new Dictionary<string, object>
+                {
+                    ["sha256Hash"] = "e709b905ddb963d7cf4a8f6760148926ecbd0eee0f2edc48d1cf17f3e87f6490",
+                    ["version"] = 1
+                }
+            }
+        };
+
+        dynamic? resp = await DoGQLRequestAsync(query);
+
+        var notifications = resp?.Data.CurrentUser.Notifications;
+
+        return notifications;
+    }
+
     public async Task<List<RewardCampaignsAvailableToUser>> FetchRewardCampaignsAvailableToUserAsync()
     {
         var query = new GraphQLRequest

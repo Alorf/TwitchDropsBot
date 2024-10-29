@@ -63,7 +63,7 @@ namespace TwitchDropsBot.GTK
 
                 switch (response)
                 {
-                    case ResponseType.DeleteEvent:
+                    case ResponseType.Cancel:
                         authDevice.Destroy();
                         Application.Quit();
                         break;
@@ -94,9 +94,9 @@ namespace TwitchDropsBot.GTK
 
             switch (response)
             {
-                case ResponseType.DeleteEvent:
+                case ResponseType.Cancel:
                     authDevice.Destroy();
-                    Application.Quit();
+                    return;
                     break;
                 default:
                     authDevice.Destroy();

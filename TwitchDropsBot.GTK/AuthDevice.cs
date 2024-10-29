@@ -1,17 +1,10 @@
 using Gtk;
 using System;
 using TwitchDropsBot.Core.Object.Config;
-using TwitchDropsBot.Core.Object;
 using UI = Gtk.Builder.ObjectAttribute;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using TwitchDropsBot.Core;
-using TwitchDropsBot.Core.Exception;
-using System.Linq;
-using Microsoft.Win32;
-using System.Reflection;
-using TwitchDropsBot.Core.Object.TwitchGQL;
 using TwitchDropsBot.Core.Utilities;
 
 namespace TwitchDropsBot.GTK
@@ -22,6 +15,7 @@ namespace TwitchDropsBot.GTK
         [UI] private LinkButton linkButton;
         [UI] private Label codeLabel;
         [UI] private Label statusLabel;
+        [UI] private Button closeButton;
 
         private string? code;
         private CancellationTokenSource? cts;
@@ -34,7 +28,7 @@ namespace TwitchDropsBot.GTK
         {
             builder.Autoconnect(this);
 
-            DeleteEvent += Window_DeleteEvent;
+            closeButton.Clicked += AuthDevice_Disposed;
             Close += AuthDevice_Disposed;
 
             Shown += authDevice_Shown;
@@ -46,12 +40,9 @@ namespace TwitchDropsBot.GTK
             {
                 cts.Cancel();
                 cts.Dispose();
+                this.Respond(Gtk.ResponseType.Cancel);
+                Destroy();
             }
-        }
-
-        private void Window_DeleteEvent(object sender, DeleteEventArgs a)
-        {
-            Application.Quit();
         }
 
         private async void authDevice_Shown(object sender, EventArgs e)

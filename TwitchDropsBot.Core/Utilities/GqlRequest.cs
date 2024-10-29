@@ -29,7 +29,7 @@ public class GqlRequest
         httpClient.DefaultRequestHeaders.Add("Origin", twitchClient.URL);
         httpClient.DefaultRequestHeaders.Add("Referer", twitchClient.URL);
         httpClient.DefaultRequestHeaders.Add("User-Agent", userAgent);
-        
+
         graphQLClient =
             new GraphQLHttpClient("https://gql.twitch.tv/gql", new SystemTextJsonSerializer(), httpClient);
     }
@@ -94,15 +94,15 @@ public class GqlRequest
                 twitchUser.Id
             }
         };
-        
+
         dynamic? resp = await DoGQLRequestAsync(query, null, "FetchDrops");
-        
+
         if (resp != null)
         {
             var dropCampaigns = resp.Data.User.DropCampaigns;
-            
-            dropCampaigns = ((List<DropCampaign>) dropCampaigns).FindAll(dropCampaign => dropCampaign is { Status: "ACTIVE" });
-            
+
+            dropCampaigns = ((List<DropCampaign>)dropCampaigns).FindAll(dropCampaign => dropCampaign is { Status: "ACTIVE" });
+
             List<string> favGames = twitchUser.FavouriteGames;
             foreach (var favGame in favGames)
             {
@@ -213,17 +213,52 @@ public class GqlRequest
                 twitchUser.Id
             }
         };
-        
+
         dynamic? resp = await DoGQLRequestAsync(query, null, "FetchInventoryDrops");
 
         Inventory inventory = resp?.Data.User.Inventory;
 
-        foreach (var dropCampaign in inventory.DropCampaignsInProgress)
+        if (inventory?.DropCampaignsInProgress == null)
+        {
+            inventory.DropCampaignsInProgress = new List<DropCampaign>();
+        }
+
+        foreach (var dropCampaign in inventory?.DropCampaignsInProgress)
         {
             dropCampaign.TimeBasedDrops = dropCampaign.TimeBasedDrops.OrderBy(drop => drop.RequiredMinutesWatched).ToList();
         }
 
         return inventory;
+    }
+
+    public async Task<Notifications?> FetchNotificationsAsync(int? limit = 10)
+    {
+        var query = new GraphQLRequest
+        {
+            OperationName = "OnsiteNotifications_ListNotifications",
+            Variables = new
+            {
+                cursor = "",
+                displayType = "VIEWER",
+                language = "en",
+                limit,
+                shouldLoadLastBroadcast = false
+            },
+            Extensions = new Dictionary<string, object?>
+            {
+                ["persistedQuery"] = new Dictionary<string, object>
+                {
+                    ["sha256Hash"] = "e709b905ddb963d7cf4a8f6760148926ecbd0eee0f2edc48d1cf17f3e87f6490",
+                    ["version"] = 1
+                }
+            }
+        };
+
+        dynamic? resp = await DoGQLRequestAsync(query);
+
+        var notifications = resp?.Data.CurrentUser.Notifications;
+
+        return notifications;
     }
 
     public async Task<List<RewardCampaignsAvailableToUser>> FetchRewardCampaignsAvailableToUserAsync()
@@ -279,7 +314,7 @@ public class GqlRequest
 
         if (resp != null)
         {
-            
+
             List<RewardCampaignsAvailableToUser> rewardCampaigns = resp.Data.RewardCampaignsAvailableToUser;
 
             rewardCampaigns = rewardCampaigns.FindAll(rewardCampaign => rewardCampaign.UnlockRequirements?.MinuteWatchedGoal != 0);
@@ -306,7 +341,7 @@ public class GqlRequest
         return new List<RewardCampaignsAvailableToUser>();
     }
 
-    public async Task<Game?> FetchDirectoryPageGameAsync(string slug)
+    public async Task<Game?> FetchDirectoryPageGameAsync(string slug, bool mustHaveDrops)
     {
         var query = new GraphQLRequest
         {
@@ -327,7 +362,7 @@ public class GqlRequest
                     // freeformTags = null,
                     tags = new List<string>(),
                     broadcasterLanguages = new List<string>(),
-                    systemFilters = new List<string>() { "DROPS_ENABLED" }
+                    systemFilters = mustHaveDrops ? new List<string>() { "DROPS_ENABLED" } : null
                 },
                 includeIsDJ = true,
                 sortTypeIsRecency = false,
@@ -343,7 +378,7 @@ public class GqlRequest
                 }
             }
         };
-        
+
         dynamic? resp = await DoGQLRequestAsync(query);
 
         return resp?.Data.Game;
@@ -372,7 +407,7 @@ public class GqlRequest
                 }
             }
         };
-        
+
         dynamic? resp = await DoGQLRequestAsync(query);
 
         return resp?.Data.StreamPlaybackAccessToken;
@@ -396,9 +431,9 @@ public class GqlRequest
                 }
             }
         };
-        
+
         dynamic? resp = await DoGQLRequestAsync(query);
-        
+
         return resp?.Data.User;
     }
 
@@ -421,7 +456,7 @@ public class GqlRequest
                 }
             }
         };
-        
+
         dynamic? resp = await DoGQLRequestAsync(query);
 
         return resp?.Data.CurrentUser.DropCurrentSession;
@@ -450,7 +485,7 @@ public class GqlRequest
         };
 
         var customHeaders = new HttpClient();
-        
+
         customHeaders.DefaultRequestHeaders.Add("Authorization", "OAuth " + twitchUser.ClientSecret);
         customHeaders.DefaultRequestHeaders.Add("client-id", twitchClient.ClientID);
         customHeaders.DefaultRequestHeaders.Add("client-session-id", clientSessionId);
@@ -461,7 +496,7 @@ public class GqlRequest
 
         var redeemGraphQLClient =
             new GraphQLHttpClient("https://gql.twitch.tv/gql", new SystemTextJsonSerializer(), customHeaders);
-        
+
         dynamic? resp = await DoGQLRequestAsync(query, redeemGraphQLClient);
 
         return resp != null;
@@ -473,13 +508,13 @@ public class GqlRequest
         client ??= graphQLClient;
         name ??= query.OperationName;
 
-        
+
         for (int i = 0; i < limit; i++)
         {
             try
             {
                 var graphQLResponse = await client.SendQueryAsync<ResponseType>(query);
-                
+
                 if (graphQLResponse.Errors != null)
                 {
                     twitchUser.Logger.Info($"Failed to execute the query {name}");
@@ -490,26 +525,27 @@ public class GqlRequest
 
                     throw new System.Exception();
                 }
-                
+
                 return graphQLResponse;
-                
-            }catch (System.Exception e)
+
+            }
+            catch (System.Exception e)
             {
                 if (i == 4)
                 {
-                    throw new System.Exception($"Failed to execute the query {name} (attempt {i+1}/{limit}).");
+                    throw new System.Exception($"Failed to execute the query {name} (attempt {i + 1}/{limit}).");
                 }
-                
-                twitchUser.Logger.Error($"Failed to execute the query {name} (attempt {i+1}/{limit}).");
+
+                twitchUser.Logger.Error($"Failed to execute the query {name} (attempt {i + 1}/{limit}).");
                 SystemLogger.Error($"(${e.Message})");
-                
+
                 await Task.Delay(TimeSpan.FromSeconds(5));
-            }    
+            }
         }
 
         return null;
     }
-    
+
     private string GenerateClientSessionId(string chars, int length)
     {
         var random = new Random();

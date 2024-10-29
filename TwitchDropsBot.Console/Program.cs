@@ -20,6 +20,7 @@ TimeSpan waitingTime;
 foreach (ConfigUser user in config.Users)
 {
     TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId);
+    twitchUser.DiscordWebhookURl = config.WebhookURL;
 
     Bot bot = new Bot(twitchUser);
 

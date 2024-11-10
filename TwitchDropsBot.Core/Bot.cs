@@ -270,7 +270,7 @@ public class Bot
             {
                 List<Channel>? channels = dropCampaign.GetChannels();
 
-                if (channels != null && channels.Count >= 10)
+                if (channels != null && channels.Count <= 10)
                 {
                     foreach (var channel in channels)
                     {

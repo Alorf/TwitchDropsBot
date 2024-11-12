@@ -58,7 +58,15 @@ public class Bot
 
         if (twitchUser.OnlyFavouriteGames)
         {
-            thingsToWatch = thingsToWatch.Where(x => x.Game.IsFavorite).ToList();
+            thingsToWatch = thingsToWatch.Where(x =>
+            {
+                if (x.Game == null)
+                {
+                    return false;
+                }
+
+                return x.Game.IsFavorite;
+            }).ToList();
         }
 
         // Remove games from favourite list that are not in dropCampaigns

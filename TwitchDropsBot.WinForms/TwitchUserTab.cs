@@ -125,10 +125,13 @@ namespace TwitchDropsBot.WinForms
             // Handle the resize event to adjust column widths dynamically
             inventoryListView.Resize += (sender, e) =>
             {
-                int totalWidth = inventoryListView.Width;
-                inventoryListView.Columns[0].Width = (int)(totalWidth * 0.3);
-                inventoryListView.Columns[1].Width = (int)(totalWidth * 0.45);
-                inventoryListView.Columns[2].Width = (int)(totalWidth * 0.1);
+                if (inventoryListView.Columns.Count >= 3)
+                {
+                    int totalWidth = inventoryListView.Width;
+                    inventoryListView.Columns[0].Width = (int)(totalWidth * 0.3);
+                    inventoryListView.Columns[1].Width = (int)(totalWidth * 0.45);
+                    inventoryListView.Columns[2].Width = (int)(totalWidth * 0.1);
+                }
             };
         }
 

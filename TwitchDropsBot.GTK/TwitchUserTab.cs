@@ -205,7 +205,11 @@ namespace TwitchDropsBot.GTK
         private async Task LoadInventoryAsync()
         {
             var inventoryTreeStore = new TreeStore(typeof(Pixbuf), typeof(string), typeof(string));
-            InitializeInventoryTreeView(inventoryTreeStore);
+            Threads.AddIdle(0, () =>
+            {
+                InitializeInventoryTreeView(inventoryTreeStore);
+                return false;
+            });
 
             List<IInventorySystem> inventoryItems = new List<IInventorySystem>();
             var gameEventDrops = twitchUser.Inventory?.GameEventDrops?.OrderBy(drop => drop.lastAwardedAt).Reverse().ToList() ?? new List<GameEventDrop>();

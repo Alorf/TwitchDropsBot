@@ -34,189 +34,119 @@ public class GqlRequest
             new GraphQLHttpClient("https://gql.twitch.tv/gql", new SystemTextJsonSerializer(), httpClient);
     }
 
-    public async Task<List<DropCampaign>> FetchDropsAsync()
+    public async Task<List<AbstractCampaign>> FetchDropsAsync()
     {
         var query = new GraphQLRequest
         {
-            Query = @"
-                    query FetchDrops($login: String!, $id: ID!) {
-                        user(login: $login, id: $id) {
-                            dropCampaigns {
-                                id
-                                name
-                                game {
-                                    id
-                                    slug
-                                    displayName
-                                    boxArtURL
-                                }
-                                status
-                                startAt
-                                endAt
-                                self {
-                                    isAccountConnected
-                                }
-                                allow {
-                                    channels {
-                                        id
-                                        name
-                                        url
-                                    }
-                                }
-                                timeBasedDrops {
-                                    id
-                                    name
-                                    startAt
-                                    endAt
-                                    requiredMinutesWatched
-                                    self {
-                                        hasPreconditionsMet
-                                        currentMinutesWatched
-                                        isClaimed
-                                        dropInstanceID
-                                    }
-                                    campaign {
-                                        id
-                                        detailsURL
-                                        accountLinkURL
-                                        self {
-                                            isAccountConnected
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                ",
+            OperationName = "ViewerDropsDashboard",
             Variables = new
             {
-                twitchUser.Login,
-                twitchUser.Id
+                fetchRewardCampaigns = true,
+            },
+            Extensions = new Dictionary<string, object?>
+            {
+                ["persistedQuery"] = new Dictionary<string, object>
+                {
+                    ["sha256Hash"] = "5a4da2ab3d5b47c9f9ce864e727b2cb346af1e3ea8b897fe8f704a97ff017619",
+                    ["version"] = 1
+                }
             }
         };
 
-        dynamic? resp = await DoGQLRequestAsync(query, null, "FetchDrops");
+        dynamic? resp = await DoGQLRequestAsync(query);
 
         if (resp != null)
         {
-            var dropCampaigns = resp.Data.User.DropCampaigns;
+            List<AbstractCampaign> campaigns = new List<AbstractCampaign>();
+            List<DropCampaign> dropCampaigns = resp.Data.CurrentUser.DropCampaigns;
+            List<RewardCampaignsAvailableToUser> rewardCampaigns = resp.Data.RewardCampaignsAvailableToUser;
 
-            dropCampaigns = ((List<DropCampaign>)dropCampaigns).FindAll(dropCampaign => dropCampaign is { Status: "ACTIVE" });
+            dropCampaigns = dropCampaigns.FindAll(dropCampaign => dropCampaign is { Status: "ACTIVE" });
+            rewardCampaigns.RemoveAll(campaign => campaign.Game == null);
 
-            List<string> favGames = twitchUser.FavouriteGames;
-            foreach (var favGame in favGames)
+
+            //Select only campaigns with minute watched goal
+            rewardCampaigns = rewardCampaigns.FindAll(rewardCampaign => rewardCampaign.UnlockRequirements?.MinuteWatchedGoal != 0);
+
+            var favGamesSet = new HashSet<string>(twitchUser.FavouriteGames.Select(game => game.ToLower()));
+
+            foreach (var dropCampaign in dropCampaigns)
             {
-                foreach (var dropCampaign in dropCampaigns)
+                if (favGamesSet.Contains(dropCampaign.Game.DisplayName.ToLower()))
                 {
-                    if (dropCampaign.Game.DisplayName.ToLower().Equals(favGame.ToLower()) ||
-                        dropCampaign.Game.Slug.ToLower().Equals(favGame.ToLower()))
-                    {
-                        dropCampaign.Game.IsFavorite = true;
-                    }
+                    dropCampaign.Game.IsFavorite = true;
                 }
             }
 
-            return dropCampaigns;
+            foreach (var rewardCampaign in rewardCampaigns)
+            {
+                if (favGamesSet.Contains(rewardCampaign.Game.DisplayName.ToLower()))
+                {
+                    rewardCampaign.Game.IsFavorite = true;
+                }
+            }
+
+            campaigns.AddRange(dropCampaigns);
+            campaigns.AddRange(rewardCampaigns);
+
+            return campaigns;
         }
 
-        return new List<DropCampaign>();
+        return new List<AbstractCampaign>();
+    }
+
+    public async Task<DropCampaign?> FetchTimeBasedDropsAsync(string dropID)
+    {
+        var query = new GraphQLRequest
+        {
+            OperationName = "DropCampaignDetails",
+            Variables = new
+            {
+                dropID,
+                channelLogin = twitchUser.Id,
+            },
+            Extensions = new Dictionary<string, object?>
+            {
+                ["persistedQuery"] = new Dictionary<string, object>
+                {
+                    ["sha256Hash"] = "039277bf98f3130929262cc7c6efd9c141ca3749cb6dca442fc8ead9a53f77c1",
+                    ["version"] = 1
+                }
+            }
+        };
+
+        dynamic? resp = await DoGQLRequestAsync(query);
+
+        if (resp != null)
+        {
+            return resp.Data.User.DropCampaign;
+        }
+
+        return null;
     }
 
     public async Task<Inventory?> FetchInventoryDropsAsync()
     {
         var query = new GraphQLRequest
         {
-            Query = @"
-                    query FetchInventoryDrops($login: String!, $id: ID) {
-                        user(login: $login, id: $id) {
-                            inventory {
-                                dropCampaignsInProgress {
-                                    id
-                                    detailsURL
-                                    accountLinkURL
-                                    startAt
-                                    endAt
-                                    imageURL
-                                    name
-                                    status
-                                    self {
-                                        isAccountConnected
-                                    }
-                                    game {
-                                        id
-                                        slug
-                                        name
-                                        boxArtURL
-                                    }
-                                    allow {
-                                        channels {
-                                            id
-                                            name
-                                            url
-                                        }
-                                    }
-                                    eventBasedDrops {
-                                        id
-                                    }
-                                    timeBasedDrops {
-                                        id
-                                        name
-                                        startAt
-                                        endAt
-                                        requiredMinutesWatched
-                                        benefitEdges {
-                                            benefit {
-                                                id
-                                                imageAssetURL
-                                                name
-                                            }
-                                            entitlementLimit
-                                            claimCount
-                                        }
-                                        self {
-                                            hasPreconditionsMet
-                                            currentMinutesWatched
-                                            isClaimed
-                                            dropInstanceID
-                                        }
-                                        campaign {
-                                            id
-                                            detailsURL
-                                            accountLinkURL
-                                            self {
-                                                isAccountConnected
-                                            }
-                                        }
-                                    }
-                                }
-                                gameEventDrops {
-                                    id
-                                    name
-                                    game {
-                                        id
-                                        slug
-                                        displayName
-                                        boxArtURL
-                                    }
-                                    isConnected
-                                    totalCount
-                                    lastAwardedAt
-                                    imageURL
-                               }
-                            }
-                        }
-                    }
-                ",
+            OperationName = "Inventory",
             Variables = new
             {
-                twitchUser.Login,
-                twitchUser.Id
+                fetchRewardCampaigns = false,
+            },
+            Extensions = new Dictionary<string, object?>
+            {
+                ["persistedQuery"] = new Dictionary<string, object>
+                {
+                    ["sha256Hash"] = "09acb7d3d7e605a92bdfdcc465f6aa481b71c234d8686a9ba38ea5ed51507592",
+                    ["version"] = 1
+                }
             }
         };
 
-        dynamic? resp = await DoGQLRequestAsync(query, null, "FetchInventoryDrops");
+        dynamic? resp = await DoGQLRequestAsync(query);
 
-        Inventory inventory = resp?.Data.User.Inventory;
+        Inventory? inventory = resp?.Data.CurrentUser.Inventory;
 
         if (inventory?.DropCampaignsInProgress == null)
         {
@@ -259,86 +189,6 @@ public class GqlRequest
         var notifications = resp?.Data.CurrentUser.Notifications;
 
         return notifications;
-    }
-
-    public async Task<List<RewardCampaignsAvailableToUser>> FetchRewardCampaignsAvailableToUserAsync()
-    {
-        var query = new GraphQLRequest
-        {
-            Query = @"
-                    query {
-                        rewardCampaignsAvailableToUser {
-                            id,
-                            name,
-                            brand,
-                            startsAt,
-                            endsAt,
-                            status,
-                            summary,
-                            instructions,
-                            externalURL,
-                            rewardValueURLParam,
-                            aboutURL,
-                            isSitewide,
-                            game {
-                                id,
-                                slug,
-                                displayName
-                            },
-                            unlockRequirements {
-                                subsGoal,
-                                minuteWatchedGoal
-                            },
-                            image {
-                                    image1xURL
-                            },
-                            rewards {
-                                id,
-                                name,
-                                bannerImage {
-                                    image1xURL
-                                },
-                                thumbnailImage, {
-                                    image1xURL
-                                },
-                                earnableUntil,
-                                redemptionInstructions,
-                                redemptionURL
-                            },
-                        }
-                    }
-                "
-        };
-
-        dynamic? resp = await DoGQLRequestAsync(query, null, "FetchRewardCampaignsAvailableToUser");
-
-        if (resp != null)
-        {
-
-            List<RewardCampaignsAvailableToUser> rewardCampaigns = resp.Data.RewardCampaignsAvailableToUser;
-
-            rewardCampaigns = rewardCampaigns.FindAll(rewardCampaign => rewardCampaign.UnlockRequirements?.MinuteWatchedGoal != 0);
-
-            foreach (var rewardCampaign in rewardCampaigns)
-            {
-                if (rewardCampaign.Game != null)
-                {
-                    List<string> favGames = twitchUser.FavouriteGames;
-                    foreach (var favGame in favGames)
-                    {
-                        if (rewardCampaign.Game.DisplayName.ToLower().Equals(favGame.ToLower()) ||
-                            rewardCampaign.Game.Slug.ToLower().Equals(favGame.ToLower()))
-                        {
-                            rewardCampaign.Game.IsFavorite = true;
-                        }
-                    }
-                }
-            }
-
-            return rewardCampaigns;
-        }
-
-        return new List<RewardCampaignsAvailableToUser>();
     }
 
     public async Task<Game?> FetchDirectoryPageGameAsync(string slug, bool mustHaveDrops)
@@ -551,5 +401,18 @@ public class GqlRequest
         var random = new Random();
         return new string(Enumerable.Repeat(chars, length)
             .Select(s => s[random.Next(s.Length)]).ToArray());
+    }
+
+    public static string ToKebabCase(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return text;
+        }
+
+        text = text.Replace(" ", "-").Replace("_", "-");
+        text = text.ToLowerInvariant();
+
+        return text;
     }
 }

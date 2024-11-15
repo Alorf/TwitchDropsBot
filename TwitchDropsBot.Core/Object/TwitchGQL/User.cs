@@ -9,6 +9,7 @@ public class User : AbstractBroadcaster
 
     public BroadcastSettings BroadcastSettings { get; set; }
     public List<DropCampaign> DropCampaigns { get; set; }
+    public DropCampaign DropCampaign { get; set; }
 
     public DropCurrentSession DropCurrentSession { get; set; }
 

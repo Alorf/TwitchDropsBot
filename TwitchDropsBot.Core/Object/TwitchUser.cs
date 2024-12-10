@@ -86,7 +86,7 @@ public class TwitchUser : INotifyPropertyChanged
             {
                 _discordWebhookURl = value;
                 discordWebhookClient = new DiscordWebhookClient(_discordWebhookURl);
-                InitNotifications();
+                //InitNotifications();
             }
         }
     }

@@ -34,7 +34,7 @@ namespace TwitchDropsBot.GTK
             this.twitchUser = twitchUser;
             twitchUser.PropertyChanged += TwitchUser_PropertyChanged;
             reloadButton.Clicked += ReloadButton_Click;
-
+            
             twitchUser.Logger.OnLog += (message) => AppendLog($"LOG: {message}");
             twitchUser.Logger.OnError += (message) => AppendLog($"ERROR: {message}");
             twitchUser.Logger.OnInfo += (message) => AppendLog($"INFO: {message}");
@@ -53,9 +53,13 @@ namespace TwitchDropsBot.GTK
         {
             Application.Invoke(delegate
             {
-                var buffer = twitchLoggerTextView.Buffer;
-                buffer.Text += $"[{DateTime.Now}] {message}{Environment.NewLine}";
-                twitchLoggerTextView.ScrollToIter(buffer.EndIter, 0, false, 0, 0);
+                Threads.AddIdle(0, () =>
+                {
+                    var buffer = twitchLoggerTextView.Buffer;
+                    buffer.Text += $"[{DateTime.Now}] {message}{Environment.NewLine}";
+                    twitchLoggerTextView.ScrollToIter(buffer.EndIter, 0, false, 0, 0);
+                    return false;
+                });
             });
             return Task.CompletedTask;
         }
@@ -87,6 +91,7 @@ namespace TwitchDropsBot.GTK
 
         private async void TwitchUser_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
+            
             if (e.PropertyName == nameof(TwitchUser.Status))
             {
                 await UpdateUI(twitchUser.Status);
@@ -111,44 +116,55 @@ namespace TwitchDropsBot.GTK
         {
             await Task.Run(() =>
             {
-                switch (twitchUser.Status)
+                Threads.AddIdle(0, () =>
                 {
-                    case BotStatus.Idle:
-                    case BotStatus.Seeking:
-                        // reset every label
-                        gameLabel.Text = "Game : N/A";
-                        dropLabel.Text = "Drop : N/A";
-                        percentageLabel.Text = "-%";
-                        minutesRemainingLabel.Text = "Minutes remaining : -";
-                        levelBar.Value = 0;
-                        break;
-                    default:
-                        gameLabel.Text = $"Game : {twitchUser.CurrentCampaign?.Game.DisplayName}";
-                        dropLabel.Text = $"Drop : {twitchUser.CurrentTimeBasedDrop?.Name}";
-                        break;
-                }
+                    switch (twitchUser.Status)
+                    {
+                        case BotStatus.Idle:
+                        case BotStatus.Seeking:
+                            // reset every label
+                            gameLabel.Text = "Game : N/A";
+                            dropLabel.Text = "Drop : N/A";
+                            percentageLabel.Text = "-%";
+                            minutesRemainingLabel.Text = "Minutes remaining : -";
+                            levelBar.Value = 0;
+                            break;
+                        default:
+                            gameLabel.Text = $"Game : {twitchUser.CurrentCampaign?.Game.DisplayName}";
+                            dropLabel.Text = $"Drop : {twitchUser.CurrentTimeBasedDrop?.Name}";
+                            break;
+                    }
+
+                    return false;
+                });
             });
         }
 
         private void UpdateProgress()
         {
-            if (twitchUser.CurrentDropCurrentSession != null &&
-                twitchUser.CurrentDropCurrentSession.requiredMinutesWatched > 0)
+            Threads.AddIdle(0, () =>
             {
-                var percentage = (int)((twitchUser.CurrentDropCurrentSession.CurrentMinutesWatched /
-                                        (double)twitchUser.CurrentDropCurrentSession
-                                            .requiredMinutesWatched) * 100);
-
-                if (percentage > 100) // for some reason it gave me 101 sometimes
+                if (twitchUser.CurrentDropCurrentSession != null &&
+                    twitchUser.CurrentDropCurrentSession.requiredMinutesWatched > 0)
                 {
-                    percentage = 100;
+                    var percentage = (int)((twitchUser.CurrentDropCurrentSession.CurrentMinutesWatched /
+                                            (double)twitchUser.CurrentDropCurrentSession
+                                                .requiredMinutesWatched) * 100);
+
+                    if (percentage > 100) // for some reason it gave me 101 sometimes
+                    {
+                        percentage = 100;
+                    }
+
+                    levelBar.Value = percentage;
+                    percentageLabel.Text = $"{percentage}%";
+                    minutesRemainingLabel.Text =
+                        $"Minutes remaining : {twitchUser.CurrentDropCurrentSession.requiredMinutesWatched - twitchUser.CurrentDropCurrentSession.CurrentMinutesWatched}";
                 }
 
-                levelBar.Value = percentage;
-                percentageLabel.Text = $"{percentage}%";
-                minutesRemainingLabel.Text =
-                    $"Minutes remaining : {twitchUser.CurrentDropCurrentSession.requiredMinutesWatched - twitchUser.CurrentDropCurrentSession.CurrentMinutesWatched}";
-            }
+                return false;
+            });
+            
         }
 
         private void InitializeInventoryTreeView(TreeStore inventoryTreeStore)
@@ -255,6 +271,18 @@ namespace TwitchDropsBot.GTK
 
                 Task.WhenAll(downloadTasks).ContinueWith(t =>
                 {
+                    if (t.IsCanceled)
+                    {
+                        twitchUser.Logger.Info("LoadInventoryAsync was canceled.");
+                        return;
+                    }
+
+                    if (t.IsFaulted)
+                    {
+                        twitchUser.Logger.Error("An error occurred while loading inventory.");
+                        return;
+                    }
+
                     Application.Invoke(delegate
                     {
                         foreach (var task in t.Result)

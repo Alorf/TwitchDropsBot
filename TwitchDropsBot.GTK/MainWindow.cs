@@ -5,12 +5,16 @@ using TwitchDropsBot.Core.Object;
 using UI = Gtk.Builder.ObjectAttribute;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
 using TwitchDropsBot.Core;
 using TwitchDropsBot.Core.Exception;
 using System.Linq;
 using Microsoft.Win32;
 using System.Reflection;
+using Gdk;
+using Application = Gtk.Application;
+using Task = System.Threading.Tasks.Task;
+using Window = Gtk.Window;
+using Menu = Gtk.Menu;
 
 namespace TwitchDropsBot.GTK
 {
@@ -35,11 +39,26 @@ namespace TwitchDropsBot.GTK
 
         [UI] private Entry nameOfGameTextBox = null;
 
+        private StatusIcon trayIcon;
+        private Menu trayMenu;
+
         public MainWindow() : this(new Builder("MainWindow.glade"))
         {
+            var assembly = Assembly.GetExecutingAssembly();
+            Pixbuf icon = new Pixbuf(assembly, "TwitchDropsBot.GTK.images.logo.png");
+            trayIcon = new StatusIcon(icon);
+            //hide tray icon
+            trayIcon.Visible = false;
+
+            InitTrayMenu();
+
             AppConfig config = AppConfig.GetConfig();
 
             addAccountButton.Clicked += buttonAddNewAccount_Click;
+            putInTrayButton.Clicked += (sender, args) =>
+            {
+                putInTray();
+            };
 
             // Set the checkbox values
             launchOnStartupCheckbox.Active = config.LaunchOnStartup;
@@ -142,6 +161,10 @@ namespace TwitchDropsBot.GTK
             {
                 AppConfig config = AppConfig.GetConfig();
                 config.MinimizeInTray = putInTrayCheckbox.Active;
+
+                //Put the app in tray
+
+
                 AppConfig.SaveConfig(config);
             };
 
@@ -409,6 +432,54 @@ namespace TwitchDropsBot.GTK
         private void Window_DeleteEvent(object sender, DeleteEventArgs a)
         {
             Application.Quit();
+        }
+
+        private void InitTrayMenu()
+        {
+            trayMenu = new Gtk.Menu();
+
+            // Create menu items
+            MenuItem showItem = new MenuItem("Show");
+            showItem.Activated += (sender, e) =>
+            {
+                this.ShowAll();
+                this.Deiconify();
+            };
+
+            MenuItem exitItem = new MenuItem("Exit");
+            exitItem.Activated += (sender, e) =>
+            {
+                Application.Quit();
+            };
+
+            // Add items to the menu
+            trayMenu.Append(showItem);
+            trayMenu.Append(exitItem);
+
+            // Show all menu items
+            trayMenu.ShowAll();
+
+            trayIcon.PopupMenu += (o, args) =>
+            {
+                trayMenu.Popup();
+            };
+        }
+
+        private void putInTray()
+        {
+            this.Hide();
+
+            trayIcon.Visible = true;
+            trayIcon.TooltipText = "Twitch Drops Bot";
+
+
+            trayIcon.Activate += delegate
+            {
+                this.ShowAll();
+                this.Deiconify();
+                trayIcon.Visible = false;
+            };
+
         }
     }
 }

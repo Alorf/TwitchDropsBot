@@ -121,16 +121,16 @@ public class GqlRequest
 
         Inventory? inventory = resp?.Data.CurrentUser.Inventory;
 
+        if (inventory?.DropCampaignsInProgress == null)
+        {
+            inventory.DropCampaignsInProgress = new List<DropCampaign>();
+        }
+
         foreach (var dropCampaign in inventory.DropCampaignsInProgress)
         {
             dropCampaign.TimeBasedDrops = dropCampaign.TimeBasedDrops.OrderBy(drop => drop.RequiredMinutesWatched).ToList();
         }
 
-        if (inventory?.DropCampaignsInProgress == null)
-        {
-            inventory.DropCampaignsInProgress = new List<DropCampaign>();
-        }
-        
         return inventory;
     }
 
@@ -301,6 +301,8 @@ public class GqlRequest
 
     private async Task<dynamic?> DoGQLRequestAsync(GraphQLRequest query, GraphQLHttpClient? client = null, string? name = null)
     {
+        var avoidPrint = new List<string> { "Inventory", "ViewerDropsDashboard", "DirectoryPage_Game" };
+
         int limit = 5;
         client ??= graphQLClient;
         name ??= query.OperationName;
@@ -321,6 +323,18 @@ public class GqlRequest
 
                     throw new System.Exception();
                 }
+
+                if (!avoidPrint.Contains(name))
+                {
+                    var options = new JsonSerializerOptions
+                    {
+                        WriteIndented = false
+                    };
+                    var json = JsonSerializer.Serialize(graphQLResponse.Data, options);
+                    twitchUser.Logger.Log(name, "REQ", ConsoleColor.Blue);
+                    twitchUser.Logger.Log(json, "REQ", ConsoleColor.Blue);
+                }
+
 
                 return graphQLResponse;
 

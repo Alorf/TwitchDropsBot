@@ -1,3 +1,4 @@
+using Discord;
 using TwitchDropsBot.Core.Object;
 
 namespace TwitchDropsBot.Core;
@@ -14,6 +15,15 @@ public class Logger
     {
         Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine($"[{TwitchUser.Login} - {DateTime.Now}] LOG : {message}");
+        Console.ResetColor();
+
+        OnLog?.Invoke(message);
+    }
+
+    public void Log(string message, string type, ConsoleColor color)
+    {
+        Console.ForegroundColor = color;
+        Console.WriteLine($"[{TwitchUser.Login} - {DateTime.Now}] {type} : {message}");
         Console.ResetColor();
 
         OnLog?.Invoke(message);

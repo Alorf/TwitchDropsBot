@@ -13,4 +13,10 @@
       <PackageReference Include="System.Text.Json" Version="8.0.5" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Update="Postman\TwitchSave.postman_collection.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
 </Project>

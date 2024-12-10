@@ -12,6 +12,6 @@ namespace TwitchDropsBot.Core.Object.TwitchGQL
         public string Name { get; set; }
 
         public Game? Game { get; set; }
-        public string Status { get; set; }
+        public string? Status { get; set; }
     }
 }

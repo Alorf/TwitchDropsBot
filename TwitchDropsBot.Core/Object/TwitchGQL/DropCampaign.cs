@@ -7,6 +7,7 @@ public class DropCampaign : AbstractCampaign
     public Self Self { get; set; }
     public Allow Allow { get; set; }
     public List<TimeBasedDrop> TimeBasedDrops { get; set; }
+    public Summary Summary { get; set; }
     
     public List<Channel>? GetChannels()
     {

@@ -1,0 +1,900 @@
+{
+	"info": {
+		"_postman_id": "def5d70b-cf18-48b8-8c1d-51ebb538913e",
+		"name": "Twitch",
+		"description": "Twitch GQL  \n  \nPersistent request used in TwitchDropsBot",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "29873939"
+	},
+	"item": [
+		{
+			"name": "authentication",
+			"item": [
+				{
+					"name": "AskCode",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "https://id.twitch.tv/oauth2/device?client_id={{client-id}}&scopes=channel_read chat:read user_blocks_edit user_blocks_read user_follows_edit user_read",
+							"protocol": "https",
+							"host": [
+								"id",
+								"twitch",
+								"tv"
+							],
+							"path": [
+								"oauth2",
+								"device"
+							],
+							"query": [
+								{
+									"key": "client_id",
+									"value": "{{client-id}}"
+								},
+								{
+									"key": "scopes",
+									"value": "channel_read chat:read user_blocks_edit user_blocks_read user_follows_edit user_read"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "AskCode Copy",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "https://id.twitch.tv/oauth2/token?client_id={{client-id}}&device_code={{device_code}}&grant_type=urn:ietf:params:oauth:grant-type:device_code",
+							"protocol": "https",
+							"host": [
+								"id",
+								"twitch",
+								"tv"
+							],
+							"path": [
+								"oauth2",
+								"token"
+							],
+							"query": [
+								{
+									"key": "client_id",
+									"value": "{{client-id}}"
+								},
+								{
+									"key": "device_code",
+									"value": "{{device_code}}"
+								},
+								{
+									"key": "grant_type",
+									"value": "urn:ietf:params:oauth:grant-type:device_code"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Inventory",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "client-id",
+						"value": "{{clientId}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"operationName\": \"Inventory\",\r\n    \"variables\": {\r\n        \"fetchRewardCampaigns\": false\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"09acb7d3d7e605a92bdfdcc465f6aa481b71c234d8686a9ba38ea5ed51507592\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://gql.twitch.tv/gql",
+					"protocol": "https",
+					"host": [
+						"gql",
+						"twitch",
+						"tv"
+					],
+					"path": [
+						"gql"
+					]
+				},
+				"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+			},
+			"response": []
+		},
+		{
+			"name": "ViewerDropsDashboard",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "client-id",
+						"value": "{{clientId}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"operationName\": \"ViewerDropsDashboard\",\r\n    \"variables\": {\r\n        \"fetchRewardCampaigns\": true\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"5a4da2ab3d5b47c9f9ce864e727b2cb346af1e3ea8b897fe8f704a97ff017619\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://gql.twitch.tv/gql",
+					"protocol": "https",
+					"host": [
+						"gql",
+						"twitch",
+						"tv"
+					],
+					"path": [
+						"gql"
+					]
+				},
+				"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+			},
+			"response": []
+		},
+		{
+			"name": "DropCampaignDetails",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "client-id",
+						"value": "{{clientId}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"operationName\": \"DropCampaignDetails\",\r\n    \"variables\": {\r\n        \"dropID\": \"{{dropDetailsId}}\",\r\n        \"channelLogin\" : \"{{channelLoginId}}\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"039277bf98f3130929262cc7c6efd9c141ca3749cb6dca442fc8ead9a53f77c1\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://gql.twitch.tv/gql",
+					"protocol": "https",
+					"host": [
+						"gql",
+						"twitch",
+						"tv"
+					],
+					"path": [
+						"gql"
+					]
+				},
+				"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+			},
+			"response": []
+		},
+		{
+			"name": "OnsiteNotifications_ListNotifications",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "client-id",
+						"value": "{{clientId}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"operationName\": \"OnsiteNotifications_ListNotifications\",\r\n    \"variables\": {\r\n        \"cursor\": \"\",\r\n        \"displayType\" : \"VIEWER\",\r\n        \"language\" : \"en\",\r\n        \"limit\" : 10,\r\n        \"shouldLoadLastBroadcast\" : false\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"11cdb54a2706c2c0b2969769907675680f02a6e77d8afe79a749180ad16bfea6\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://gql.twitch.tv/gql",
+					"protocol": "https",
+					"host": [
+						"gql",
+						"twitch",
+						"tv"
+					],
+					"path": [
+						"gql"
+					]
+				},
+				"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+			},
+			"response": []
+		},
+		{
+			"name": "DirectoryPage_Game",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "client-id",
+						"value": "{{clientId}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"operationName\": \"DirectoryPage_Game\",\r\n    \"variables\": {\r\n        \"imageWidth\": 50,\r\n        \"slug\": \"{{slug}}\",\r\n        \"options\": {\r\n            \"includeRestricted\": [\r\n                \"SUB_ONLY_LIVE\"\r\n            ],\r\n            \"sort\": \"RELEVANCE\",\r\n            \"recommendationsContext\": {\r\n                \"platform\": \"web\"\r\n            },\r\n            \"requestID\": \"JIRA-VXP-2397\",\r\n            \"freeformTags\": null,\r\n            \"tags\": [],\r\n            \"systemFilters\": []\r\n        },\r\n        \"sortTypeIsRecency\": false,\r\n        \"limit\": 30,\r\n        \"includeIsDJ\": false\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"version\": 1,\r\n            \"sha256Hash\": \"c7c9d5aad09155c4161d2382092dc44610367f3536aac39019ec2582ae5065f9\"\r\n        }\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://gql.twitch.tv/gql",
+					"protocol": "https",
+					"host": [
+						"gql",
+						"twitch",
+						"tv"
+					],
+					"path": [
+						"gql"
+					]
+				},
+				"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+			},
+			"response": []
+		},
+		{
+			"name": "PlaybackAccessToken",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "client-id",
+						"value": "{{clientId}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"operationName\": \"PlaybackAccessToken\",\r\n    \"variables\": {\r\n        \"isLive\" : true,\r\n        \"login\" : \"{{channelToWatch}}\",\r\n        \"isVod\" : false,\r\n        \"vodID\" : \"\",\r\n        \"platform\" : \"web\",\r\n        \"playerType\" : \"site\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://gql.twitch.tv/gql",
+					"protocol": "https",
+					"host": [
+						"gql",
+						"twitch",
+						"tv"
+					],
+					"path": [
+						"gql"
+					]
+				},
+				"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+			},
+			"response": []
+		},
+		{
+			"name": "VideoPlayerStreamInfoOverlayChannel",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "client-id",
+						"value": "{{clientId}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"operationName\": \"VideoPlayerStreamInfoOverlayChannel\",\r\n    \"variables\": {\r\n        \"channel\" : \"{{channelToWatch}}\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"a5f2e34d626a9f4f5c0204f910bab2194948a9502089be558bb6e779a9e1b3d2\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://gql.twitch.tv/gql",
+					"protocol": "https",
+					"host": [
+						"gql",
+						"twitch",
+						"tv"
+					],
+					"path": [
+						"gql"
+					]
+				},
+				"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+			},
+			"response": []
+		},
+		{
+			"name": "DropCurrentSessionContext",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "client-id",
+						"value": "{{clientId}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"operationName\": \"DropCurrentSessionContext\",\r\n    \"variables\": {\r\n        \"channelLogin\" : \"{{channelToWatch}}\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"4d06b702d25d652afb9ef835d2a550031f1cf762b193523a92166f40ea3d142b\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://gql.twitch.tv/gql",
+					"protocol": "https",
+					"host": [
+						"gql",
+						"twitch",
+						"tv"
+					],
+					"path": [
+						"gql"
+					]
+				},
+				"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+			},
+			"response": []
+		},
+		{
+			"name": "DropsPage_ClaimDropRewards",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "client-id",
+						"value": "{{clientId}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"operationName\": \"DropsPage_ClaimDropRewards\",\r\n    \"input\": {\r\n        \"dropInstanceID\": \"{{dropClaimId}}\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"a455deea71bdc9015b78eb49f4acfbce8baa7ccbedd28e549bb025bd0f751930\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://gql.twitch.tv/gql",
+					"protocol": "https",
+					"host": [
+						"gql",
+						"twitch",
+						"tv"
+					],
+					"path": [
+						"gql"
+					]
+				},
+				"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+			},
+			"response": []
+		},
+		{
+			"name": "DropsHighlightService_AvailableDrops",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "client-id",
+						"value": "{{clientId}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"operationName\": \"DropsHighlightService_AvailableDrops\",\r\n    \"variables\": {\r\n        \"channelID\": \"175831187\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"eff13f4a43157238e40b4cd74b0dac3a41b5f8fb31de1a3b19347fae84e60b92\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://gql.twitch.tv/gql",
+					"protocol": "https",
+					"host": [
+						"gql",
+						"twitch",
+						"tv"
+					],
+					"path": [
+						"gql"
+					]
+				},
+				"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+			},
+			"response": [
+				{
+					"name": "DropsPage_ClaimDropRewards Copy",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "client-id",
+								"value": "{{clientId}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"operationName\": \"DropsHighlightService_AvailableDrops\",\r\n    \"variables\": {\r\n        \"channelID\": \"556769569\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"eff13f4a43157238e40b4cd74b0dac3a41b5f8fb31de1a3b19347fae84e60b92\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://gql.twitch.tv/gql",
+							"protocol": "https",
+							"host": [
+								"gql",
+								"twitch",
+								"tv"
+							],
+							"path": [
+								"gql"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						},
+						{
+							"key": "Content-Length",
+							"value": "882"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "*"
+						},
+						{
+							"key": "Content-Encoding",
+							"value": "br"
+						},
+						{
+							"key": "Date",
+							"value": "Sun, 17 Nov 2024 15:51:31 GMT"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"data\": {\n        \"channel\": {\n            \"id\": \"556769569\",\n            \"viewerDropCampaigns\": [\n                {\n                    \"id\": \"1ff04716-6c80-11ef-82b5-0a58a9feac02\",\n                    \"name\": \"Become the Magic Missile\",\n                    \"game\": {\n                        \"id\": \"512232\",\n                        \"name\": \"Deceive Inc.\",\n                        \"__typename\": \"Game\"\n                    },\n                    \"detailsURL\": \"https://deceiveinc.com\",\n                    \"endAt\": \"2024-11-30T03:59:59.999Z\",\n                    \"imageURL\": \"https://static-cdn.jtvnw.net/twitch-quests-assets/CAMPAIGN/aec19b22-69f6-44ff-9df6-6978533ac8ae.png\",\n                    \"eventBasedDrops\": [],\n                    \"timeBasedDrops\": [\n                        {\n                            \"id\": \"8f79f05f-9569-11ef-a940-0a58a9feac02\",\n                            \"name\": \" Duckies Ink, a Twitch exclusive Weapon and Gadget Ink.\",\n                            \"startAt\": \"2024-11-07T16:00:00Z\",\n                            \"endAt\": \"2024-11-30T03:59:59.999Z\",\n                            \"benefitEdges\": [\n                                {\n                                    \"benefit\": {\n                                        \"id\": \"2e259b29-3820-4e20-9a88-27377e163c03_CUSTOM_ID_5279\",\n                                        \"name\": \"Duckies: Ink\",\n                                        \"game\": {\n                                            \"name\": \"Deceive Inc.\",\n                                            \"id\": \"512232\",\n                                            \"__typename\": \"Game\"\n                                        },\n                                        \"imageAssetURL\": \"https://static-cdn.jtvnw.net/twitch-quests-assets/REWARD/b135adc9-7e2a-48d8-acb2-5597fed03763.png\",\n                                        \"__typename\": \"DropBenefit\"\n                                    },\n                                    \"entitlementLimit\": 1,\n                                    \"__typename\": \"DropBenefitEdge\"\n                                }\n                            ],\n                            \"requiredMinutesWatched\": 30,\n                            \"__typename\": \"TimeBasedDrop\"\n                        },\n                        {\n                            \"id\": \"cae527c3-9569-11ef-9604-0a58a9feac02\",\n                            \"name\": \" Pyromancer, a Twitch exclusive Chavez Skin.\",\n                            \"startAt\": \"2024-11-07T16:00:00Z\",\n                            \"endAt\": \"2024-11-30T03:59:59.999Z\",\n                            \"benefitEdges\": [\n                                {\n                                    \"benefit\": {\n                                        \"id\": \"2e259b29-3820-4e20-9a88-27377e163c03_CUSTOM_ID_13393\",\n                                        \"name\": \"Pyromancer Chavez: Skin\",\n                                        \"game\": {\n                                            \"name\": \"Deceive Inc.\",\n                                            \"id\": \"512232\",\n                                            \"__typename\": \"Game\"\n                                        },\n                                        \"imageAssetURL\": \"https://static-cdn.jtvnw.net/twitch-quests-assets/REWARD/272136e6-810e-43cc-90be-39e004157664.png\",\n                                        \"__typename\": \"DropBenefit\"\n                                    },\n                                    \"entitlementLimit\": 1,\n                                    \"__typename\": \"DropBenefitEdge\"\n                                }\n                            ],\n                            \"requiredMinutesWatched\": 120,\n                            \"__typename\": \"TimeBasedDrop\"\n                        },\n                        {\n                            \"id\": \"ccc85d78-987b-11ef-87a4-0a58a9feac02\",\n                            \"name\": \"Potion of Diminution (Failed), a Twitch exclusive Ace Intro pose.\",\n                            \"startAt\": \"2024-11-07T16:00:00Z\",\n                            \"endAt\": \"2024-11-30T03:59:59.999Z\",\n                            \"benefitEdges\": [\n                                {\n                                    \"benefit\": {\n                                        \"id\": \"2e259b29-3820-4e20-9a88-27377e163c03_CUSTOM_ID_4163\",\n                                        \"name\": \"Potion Failed: Intro Pose\",\n                                        \"game\": {\n                                            \"name\": \"Deceive Inc.\",\n                                            \"id\": \"512232\",\n                                            \"__typename\": \"Game\"\n                                        },\n                                        \"imageAssetURL\": \"https://static-cdn.jtvnw.net/twitch-quests-assets/REWARD/15ec6e64-b01e-4780-8fe4-e9a7248f2f98.png\",\n                                        \"__typename\": \"DropBenefit\"\n                                    },\n                                    \"entitlementLimit\": 1,\n                                    \"__typename\": \"DropBenefitEdge\"\n                                }\n                            ],\n                            \"requiredMinutesWatched\": 60,\n                            \"__typename\": \"TimeBasedDrop\"\n                        }\n                    ],\n                    \"summary\": {\n                        \"includesMWRequirement\": true,\n                        \"includesSubRequirement\": false,\n                        \"isSitewide\": false,\n                        \"isRewardCampaign\": false,\n                        \"isPermanentlyDismissible\": false,\n                        \"__typename\": \"DropCampaignSummary\"\n                    },\n                    \"__typename\": \"DropCampaign\"\n                }\n            ],\n            \"__typename\": \"Channel\"\n        }\n    },\n    \"extensions\": {\n        \"durationMilliseconds\": 77,\n        \"operationName\": \"DropsHighlightService_AvailableDrops\",\n        \"requestID\": \"01JCXD4X0027MVK8PW858WRZCN\"\n    }\n}"
+				},
+				{
+					"name": "DropsPage_ClaimDropRewards Copy",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "client-id",
+								"value": "{{clientId}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"operationName\": \"DropsHighlightService_AvailableDrops\",\r\n    \"variables\": {\r\n        \"channelID\": \"175831187\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"eff13f4a43157238e40b4cd74b0dac3a41b5f8fb31de1a3b19347fae84e60b92\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://gql.twitch.tv/gql",
+							"protocol": "https",
+							"host": [
+								"gql",
+								"twitch",
+								"tv"
+							],
+							"path": [
+								"gql"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						},
+						{
+							"key": "Content-Length",
+							"value": "714"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "*"
+						},
+						{
+							"key": "Content-Encoding",
+							"value": "br"
+						},
+						{
+							"key": "Date",
+							"value": "Sun, 17 Nov 2024 15:53:54 GMT"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"data\": {\n        \"channel\": {\n            \"id\": \"175831187\",\n            \"viewerDropCampaigns\": [\n                {\n                    \"id\": \"1822ae16-9d13-11ef-a7ae-0a58a9feac02\",\n                    \"name\": \"Kai Cenat Rust\",\n                    \"game\": {\n                        \"id\": \"263490\",\n                        \"name\": \"Rust\",\n                        \"__typename\": \"Game\"\n                    },\n                    \"detailsURL\": \"https://twitch.facepunch.com/\",\n                    \"endAt\": \"2024-11-18T07:59:59.998Z\",\n                    \"imageURL\": \"https://static-cdn.jtvnw.net/twitch-quests-assets/CAMPAIGN/258625c4-d1ec-45c6-8629-cb118bdcbd7d.png\",\n                    \"eventBasedDrops\": [],\n                    \"timeBasedDrops\": [\n                        {\n                            \"id\": \"32109b8f-9d13-11ef-8a8f-0a58a9feac02\",\n                            \"name\": \"Kai Rust Rug\",\n                            \"startAt\": \"2024-11-08T19:31:00Z\",\n                            \"endAt\": \"2024-11-18T07:59:59.998Z\",\n                            \"benefitEdges\": [\n                                {\n                                    \"benefit\": {\n                                        \"id\": \"0c95681b-95ad-4be7-a2ba-07dcace74891_CUSTOM_ID_11364\",\n                                        \"name\": \"Kai Rug\",\n                                        \"game\": {\n                                            \"name\": \"Rust\",\n                                            \"id\": \"263490\",\n                                            \"__typename\": \"Game\"\n                                        },\n                                        \"imageAssetURL\": \"https://static-cdn.jtvnw.net/twitch-quests-assets/REWARD/ca495c10-3648-4e2e-af63-91f36a9a082f.png\",\n                                        \"__typename\": \"DropBenefit\"\n                                    },\n                                    \"entitlementLimit\": 1,\n                                    \"__typename\": \"DropBenefitEdge\"\n                                }\n                            ],\n                            \"requiredMinutesWatched\": 60,\n                            \"__typename\": \"TimeBasedDrop\"\n                        },\n                        {\n                            \"id\": \"4834d093-9d13-11ef-83c1-0a58a9feac02\",\n                            \"name\": \"Kai Rust Hoodie\",\n                            \"startAt\": \"2024-11-08T19:31:00Z\",\n                            \"endAt\": \"2024-11-18T07:59:59.998Z\",\n                            \"benefitEdges\": [\n                                {\n                                    \"benefit\": {\n                                        \"id\": \"0c95681b-95ad-4be7-a2ba-07dcace74891_CUSTOM_ID_11384\",\n                                        \"name\": \"Kai Hoodie\",\n                                        \"game\": {\n                                            \"name\": \"Rust\",\n                                            \"id\": \"263490\",\n                                            \"__typename\": \"Game\"\n                                        },\n                                        \"imageAssetURL\": \"https://static-cdn.jtvnw.net/twitch-quests-assets/REWARD/49e1854e-6b3c-405f-896b-bb9d72ca6f77.png\",\n                                        \"__typename\": \"DropBenefit\"\n                                    },\n                                    \"entitlementLimit\": 1,\n                                    \"__typename\": \"DropBenefitEdge\"\n                                }\n                            ],\n                            \"requiredMinutesWatched\": 0,\n                            \"__typename\": \"TimeBasedDrop\"\n                        }\n                    ],\n                    \"summary\": {\n                        \"includesMWRequirement\": true,\n                        \"includesSubRequirement\": true,\n                        \"isSitewide\": false,\n                        \"isRewardCampaign\": false,\n                        \"isPermanentlyDismissible\": false,\n                        \"__typename\": \"DropCampaignSummary\"\n                    },\n                    \"__typename\": \"DropCampaign\"\n                }\n            ],\n            \"__typename\": \"Channel\"\n        }\n    },\n    \"extensions\": {\n        \"durationMilliseconds\": 71,\n        \"operationName\": \"DropsHighlightService_AvailableDrops\",\n        \"requestID\": \"01JCXD98QPYBJCYCNFM4FQW99Y\"\n    }\n}"
+				},
+				{
+					"name": "DropsPage_ClaimDropRewards Reward campaign watch",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "client-id",
+								"value": "{{clientId}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"operationName\": \"DropsHighlightService_AvailableDrops\",\r\n    \"variables\": {\r\n        \"channelID\": \"507845042\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"eff13f4a43157238e40b4cd74b0dac3a41b5f8fb31de1a3b19347fae84e60b92\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://gql.twitch.tv/gql",
+							"protocol": "https",
+							"host": [
+								"gql",
+								"twitch",
+								"tv"
+							],
+							"path": [
+								"gql"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						},
+						{
+							"key": "Content-Length",
+							"value": "726"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "*"
+						},
+						{
+							"key": "Content-Encoding",
+							"value": "br"
+						},
+						{
+							"key": "Date",
+							"value": "Sun, 17 Nov 2024 16:13:38 GMT"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"data\": {\n        \"channel\": {\n            \"id\": \"507845042\",\n            \"viewerDropCampaigns\": [\n                {\n                    \"id\": \"744ecde6-9638-11ef-b422-227cbbaddcd5\",\n                    \"name\": \"Fallout Day - Subscribe to a Fallout 76 streamer to receive the 5 x Perk Card Packs, 5 x Score Booster, and 5 x Re-Roller Rewards Pack!\",\n                    \"game\": {\n                        \"id\": \"506246\",\n                        \"name\": \"Fallout 76\",\n                        \"__typename\": \"Game\"\n                    },\n                    \"detailsURL\": \"https://bethesda.net/en/article/106BFARWJOIlAkrwv406Qu/watch-the-fallout-day-broadcast\",\n                    \"endAt\": \"2024-11-21T07:59:59Z\",\n                    \"imageURL\": \"https://static-cdn.jtvnw.net/twitch-quests-assets/CAMPAIGN/quests_fallout76_q4_2024/FO76-Logo_SOS-TwitchDrop24_150x200-01_blk.png\",\n                    \"eventBasedDrops\": [],\n                    \"timeBasedDrops\": [\n                        {\n                            \"id\": \"7467ab72-9638-11ef-b422-227cbbaddcd5\",\n                            \"name\": \"November 2024 Fallout 76 Rewards Pack Reward Group\",\n                            \"startAt\": \"2024-11-01T18:00:00Z\",\n                            \"endAt\": \"2024-11-21T07:59:59Z\",\n                            \"benefitEdges\": [\n                                {\n                                    \"benefit\": {\n                                        \"id\": \"74171112-9638-11ef-b422-227cbbaddcd5\",\n                                        \"name\": \"Fallout 76 Rewards Pack\",\n                                        \"game\": {\n                                            \"name\": \"Fallout 76\",\n                                            \"id\": \"506246\",\n                                            \"__typename\": \"Game\"\n                                        },\n                                        \"imageAssetURL\": \"https://static-cdn.jtvnw.net/twitch-quests-assets/CAMPAIGN/quests_fallout76_q4_2024/falloutdayreward_sas.png\",\n                                        \"__typename\": \"DropBenefit\"\n                                    },\n                                    \"entitlementLimit\": 1,\n                                    \"__typename\": \"DropBenefitEdge\"\n                                }\n                            ],\n                            \"requiredMinutesWatched\": 0,\n                            \"__typename\": \"TimeBasedDrop\"\n                        }\n                    ],\n                    \"summary\": {\n                        \"includesMWRequirement\": false,\n                        \"includesSubRequirement\": true,\n                        \"isSitewide\": false,\n                        \"isRewardCampaign\": true,\n                        \"isPermanentlyDismissible\": false,\n                        \"__typename\": \"DropCampaignSummary\"\n                    },\n                    \"__typename\": \"DropCampaign\"\n                }\n            ],\n            \"__typename\": \"Channel\"\n        }\n    },\n    \"extensions\": {\n        \"durationMilliseconds\": 75,\n        \"operationName\": \"DropsHighlightService_AvailableDrops\",\n        \"requestID\": \"01JCXEDD0CDRD8A4ZR99WTPGK7\"\n    }\n}"
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "oauth2",
+		"oauth2": [
+			{
+				"key": "tokenType",
+				"value": "",
+				"type": "string"
+			},
+			{
+				"key": "accessToken",
+				"value": "{{token}}",
+				"type": "string"
+			},
+			{
+				"key": "clientId",
+				"value": "",
+				"type": "string"
+			},
+			{
+				"key": "authUrl",
+				"value": "",
+				"type": "string"
+			},
+			{
+				"key": "useBrowser",
+				"value": true,
+				"type": "boolean"
+			},
+			{
+				"key": "scope",
+				"value": "",
+				"type": "string"
+			},
+			{
+				"key": "accessTokenUrl",
+				"value": "",
+				"type": "string"
+			},
+			{
+				"key": "client_authentication",
+				"value": "body",
+				"type": "string"
+			},
+			{
+				"key": "clientSecret",
+				"value": "",
+				"type": "string"
+			},
+			{
+				"key": "grant_type",
+				"value": "authorization_code",
+				"type": "string"
+			},
+			{
+				"key": "headerPrefix",
+				"value": "OAuth",
+				"type": "string"
+			},
+			{
+				"key": "addTokenTo",
+				"value": "header",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "clientId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": "channelLoginId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "channelToWatch",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": "slug",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": "dropDetailsId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "dropClaimId",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

@@ -6,6 +6,9 @@ public class DropCurrentSession
     public Game Game { get; set; }
     public int CurrentMinutesWatched { get; set; }
     public int requiredMinutesWatched { get; set; }
-    
-    
+
+    public override string ToString()
+    {
+        return $"{Channel.Name}({Channel.Id}) - {DropId}";
+    }
 }

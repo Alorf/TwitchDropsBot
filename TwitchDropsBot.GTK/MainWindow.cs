@@ -41,6 +41,7 @@ namespace TwitchDropsBot.GTK
 
         private StatusIcon trayIcon;
         private Menu trayMenu;
+        private AppConfig config;
 
         public MainWindow() : this(new Builder("MainWindow.glade"))
         {
@@ -52,7 +53,7 @@ namespace TwitchDropsBot.GTK
 
             InitTrayMenu();
 
-            AppConfig config = AppConfig.GetConfig();
+            config = AppConfig.Instance;
 
             addAccountButton.Clicked += buttonAddNewAccount_Click;
             putInTrayButton.Clicked += (sender, args) =>
@@ -88,7 +89,7 @@ namespace TwitchDropsBot.GTK
                         break;
                 }
 
-                config = AppConfig.GetConfig();
+                config = config.GetConfig();
             }
 
             foreach (ConfigUser user in config.Users)
@@ -123,7 +124,6 @@ namespace TwitchDropsBot.GTK
             }
 
             // Create a bot for the new user
-            AppConfig config = AppConfig.GetConfig();
             ConfigUser user = config.Users.Last();
             TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId);
 
@@ -137,35 +137,30 @@ namespace TwitchDropsBot.GTK
         {
             launchOnStartupCheckbox.Toggled += (sender, args) =>
             {
-                AppConfig config = AppConfig.GetConfig();
                 config.LaunchOnStartup = launchOnStartupCheckbox.Active;
                 SetStartup(launchOnStartupCheckbox.Active);
-                AppConfig.SaveConfig(config);
+                config.SaveConfig();
             };
 
             onlyFavouritesCheckbox.Toggled += (sender, args) =>
-            {
-                AppConfig config = AppConfig.GetConfig();
-                config.OnlyFavouriteGames = onlyFavouritesCheckbox.Active;
-                AppConfig.SaveConfig(config);
+            { config.OnlyFavouriteGames = onlyFavouritesCheckbox.Active;
+                config.SaveConfig();
             };
 
             onlyConnectedCheckbox.Toggled += (sender, args) =>
             {
-                AppConfig config = AppConfig.GetConfig();
                 config.OnlyConnectedAccounts = onlyConnectedCheckbox.Active;
-                AppConfig.SaveConfig(config);
+                config.SaveConfig();
             };
 
             putInTrayCheckbox.Toggled += (sender, args) =>
             {
-                AppConfig config = AppConfig.GetConfig();
                 config.MinimizeInTray = putInTrayCheckbox.Active;
 
                 //Put the app in tray
 
 
-                AppConfig.SaveConfig(config);
+                config.SaveConfig();
             };
 
             //favgame lost focus
@@ -206,14 +201,13 @@ namespace TwitchDropsBot.GTK
                     return;
                 }
 
-                AppConfig config = AppConfig.GetConfig();
 
                 if (!config.FavouriteGames.Contains(gameName))
                 {
                     config.FavouriteGames.Add(gameName);
                 }
 
-                AppConfig.SaveConfig(config);
+                config.SaveConfig();
 
                 var newRow = new ListBoxRow();
                 newRow.Add(new Label(gameName) { Halign = Align.Start });
@@ -230,14 +224,12 @@ namespace TwitchDropsBot.GTK
                 {
                     string gameName = ((Label)selectedRow.Child).Text;
 
-                    AppConfig config = AppConfig.GetConfig();
-
                     if (config.FavouriteGames.Contains(gameName))
                     {
                         config.FavouriteGames.Remove(gameName);
                     }
 
-                    AppConfig.SaveConfig(config);
+                    config.SaveConfig();
 
                     favGameListBox.Remove(selectedRow);
                 }
@@ -253,12 +245,9 @@ namespace TwitchDropsBot.GTK
                     {
                         string gameName = ((Label)selectedRow.Child).Text;
 
-                        AppConfig config = AppConfig.GetConfig();
-
                         config.FavouriteGames.RemoveAt(index);
                         config.FavouriteGames.Insert(index - 1, gameName);
-
-                        AppConfig.SaveConfig(config);
+                        config.SaveConfig();
 
                         MoveRow(selectedRow, index - 1);
                     }
@@ -275,12 +264,10 @@ namespace TwitchDropsBot.GTK
                     {
                         string gameName = ((Label)selectedRow.Child).Text;
 
-                        AppConfig config = AppConfig.GetConfig();
-
                         config.FavouriteGames.RemoveAt(index);
                         config.FavouriteGames.Insert(index + 1, gameName);
 
-                        AppConfig.SaveConfig(config);
+                        config.SaveConfig();
 
                         MoveRow(selectedRow, index + 1);
                     }
@@ -344,8 +331,6 @@ namespace TwitchDropsBot.GTK
             {
                 favGameListBox.Remove(child);
             }
-
-            AppConfig config = AppConfig.GetConfig();
 
             foreach (var game in config.FavouriteGames)
             {

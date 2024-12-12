@@ -5,7 +5,7 @@ using TwitchDropsBot.Core.Object;
 using TwitchDropsBot.Core.Object.Config;
 using TwitchDropsBot.Core.Utilities;
 
-AppConfig config = AppConfig.GetConfig();
+AppConfig config = AppConfig.Instance;
 
 while (config.Users.Count == 0)
 {
@@ -13,7 +13,7 @@ while (config.Users.Count == 0)
     SystemLogger.Info("Login process will start.");
 
     await AuthDeviceAsync();
-    config = AppConfig.GetConfig();
+    config = AppConfig.Instance;
 }
 
 TimeSpan waitingTime;
@@ -77,9 +77,9 @@ static async Task AuthDeviceAsync()
     ConfigUser user = await AuthSystem.ClientSecretUserAsync(secret);
 
     // Save the user into config.json
-    var config = AppConfig.GetConfig();
+    var config = AppConfig.Instance;
     config.Users.RemoveAll(x => x.Id == user.Id);
     config.Users.Add(user);
 
-    AppConfig.SaveConfig(config);
+    config.SaveConfig();
 }

@@ -14,18 +14,20 @@ namespace TwitchDropsBot.Core;
 public class Bot
 {
     private TwitchUser twitchUser;
+    private AppConfig config;
 
     public Bot(TwitchUser twitchUser)
     {
         this.twitchUser = twitchUser;
+        config = AppConfig.Instance;
     }
 
     public async Task StartAsync()
     {
-        AppConfig appConfig = AppConfig.GetConfig();
-        twitchUser.FavouriteGames = appConfig.FavouriteGames;
-        twitchUser.OnlyFavouriteGames = appConfig.OnlyFavouriteGames;
-        twitchUser.OnlyConnectedAccounts = appConfig.OnlyConnectedAccounts;
+        config.GetConfig();
+        twitchUser.FavouriteGames = config.FavouriteGames;
+        twitchUser.OnlyFavouriteGames = config.OnlyFavouriteGames;
+        twitchUser.OnlyConnectedAccounts = config.OnlyConnectedAccounts;
 
         // Get campaigns
         List<AbstractCampaign> thingsToWatch = await twitchUser.GqlRequest.FetchDropsAsync();
@@ -80,7 +82,7 @@ public class Bot
 
             var campaignsAvailable = await twitchUser.GqlRequest.FetchAvailableDropsAsync(broadcaster?.Id);
 
-            if (campaign == null || broadcaster == null || campaignsAvailable.Count == 0)
+            if (campaign == null || broadcaster == null /*|| campaignsAvailable.Count == 0*/)
             {
                 if (broadcaster == null)
                 {
@@ -248,7 +250,7 @@ public class Bot
 
                 List<Channel>? channels = dropCampaign.GetChannels();
 
-                if (channels != null && channels.Count >= 10)
+                if (channels != null && channels.Count <= 10)
                 {
                     foreach (var channel in channels)
                     {

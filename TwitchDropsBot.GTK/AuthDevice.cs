@@ -19,9 +19,11 @@ namespace TwitchDropsBot.GTK
 
         private string? code;
         private CancellationTokenSource? cts;
+        private AppConfig config;
 
         public AuthDevice() : this(new Builder("MainWindow.glade"))
         {
+            config = AppConfig.Instance;
         }
 
         private AuthDevice(Builder builder) : base(builder.GetRawOwnedObject("AuthDeviceDialog"))
@@ -103,11 +105,10 @@ namespace TwitchDropsBot.GTK
                 CheckCancellation();
 
                 // Save the user into config.json
-                var config = AppConfig.GetConfig();
                 config.Users.RemoveAll(x => x.Id == user.Id);
                 config.Users.Add(user);
 
-                AppConfig.SaveConfig(config);
+                config.SaveConfig();
 
                 Application.Invoke(delegate
                 {

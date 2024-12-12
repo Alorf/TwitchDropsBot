@@ -10,13 +10,14 @@ namespace TwitchDropsBot.WinForms
     {
         private string? code;
         private CancellationTokenSource? cts;
+        private AppConfig config;
 
         public AuthDevice()
         {
+            config = AppConfig.Instance;
+            this.Load += new EventHandler(AuthDevice_Load);
+            this.Disposed += new EventHandler(AuthDevice_Disposed);
             InitializeComponent();
-            this.Load += new EventHandler(AuthDevice_Load); // Subscribe to the Load event
-            this.Disposed += new EventHandler(AuthDevice_Disposed); // Subscribe to the Disposed event
-
         }
 
         private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
@@ -102,11 +103,10 @@ namespace TwitchDropsBot.WinForms
                 CheckCancellation();
 
                 // Save the user into config.json
-                var config = AppConfig.GetConfig();
                 config.Users.RemoveAll(x => x.Id == user.Id);
                 config.Users.Add(user);
 
-                AppConfig.SaveConfig(config);
+                config.SaveConfig();
 
                 this.Invoke((MethodInvoker)delegate
                 {

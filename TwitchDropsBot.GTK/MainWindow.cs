@@ -48,11 +48,7 @@ namespace TwitchDropsBot.GTK
             var assembly = Assembly.GetExecutingAssembly();
             Pixbuf icon = new Pixbuf(assembly, "TwitchDropsBot.GTK.images.logo.png");
             trayIcon = new StatusIcon(icon);
-            //hide tray icon
             trayIcon.Visible = false;
-
-            InitTrayMenu();
-
             config = AppConfig.Instance;
 
             addAccountButton.Clicked += buttonAddNewAccount_Click;
@@ -66,6 +62,14 @@ namespace TwitchDropsBot.GTK
             onlyFavouritesCheckbox.Active = config.OnlyFavouriteGames;
             onlyConnectedCheckbox.Active = config.OnlyConnectedAccounts;
             putInTrayCheckbox.Active = config.MinimizeInTray;
+
+            this.WindowStateEvent += (sender, args) =>
+            {
+                if (config.MinimizeInTray && args.Event.NewWindowState == Gdk.WindowState.Iconified)
+                {
+                    putInTray();
+                }
+            };
 
             //if linux, disable launch on startup
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -85,7 +89,7 @@ namespace TwitchDropsBot.GTK
                 {
                     case ResponseType.Cancel:
                         authDevice.Destroy();
-                        Application.Quit();
+                        Environment.Exit(0);
                         break;
                 }
 
@@ -143,7 +147,8 @@ namespace TwitchDropsBot.GTK
             };
 
             onlyFavouritesCheckbox.Toggled += (sender, args) =>
-            { config.OnlyFavouriteGames = onlyFavouritesCheckbox.Active;
+            {
+                config.OnlyFavouriteGames = onlyFavouritesCheckbox.Active;
                 config.SaveConfig();
             };
 
@@ -156,10 +161,6 @@ namespace TwitchDropsBot.GTK
             putInTrayCheckbox.Toggled += (sender, args) =>
             {
                 config.MinimizeInTray = putInTrayCheckbox.Active;
-
-                //Put the app in tray
-
-
                 config.SaveConfig();
             };
 
@@ -417,37 +418,6 @@ namespace TwitchDropsBot.GTK
         private void Window_DeleteEvent(object sender, DeleteEventArgs a)
         {
             Application.Quit();
-        }
-
-        private void InitTrayMenu()
-        {
-            trayMenu = new Gtk.Menu();
-
-            // Create menu items
-            MenuItem showItem = new MenuItem("Show");
-            showItem.Activated += (sender, e) =>
-            {
-                this.ShowAll();
-                this.Deiconify();
-            };
-
-            MenuItem exitItem = new MenuItem("Exit");
-            exitItem.Activated += (sender, e) =>
-            {
-                Application.Quit();
-            };
-
-            // Add items to the menu
-            trayMenu.Append(showItem);
-            trayMenu.Append(exitItem);
-
-            // Show all menu items
-            trayMenu.ShowAll();
-
-            trayIcon.PopupMenu += (o, args) =>
-            {
-                trayMenu.Popup();
-            };
         }
 
         private void putInTray()

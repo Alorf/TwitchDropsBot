@@ -12,6 +12,7 @@ public class AppConfig
     public bool LaunchOnStartup { get; set; }
     public bool MinimizeInTray { get; set; }
     public bool OnlyConnectedAccounts { get; set; }
+    public int LogLevel { get; set; }
     public string? WebhookURL { get; set; }
     public static TwitchClient TwitchClient { get; } = TwitchClientType.ANDROID_APP;
 
@@ -35,6 +36,8 @@ public class AppConfig
         OnlyFavouriteGames = false;
         LaunchOnStartup = false;
         MinimizeInTray = true;
+        OnlyConnectedAccounts = false;
+        LogLevel = 0;
     }
 
     private static AppConfig LoadConfig()
@@ -66,6 +69,8 @@ public class AppConfig
 
     public AppConfig GetConfig()
     {
-        return LoadConfig();
+        var config = LoadConfig();
+        SaveConfig();
+        return config;
     }
 }

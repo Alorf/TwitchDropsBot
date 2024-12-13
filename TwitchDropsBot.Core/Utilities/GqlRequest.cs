@@ -18,11 +18,12 @@ public class GqlRequest
     private TwitchUser twitchUser;
     private string clientSessionId;
     private string userAgent;
-
+    private AppConfig config;
     private JsonElement postmanCollection;
 
     public GqlRequest(TwitchUser twitchUser)
     {
+        config = AppConfig.Instance;
         this.twitchUser = twitchUser;
         clientSessionId = GenerateClientSessionId("0123456789abcdef", 16);
         userAgent = twitchClient.UserAgents[new Random().Next(twitchClient.UserAgents.Count)];
@@ -104,6 +105,11 @@ public class GqlRequest
         if (resp != null && resp.Data.User.DropCampaign != null)
         {
             DropCampaign dropCampaign = resp.Data.User.DropCampaign;
+
+            if (dropCampaign.Id != dropID)
+            {
+                twitchUser.Logger.Error("The drop ID does not match the drop campaign ID.");
+            }
 
             dropCampaign.TimeBasedDrops.RemoveAll(drop => drop.RequiredSubs != 0);
 
@@ -251,33 +257,13 @@ public class GqlRequest
     public async Task<bool> ClaimDropAsync(string dropInstanceID)
     {
 
-        /*var query = CreateQuery("DropsPage_ClaimDropRewards");
+        var query = CreateQuery("DropsPage_ClaimDropRewards");
 
         query.Variables = new
         {
             input = new
             {
                 dropInstanceID
-            }
-        };*/
-
-        var query = new GraphQLRequest
-        {
-            OperationName = "DropsPage_ClaimDropRewards",
-            Variables = new
-            {
-                input = new
-                {
-                    dropInstanceID
-                }
-            },
-            Extensions = new Dictionary<string, object?>
-            {
-                ["persistedQuery"] = new Dictionary<string, object>
-                {
-                    ["sha256Hash"] = "a455deea71bdc9015b78eb49f4acfbce8baa7ccbedd28e549bb025bd0f751930",
-                    ["version"] = 1
-                }
             }
         };
 
@@ -331,8 +317,11 @@ public class GqlRequest
                         WriteIndented = false
                     };
                     var json = JsonSerializer.Serialize(graphQLResponse.Data, options);
-                    twitchUser.Logger.Log(name, "REQ", ConsoleColor.Blue);
-                    twitchUser.Logger.Log(json, "REQ", ConsoleColor.Blue);
+                    if (config.LogLevel > 0)
+                    {
+                        twitchUser.Logger.Log(name, "REQ", ConsoleColor.Blue);
+                        twitchUser.Logger.Log(json, "REQ", ConsoleColor.Blue);
+                    }
                 }
 
 

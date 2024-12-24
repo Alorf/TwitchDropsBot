@@ -1,53 +1,39 @@
-﻿using System.Diagnostics;
-using System.Text.Json;
-using TwitchDropsBot.Core;
+using Gtk;
+using System;
 using TwitchDropsBot.Core.Object.Config;
+using UI = Gtk.Builder.ObjectAttribute;
+using System.Threading;
+using System.Threading.Tasks;
+using TwitchDropsBot.Core;
 using TwitchDropsBot.Core.Utilities;
 
-namespace TwitchDropsBot.WinForms
+namespace TwitchDropsBot.GTK
 {
-    public partial class AuthDevice : Form
+    internal class AuthDevice : Dialog
     {
+
+        [UI] private LinkButton linkButton;
+        [UI] private Label codeLabel;
+        [UI] private Label statusLabel;
+        [UI] private Button closeButton;
+
         private string? code;
         private CancellationTokenSource? cts;
         private AppConfig config;
 
-        public AuthDevice()
+        public AuthDevice() : this(new Builder("MainWindow.glade"))
         {
             config = AppConfig.Instance;
-            this.Load += new EventHandler(AuthDevice_Load);
-            this.Disposed += new EventHandler(AuthDevice_Disposed);
-            InitializeComponent();
         }
 
-        private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        private AuthDevice(Builder builder) : base(builder.GetRawOwnedObject("AuthDeviceDialog"))
         {
-            ProcessStartInfo sInfo = new ProcessStartInfo($"https://www.twitch.tv/activate?device-code={code}")
-            {
-                UseShellExecute = true
-            };
+            builder.Autoconnect(this);
 
-            if (!string.IsNullOrEmpty(code))
-            {
-                Process.Start(sInfo);
-            }
-        }
+            closeButton.Clicked += AuthDevice_Disposed;
+            Close += AuthDevice_Disposed;
 
-        private async void AuthDevice_Load(object sender, EventArgs e)
-        {
-            cts = new CancellationTokenSource();
-            try
-            {
-                Task.Run(async () =>
-                {
-                    await AuthenticateDeviceAsync(cts.Token);
-                });
-
-            }
-            catch (OperationCanceledException)
-            {
-                SystemLogger.Info("Operation Cancelled");
-            }
+            Shown += authDevice_Shown;
         }
 
         private void AuthDevice_Disposed(object sender, EventArgs e)
@@ -56,18 +42,35 @@ namespace TwitchDropsBot.WinForms
             {
                 cts.Cancel();
                 cts.Dispose();
+                this.Respond(Gtk.ResponseType.Cancel);
+                Destroy();
+            }
+        }
+
+        private async void authDevice_Shown(object sender, EventArgs e)
+        {
+            cts = new CancellationTokenSource();
+            try
+            {
+                Task.Run(async () => { await AuthenticateDeviceAsync(cts.Token); });
+
+            }
+            catch (OperationCanceledException)
+            {
+                SystemLogger.Info("Operation Cancelled");
             }
         }
 
         private async Task AuthenticateDeviceAsync(CancellationToken token)
         {
-            Action CheckCancellation() => () =>
+            System.Action CheckCancellation() => () =>
             {
                 if (token.IsCancellationRequested)
                 {
                     throw new OperationCanceledException();
                 }
             };
+
             try
             {
                 CheckCancellation();
@@ -78,11 +81,11 @@ namespace TwitchDropsBot.WinForms
                 CheckCancellation();
 
                 // Update UI with verification URI and user code
-                this.Invoke((MethodInvoker)delegate
+                Application.Invoke(delegate
                 {
-                    AuthCode.Text = $"Please enter the code: {code}";
-                    AuthCode.TextAlign = ContentAlignment.MiddleCenter;
-                    AuthStatus.Text = $"Waiting for user to authenticate...";
+                    codeLabel.Text = $"Please enter the code: {code}";
+                    linkButton.Uri = verificationUri;
+                    statusLabel.Text = $"Waiting for user to authenticate...";
                 });
 
                 CheckCancellation();
@@ -91,8 +94,7 @@ namespace TwitchDropsBot.WinForms
 
                 if (jsonResponse == null)
                 {
-                    MessageBox.Show("Failed to authenticate the user.", "Error", MessageBoxButtons.OK,
-                        MessageBoxIcon.Error);
+                    ShowMessageDialog("Failed to authenticate the user.", "Error", MessageType.Error);
                     return;
                 }
 
@@ -108,12 +110,12 @@ namespace TwitchDropsBot.WinForms
 
                 config.SaveConfig();
 
-                this.Invoke((MethodInvoker)delegate
+                Application.Invoke(delegate
                 {
-                    MessageBox.Show("User authenticated and configuration saved.", "Success", MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
-                    this.DialogResult = DialogResult.OK;
-                    this.Close();
+                    ShowMessageDialog("User authenticated and configuration saved.", "Success", MessageType.Info);
+                    this.Respond(Gtk.ResponseType.Ok);
+                    //close
+                    this.Destroy();
                 });
             }
             catch (OperationCanceledException ex)
@@ -122,7 +124,17 @@ namespace TwitchDropsBot.WinForms
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"An error occurred: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ShowMessageDialog($"An error occurred: {ex.Message}", "Error", MessageType.Error);
+            }
+        }
+
+        private void ShowMessageDialog(string message, string title, MessageType messageType)
+        {
+            using (var dialog = new MessageDialog(this, DialogFlags.Modal, messageType, ButtonsType.Ok, message))
+            {
+                dialog.Title = title;
+                dialog.Run();
+                dialog.Destroy();
             }
         }
     }

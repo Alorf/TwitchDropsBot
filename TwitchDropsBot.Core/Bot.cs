@@ -6,25 +6,28 @@ using TwitchDropsBot.Core.Object;
 using TwitchDropsBot.Core.Object.Config;
 using TwitchDropsBot.Core.Object.TwitchGQL;
 using Game = TwitchDropsBot.Core.Object.TwitchGQL.Game;
+using System.Threading.Channels;
+using Channel = TwitchDropsBot.Core.Object.TwitchGQL.Channel;
 
 namespace TwitchDropsBot.Core;
 
 public class Bot
 {
     private TwitchUser twitchUser;
+    private AppConfig config;
 
     public Bot(TwitchUser twitchUser)
     {
         this.twitchUser = twitchUser;
+        config = AppConfig.Instance;
     }
 
     public async Task StartAsync()
     {
-        AppConfig appConfig = AppConfig.GetConfig();
-        twitchUser.FavouriteGames = appConfig.FavouriteGames;
-        twitchUser.OnlyFavouriteGames = appConfig.OnlyFavouriteGames;
-        twitchUser.OnlyConnectedAccounts = appConfig.OnlyConnectedAccounts;
-
+        config.GetConfig();
+        twitchUser.FavouriteGames = config.FavouriteGames;
+        twitchUser.OnlyFavouriteGames = config.OnlyFavouriteGames;
+        twitchUser.OnlyConnectedAccounts = config.OnlyConnectedAccounts;
 
         // Get campaigns
         List<AbstractCampaign> thingsToWatch = await twitchUser.GqlRequest.FetchDropsAsync();
@@ -55,8 +58,8 @@ public class Bot
         // Order things to watch by the order of favorite game names and drop that is ending soon
         await CheckCancellation();
         thingsToWatch = thingsToWatch
-            .OrderBy(x => (x as DropCampaign)?.EndAt ?? DateTime.MaxValue)
-            .ThenBy(x => favoriteGameNames.IndexOf(x.Game.DisplayName) == -1 ? int.MaxValue : favoriteGameNames.IndexOf(x.Game.DisplayName))
+            .OrderBy(x => favoriteGameNames.IndexOf(x.Game.DisplayName) == -1 ? int.MaxValue : favoriteGameNames.IndexOf(x.Game.DisplayName))
+            .ThenBy(x => (x as DropCampaign)?.EndAt ?? DateTime.MaxValue)
             .ToList();
 
         bool timeBasedDropFound = false;
@@ -77,11 +80,18 @@ public class Bot
             campaign = result.campaign;
             broadcaster = result.broadcaster;
 
-            if (campaign == null || broadcaster == null)
+            var campaignsAvailable = await twitchUser.GqlRequest.FetchAvailableDropsAsync(broadcaster?.Id);
+
+            if (campaign == null || broadcaster == null /*|| campaignsAvailable.Count == 0*/)
             {
                 if (broadcaster == null)
                 {
                     twitchUser.Logger.Log($"No broadcaster found for this campaign ({campaign?.Name}).");
+                }
+
+                if (broadcaster != null && campaignsAvailable.Count == 0)
+                {
+                    twitchUser.Logger.Log($"It seems like every drops have been watched for this campaign ({campaign?.Name} | {broadcaster.Login} - {broadcaster.Id}).");
                 }
 
                 var ToDelete = thingsToWatch.Find(x => x.Id == campaign.Id);
@@ -96,14 +106,15 @@ public class Bot
                 dropCurrentSession =
                     await twitchUser.GqlRequest.FetchCurrentSessionContextAsync(broadcaster);
 
-                if (string.IsNullOrEmpty(dropCurrentSession?.DropId) || dropCurrentSession.CurrentMinutesWatched == dropCurrentSession.requiredMinutesWatched)
+                if (string.IsNullOrEmpty(dropCurrentSession?.DropId) || dropCurrentSession.Channel.Id != broadcaster.Id || dropCurrentSession.CurrentMinutesWatched == dropCurrentSession.requiredMinutesWatched)
                 {
-                    twitchUser.Logger.Log($"No time based drop found, watching 20sec to init the drop...");
-                    await twitchUser.WatchStreamAsync(broadcaster.Login);
-                    twitchUser.StreamURL = null;
-                    await Task.Delay(TimeSpan.FromSeconds(20));
-                    dropCurrentSession =
-                        await twitchUser.GqlRequest.FetchCurrentSessionContextAsync(broadcaster);
+
+                    if (dropCurrentSession != null && dropCurrentSession?.Channel != null && dropCurrentSession?.Channel.Id != broadcaster.Id)
+                    {
+                        twitchUser.Logger.Log($"Drop found but not the right channel, watching 20 sec to init the drop (got {dropCurrentSession.Channel.Name} instead of {broadcaster.Login})");
+                    }
+                    twitchUser.Logger.Log($"No time based drop found, watching 20 sec to init the drop");
+                    dropCurrentSession = await FakeWatchAsync(broadcaster);
                 }
 
                 if (campaign is DropCampaign dropCampaign)
@@ -229,7 +240,6 @@ public class Bot
         {
             await CheckCancellation();
             twitchUser.Logger.Log($"Checking {campaign.Game.DisplayName}...");
-            //todo :Get time based drops of this campaign
 
             if (campaign is DropCampaign dropCampaign)
             {
@@ -336,6 +346,17 @@ public class Bot
 
         await twitchUser.SendWebhookAsync(embeds);
 
+    }
+
+    private async Task<DropCurrentSession> FakeWatchAsync(AbstractBroadcaster broadcaster)
+    {
+        //trying to init the drop
+
+        await twitchUser.WatchStreamAsync(broadcaster.Login);
+        twitchUser.StreamURL = null;
+        await Task.Delay(TimeSpan.FromSeconds(20));
+
+        return await twitchUser.GqlRequest.FetchCurrentSessionContextAsync(broadcaster);
     }
 
     private async Task CheckCancellation()

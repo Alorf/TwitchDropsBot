@@ -125,25 +125,16 @@ namespace TwitchDropsBot.WinForms
             // Handle the resize event to adjust column widths dynamically
             inventoryListView.Resize += (sender, e) =>
             {
-                if (inventoryListView.Columns.Count >= 3)
-                {
-                    int totalWidth = inventoryListView.Width;
-                    inventoryListView.Columns[0].Width = (int)(totalWidth * 0.3);
-                    inventoryListView.Columns[1].Width = (int)(totalWidth * 0.45);
-                    inventoryListView.Columns[2].Width = (int)(totalWidth * 0.1);
-                }
+                int totalWidth = inventoryListView.Width;
+                inventoryListView.Columns[0].Width = (int)(totalWidth * 0.3);
+                inventoryListView.Columns[1].Width = (int)(totalWidth * 0.45);
+                inventoryListView.Columns[2].Width = (int)(totalWidth * 0.1);
             };
         }
 
         private async Task<ListViewGroup> AddGroup(IInventorySystem item)
         {
-            ListViewGroup ifExist = null;
-
-            // Use a lock to ensure thread safety if this method is called from multiple threads
-            lock (inventoryListView.Groups)
-            {
-                ifExist = inventoryListView.Groups.Cast<ListViewGroup>().FirstOrDefault(group => group.Header == item.GetGroup());
-            }
+            var ifExist = inventoryListView.Groups.Cast<ListViewGroup>().FirstOrDefault(group => group.Header == item.GetGroup());
 
             if (ifExist != null)
             {
@@ -153,41 +144,30 @@ namespace TwitchDropsBot.WinForms
             if (item.GetGameImageUrl() != null)
             {
                 var url = item.GetGameImageUrl();
-                // Replace width and height
+                //replace width and height
                 url = url.Replace("{width}", "16");
                 url = url.Replace("{height}", "16");
 
                 await DownloadImageFromWeb(item, gameImageList, item.GetGameSlug());
             }
 
-            ListViewGroup group = new ListViewGroup(item.GetGroup(), HorizontalAlignment.Left)
-            {
-                TitleImageKey = item.GetGameSlug(),
-                CollapsedState = ListViewGroupCollapsedState.Collapsed
-            };
-
-            // Add the new group to the collection
+            ListViewGroup group = new ListViewGroup(item.GetGroup(), HorizontalAlignment.Left);
+            group.TitleImageKey = item.GetGameSlug();
+            group.CollapsedState = ListViewGroupCollapsedState.Collapsed;
             if (inventoryListView.InvokeRequired)
             {
                 inventoryListView.Invoke(new Action(() =>
                 {
-                    lock (inventoryListView.Groups)
-                    {
-                        inventoryListView.Groups.Add(group);
-                    }
+                    inventoryListView.Groups.Add(group);
                 }));
             }
             else
             {
-                lock (inventoryListView.Groups)
-                {
-                    inventoryListView.Groups.Add(group);
-                }
+                inventoryListView.Groups.Add(group);
             }
 
             return group;
         }
-
 
         private async Task LoadInventoryAsync()
         {

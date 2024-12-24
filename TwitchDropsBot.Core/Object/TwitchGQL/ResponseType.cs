@@ -7,6 +7,8 @@ public class ResponseType
     public List<RewardCampaignsAvailableToUser> RewardCampaignsAvailableToUser { get; set; }
     
     public User CurrentUser { get; set; }    
+
+    public User Channel { get; set; }    
     
     public Game Game { get; set; }
     

@@ -14,13 +14,14 @@ namespace TwitchDropsBot.WinForms
 {
     public partial class MainForm : Form
     {
+        private AppConfig config;
         public MainForm()
         {
             InitializeComponent();
             this.SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
             this.UpdateStyles();
 
-            AppConfig config = AppConfig.GetConfig();
+            config = AppConfig.Instance;
 
             checkBoxFavourite.Checked = config.OnlyFavouriteGames;
             checkBoxStartup.Checked = config.LaunchOnStartup;
@@ -40,7 +41,7 @@ namespace TwitchDropsBot.WinForms
                     Environment.Exit(1);
                 }
 
-                config = AppConfig.GetConfig();
+                config = config.GetConfig();
             }
 
             foreach (ConfigUser user in config.Users)
@@ -108,7 +109,6 @@ namespace TwitchDropsBot.WinForms
         void InitList()
         {
             FavGameListBox.Items.Clear();
-            AppConfig config = AppConfig.GetConfig();
 
             foreach (var game in config.FavouriteGames)
             {
@@ -183,15 +183,12 @@ namespace TwitchDropsBot.WinForms
 
         private void checkBoxStartup_CheckedChanged(object sender, EventArgs e)
         {
-            //change appConfig
-            AppConfig config = AppConfig.GetConfig();
-
             config.LaunchOnStartup = checkBoxStartup.Checked;
 
             SetStartup(config.LaunchOnStartup);
 
 
-            AppConfig.SaveConfig(config);
+            config.SaveConfig();
         }
 
         private void SetStartup(bool enable)
@@ -211,12 +208,9 @@ namespace TwitchDropsBot.WinForms
 
         private void checkBoxFavourite_CheckedChanged(object sender, EventArgs e)
         {
-            //change appConfig
-            AppConfig config = AppConfig.GetConfig();
-
             config.OnlyFavouriteGames = checkBoxFavourite.Checked;
 
-            AppConfig.SaveConfig(config);
+            config.SaveConfig();
         }
 
         private void buttonAdd_Click(object sender, EventArgs e)
@@ -232,14 +226,12 @@ namespace TwitchDropsBot.WinForms
                 return;
             }
 
-            AppConfig config = AppConfig.GetConfig();
-
             if (!config.FavouriteGames.Contains(gameName))
             {
                 config.FavouriteGames.Add(gameName);
             }
 
-            AppConfig.SaveConfig(config);
+            config.SaveConfig();
 
             FavGameListBox.Items.Add(gameName);
             FavGameListBox.SelectedItem = gameName;
@@ -251,14 +243,12 @@ namespace TwitchDropsBot.WinForms
             {
                 string gameName = FavGameListBox.SelectedItem.ToString();
 
-                AppConfig config = AppConfig.GetConfig();
-
                 if (config.FavouriteGames.Contains(gameName))
                 {
                     config.FavouriteGames.Remove(gameName);
                 }
 
-                AppConfig.SaveConfig(config);
+                config.SaveConfig();
 
                 FavGameListBox.Items.Remove(gameName);
             }
@@ -271,12 +261,10 @@ namespace TwitchDropsBot.WinForms
                 int index = FavGameListBox.SelectedIndex;
                 string item = FavGameListBox.SelectedItem.ToString();
 
-                AppConfig config = AppConfig.GetConfig();
-
                 config.FavouriteGames.RemoveAt(index);
                 config.FavouriteGames.Insert(index - 1, item);
 
-                AppConfig.SaveConfig(config);
+                config.SaveConfig();
 
                 FavGameListBox.Items.RemoveAt(index);
                 FavGameListBox.Items.Insert(index - 1, item);
@@ -291,12 +279,10 @@ namespace TwitchDropsBot.WinForms
                 int index = FavGameListBox.SelectedIndex;
                 string item = FavGameListBox.SelectedItem.ToString();
 
-                AppConfig config = AppConfig.GetConfig();
-
                 config.FavouriteGames.RemoveAt(index);
                 config.FavouriteGames.Insert(index + 1, item);
 
-                AppConfig.SaveConfig(config);
+                config.SaveConfig();
 
                 FavGameListBox.Items.RemoveAt(index);
                 FavGameListBox.Items.Insert(index + 1, item);
@@ -317,7 +303,6 @@ namespace TwitchDropsBot.WinForms
             }
 
             // Create a bot for the new user
-            AppConfig config = AppConfig.GetConfig();
             ConfigUser user = config.Users.Last();
             TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId);
             twitchUser.DiscordWebhookURl = config.WebhookURL;
@@ -334,22 +319,16 @@ namespace TwitchDropsBot.WinForms
 
         private void CheckBoxMinimizeInTrayCheckedChanged(object sender, EventArgs e)
         {
-            //change appConfig
-            AppConfig config = AppConfig.GetConfig();
-
             config.MinimizeInTray = checkBoxMinimizeInTray.Checked;
 
-            AppConfig.SaveConfig(config);
+            config.SaveConfig();
         }
 
         private void checkBoxConnectedAccounts_CheckedChanged(object sender, EventArgs e)
         {
-            //change appConfig
-            AppConfig config = AppConfig.GetConfig();
-
             config.OnlyConnectedAccounts = checkBoxConnectedAccounts.Checked;
 
-            AppConfig.SaveConfig(config);
+            config.SaveConfig();
         }
     }
 }

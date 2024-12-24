@@ -7,6 +7,7 @@ public class TimeBasedDrop : IInventorySystem
     public DateTime StartAt { get; set; }
     public DateTime EndAt { get; set; }
     public int RequiredMinutesWatched { get; set; }
+    public int RequiredSubs { get; set; }
     public Self Self { get; set; }
     public Campaign Campaign { get; set; }
     public List<BenefitEdge> BenefitEdges { get; set; }

@@ -1,11 +1,10 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using TwitchDropsBot.Core.Utilities;
 using TwitchDropsBot.Core.Object.TwitchGQL;
 using Discord.Webhook;
 using Discord;
-using System.Net.NetworkInformation;
-using System.Runtime.CompilerServices;
 
 namespace TwitchDropsBot.Core.Object;
 

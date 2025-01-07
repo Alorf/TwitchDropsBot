@@ -38,7 +38,7 @@ public class GqlRequest
         graphQLClient =
             new GraphQLHttpClient("https://gql.twitch.tv/gql", new SystemTextJsonSerializer(), httpClient);
 
-        var jsonString = File.ReadAllText("Postman/TwitchSave.postman_collection.json");
+        var jsonString = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Postman/TwitchSave.postman_collection.json"));
         postmanCollection = JsonDocument.Parse(jsonString).RootElement;
     }
 

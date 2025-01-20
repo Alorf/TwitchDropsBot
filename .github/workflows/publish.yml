@@ -1,0 +1,74 @@
+"on":
+  workflow_call:
+    inputs:
+      project_name:
+        required: true
+        type: string
+      project_path:
+        required: true
+        type: string
+      framework:
+        required: true
+        type: string
+      os:
+        required: true
+        type: string
+      target:
+        required: true
+        type: string
+
+jobs:
+  build-and-publish:
+    runs-on: "${{ inputs.os }}"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: "Build and Publish ${{ inputs.project_name }}"
+        shell: bash
+        run: |
+          tag=$(git describe --tags --abbrev=0)
+
+            release_name="TwitchDropsBot-${{ inputs.project_name }}-${{ inputs.target }}-$tag"
+
+            # Build the project
+            dotnet publish ${{ inputs.project_path }} \
+              -f ${{ inputs.framework }} \
+              -r ${{ inputs.target }} \
+              -p:PublishSingleFile=true \
+              -p:IncludeNativeLibrariesForSelfExtract=true \
+              -c Release \
+              -o "$release_name"
+      - name: Package for Windows
+        shell: bash
+        if: "${{ startsWith(inputs.target, 'win-') }}"
+        run: |
+          tag=$(git describe --tags --abbrev=0)
+          release_name="TwitchDropsBot-${{ inputs.project_name }}-${{inputs.target }}-$tag"
+
+          # Package as zip
+          7z a -tzip "${release_name}.zip" "./${release_name}/*"
+
+          # Clean up
+          rm -r "$release_name"
+      - name: Package for Unix
+        shell: bash
+        if: "${{ !startsWith(inputs.target, 'win-') }}"
+        run: |
+          tag=$(git describe --tags --abbrev=0)
+          release_name="TwitchDropsBot-${{ inputs.project_name }}-${{inputs.target }}-$tag"
+
+          # Package as tar.gz
+          tar czvf "${release_name}.tar.gz" "$release_name"
+
+          # Clean up
+          rm -r "$release_name"
+      - name: Publish Artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "TwitchDropsBot-${{ inputs.project_name }}-*"
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"

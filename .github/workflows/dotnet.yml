@@ -1,73 +1,46 @@
 name: .NET
 
 on:
-    push:
-        tags:
-            - '*'
+  push:
+    tags:
+      - "*"
 
 jobs:
-  release:
-    name: Release
+  release-console:
+    name: Release Console
+    uses: ./.github/workflows/publish.yml
     strategy:
       matrix:
-        kind: ['linux', 'windows', 'winforms']
-        include:
-          - kind: linux
-            version : Console
-            os: ubuntu-latest
-            target: linux-x64
-            project: TwitchDropsBot.Console/TwitchDropsBot.Console.csproj
-          - kind: windows
-            version : Console
-            os: windows-latest
-            target: win-x64
-            project: TwitchDropsBot.Console/TwitchDropsBot.Console.csproj
-          - kind: winforms
-            version : WinForms
-            os: windows-latest
-            target: win-x64
-            project: TwitchDropsBot.WinForms/TwitchDropsBot.WinForms.csproj
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+        targets: [linux-x64, win-x64]
+    with:
+      project_name: Console
+      project_path: TwitchDropsBot.Console/TwitchDropsBot.Console.csproj
+      framework: net8.0
+      os: ubuntu-latest
+      target: ${{ matrix.targets }}
 
-      - name: Setup dotnet
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
+  release-winforms:
+    name: Release WinForms
+    uses: ./.github/workflows/publish.yml
+    strategy:
+      matrix:
+        targets: [win-x64]
+    with:
+      project_name: WinForms
+      project_path: TwitchDropsBot.WinForms/TwitchDropsBot.WinForms.csproj
+      framework: net8.0-windows
+      os: windows-latest
+      target: ${{ matrix.targets }}
 
-      - name: Build
-        shell: bash
-        run: |
-          tag=$(git describe --tags --abbrev=0)
-          release_name="TwitchDropsBot-${{ matrix.version }}-${{ matrix.target }}-$tag"
-          
-          if [ "${{ matrix.kind }}" == "winforms" ]; then
-            framework="net8.0-windows"
-            # Build with native libraries for self-extract
-            dotnet publish ${{ matrix.project }} -f $framework -r "${{ matrix.target }}" -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -c Release -o "$release_name"
-          else
-            framework="net8.0"
-            dotnet publish ${{ matrix.project }} -f $framework -r "${{ matrix.target }}" -p:PublishSingleFile=true -c Release -o "$release_name"
-          fi
-
-          find "$release_name" -name '*.sln' -delete
-
-          # Pack files
-          if [ "${{ matrix.target }}" == "win-x64" ]; then
-            # Pack to zip for Windows
-            7z a -tzip "${release_name}.zip" "./${release_name}/*"
-          else
-            tar czvf "${release_name}.tar.gz" "$release_name"
-          fi
-
-          # Delete output directory
-          rm -r "$release_name"
-
-      - name: Publish
-        uses: softprops/action-gh-release@v2
-        with:
-          files: "TwitchDropsBot*"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  release-gtk:
+    name: Release GTK
+    uses: ./.github/workflows/publish.yml
+    strategy:
+      matrix:
+        targets: [linux-x64, win-x64]
+    with:
+      project_name: GTK
+      project_path: TwitchDropsBot.GTK/TwitchDropsBot.GTK.csproj
+      framework: net8.0
+      os: ubuntu-latest
+      target: ${{ matrix.targets }}

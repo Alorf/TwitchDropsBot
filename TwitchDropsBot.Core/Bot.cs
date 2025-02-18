@@ -15,6 +15,7 @@ public class Bot
 {
     private TwitchUser twitchUser;
     private AppConfig config;
+    private static readonly object _configLock = new object();
 
     public Bot(TwitchUser twitchUser)
     {
@@ -24,7 +25,10 @@ public class Bot
 
     public async Task StartAsync()
     {
-        config.GetConfig();
+        lock (_configLock)
+        {
+            config.GetConfig();
+        }
         twitchUser.FavouriteGames = config.FavouriteGames;
         twitchUser.OnlyFavouriteGames = config.OnlyFavouriteGames;
         twitchUser.OnlyConnectedAccounts = config.OnlyConnectedAccounts;

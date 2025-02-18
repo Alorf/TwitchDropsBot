@@ -20,6 +20,8 @@ public class GqlRequest
     private string userAgent;
     private AppConfig config;
     private JsonElement postmanCollection;
+    private static readonly object _postmanLock = new object();
+
 
     public GqlRequest(TwitchUser twitchUser)
     {
@@ -38,8 +40,11 @@ public class GqlRequest
         graphQLClient =
             new GraphQLHttpClient("https://gql.twitch.tv/gql", new SystemTextJsonSerializer(), httpClient);
 
-        var jsonString = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Postman/TwitchSave.postman_collection.json"));
-        postmanCollection = JsonDocument.Parse(jsonString).RootElement;
+        lock (_postmanLock)
+        {
+            var jsonString = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Postman/TwitchSave.postman_collection.json"));
+            postmanCollection = JsonDocument.Parse(jsonString).RootElement;
+        }
     }
 
     public async Task<List<AbstractCampaign>> FetchDropsAsync()

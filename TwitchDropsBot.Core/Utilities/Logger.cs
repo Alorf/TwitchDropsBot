@@ -1,70 +1,56 @@
-using Discord;
+using Serilog;
+using Serilog.Sinks.SystemConsole.Themes;
 using TwitchDropsBot.Core.Object;
 
 namespace TwitchDropsBot.Core;
 
 public class Logger
 {
-    public TwitchUser TwitchUser { get; set; }
+    private TwitchUser TwitchUser { get; set; }
 
     public event Action<string> OnLog;
     public event Action<string> OnError;
+    public event Action<System.Exception> OnException;
     public event Action<string> OnInfo;
+
+    private readonly ILogger _logger;
+
+    public Logger(TwitchUser twitchUser)
+    {
+        TwitchUser = twitchUser;
+        _logger = new LoggerConfiguration()
+            .WriteTo.Console(theme: SystemConsoleTheme.Colored)
+            .WriteTo.File($"logs/{TwitchUser.Login}.txt")
+            .CreateLogger();
+    }
 
     public void Log(string message)
     {
-        Console.ForegroundColor = ConsoleColor.Green;
-        Console.WriteLine($"[{TwitchUser.Login} - {DateTime.Now}] LOG : {message}");
-        Console.ResetColor();
-
+        _logger.Information($"[{TwitchUser.Login}] : {message}");
         OnLog?.Invoke(message);
     }
 
     public void Log(string message, string type, ConsoleColor color)
     {
-        Console.ForegroundColor = color;
-        Console.WriteLine($"[{TwitchUser.Login} - {DateTime.Now}] {type} : {message}");
-        Console.ResetColor();
-
+        _logger.Information($"[{TwitchUser.Login}] {type} : {message}");
         OnLog?.Invoke(message);
     }
 
     public void Error(string message)
     {
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine($"[{TwitchUser.Login} - {DateTime.Now}] ERROR : {message}");
-        Console.ResetColor();
-
+        _logger.Error($"[{TwitchUser.Login}] : {message}");
         OnError?.Invoke(message);
     }
 
     public void Error(System.Exception exception)
     {
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine($"[{TwitchUser.Login} - {DateTime.Now}] ERROR : {exception.Message}\n{exception.StackTrace}");
-
-        foreach (var data in exception.Data)
-        {
-            Console.WriteLine(data);
-        }
-        
-        // print inner exception
-        if (exception.InnerException != null)
-        {
-            Console.WriteLine(exception.InnerException);
-        }
-        
-        Console.ResetColor();
-
-        OnError?.Invoke(exception.Message);
+        _logger.Error(exception, $"[{TwitchUser.Login}] ");
+        OnException?.Invoke(exception);
     }
 
     public void Info(string message)
     {
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.WriteLine($"[{TwitchUser.Login} - {DateTime.Now}] INFO : {message}");
-        Console.ResetColor();
-
+        _logger.Information($"[{TwitchUser.Login}] : {message}");
         OnInfo?.Invoke(message);
     }
 }

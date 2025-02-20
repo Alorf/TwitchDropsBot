@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
 using System.Windows.Forms;
+using TwitchDropsBot.Core;
 using TwitchDropsBot.Core.Object;
 using TwitchDropsBot.Core.Object.TwitchGQL;
 using Action = System.Action;
@@ -13,11 +14,21 @@ namespace TwitchDropsBot.WinForms
     {
         private readonly TwitchUser twitchUser;
         public TabPage TabPage => currentTabPage;
+        private readonly object imageListLock = new object();
+
 
         public TwitchUserTab(TwitchUser twitchUser)
         {
             InitializeComponent();
-            InitializeListView();
+
+            try
+            {
+                InitializeListView();
+            }
+            catch (Exception ex)
+            {
+                twitchUser.Logger.Error(ex);
+            }
 
             this.twitchUser = twitchUser;
             twitchUser.PropertyChanged += TwitchUser_PropertyChanged;
@@ -26,6 +37,7 @@ namespace TwitchDropsBot.WinForms
 
             twitchUser.Logger.OnLog += (message) => AppendLog($"LOG: {message}");
             twitchUser.Logger.OnError += (message) => AppendLog($"ERROR: {message}");
+            twitchUser.Logger.OnException += (exception) => AppendLog($"ERROR: {exception.ToString()}");
             twitchUser.Logger.OnInfo += (message) => AppendLog($"INFO: {message}");
         }
 
@@ -46,7 +58,15 @@ namespace TwitchDropsBot.WinForms
                 if (twitchUser?.Inventory != null)
                 {
                     twitchUser.Logger.Info("Inventory requested");
-                    await LoadInventoryAsync();
+                    try
+                    {
+                        await LoadInventoryAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        twitchUser.Logger.Error(ex);
+                    }
+
                 }
             }
         }

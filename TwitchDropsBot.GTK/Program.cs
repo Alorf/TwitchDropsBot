@@ -1,6 +1,7 @@
 using Gtk;
 using System;
 using System.Reflection;
+using TwitchDropsBot.Core;
 
 namespace TwitchDropsBot.GTK
 {
@@ -36,7 +37,21 @@ namespace TwitchDropsBot.GTK
                 }
             }
             win.Show();
+
+#if RELEASE
+            try
+            {
+                Application.Run();
+            }
+            catch (Exception e)
+            {
+                SystemLogger.Error(e);
+                Environment.Exit(1);
+            }
+#else
             Application.Run();
+#endif
+            
         }
     }
 }

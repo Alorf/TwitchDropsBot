@@ -37,6 +37,7 @@ namespace TwitchDropsBot.GTK
             
             twitchUser.Logger.OnLog += (message) => AppendLog($"LOG: {message}");
             twitchUser.Logger.OnError += (message) => AppendLog($"ERROR: {message}");
+            twitchUser.Logger.OnException += (exception) => AppendLog($"ERROR: {exception.ToString()}");
             twitchUser.Logger.OnInfo += (message) => AppendLog($"INFO: {message}");
         }
         private void ReloadButton_Click(object sender, EventArgs e)
@@ -107,7 +108,15 @@ namespace TwitchDropsBot.GTK
                 if (twitchUser?.Inventory != null)
                 {
                     twitchUser.Logger.Info("Inventory requested");
-                    await LoadInventoryAsync();
+                    try
+                    {
+                        await LoadInventoryAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        twitchUser.Logger.Error(ex);
+                    }
+                    
                 }
             }
         }

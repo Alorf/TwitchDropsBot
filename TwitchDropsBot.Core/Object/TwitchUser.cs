@@ -99,8 +99,7 @@ public class TwitchUser : INotifyPropertyChanged
         UniqueId = uniqueId;
         GqlRequest = new GqlRequest(this);
         Status = BotStatus.Idle;
-        Logger = new Logger();
-        Logger.TwitchUser = this;
+        Logger = new Logger(this);
         FavouriteGames = new List<string>();
         OnlyFavouriteGames = false;
         StreamURL = null;
@@ -139,6 +138,18 @@ public class TwitchUser : INotifyPropertyChanged
                     new EmbedBuilder()
                         .WithTitle($"Error - {Login}")
                         .WithDescription(message)
+                        .WithColor(Color.Red)
+                        .Build()
+                });
+            };
+
+            Logger.OnException += async (exception) =>
+            {
+                await SendWebhookAsync(new List<Embed>
+                {
+                    new EmbedBuilder()
+                        .WithTitle($"Error - {Login}")
+                        .WithDescription(exception.ToString())
                         .WithColor(Color.Red)
                         .Build()
                 });

@@ -143,11 +143,6 @@ namespace TwitchDropsBot.WinForms
 
             if (item.GetGameImageUrl() != null)
             {
-                var url = item.GetGameImageUrl();
-                //replace width and height
-                url = url.Replace("{width}", "16");
-                url = url.Replace("{height}", "16");
-
                 await DownloadImageFromWeb(item, gameImageList, item.GetGameSlug());
             }
 
@@ -198,8 +193,13 @@ namespace TwitchDropsBot.WinForms
 
             inventoryItems.AddRange(gameEventDrops);
 
+            var oneItemOfEachDistinctSlug = inventoryItems
+                .GroupBy(item => item.GetGameSlug())
+                .Select(group => group.First())
+                .ToList();
+
             // Create and add groups first
-            var groupTasks = inventoryItems.Select(async inventoryItem =>
+            var groupTasks = oneItemOfEachDistinctSlug.Select(async inventoryItem =>
             {
                 return await AddGroup(inventoryItem);
             });
@@ -232,39 +232,65 @@ namespace TwitchDropsBot.WinForms
             {
                 inventoryListView.Invoke(new Action(() =>
                 {
+                    inventoryListView.BeginUpdate();
                     inventoryListView.Items.Clear();
                     inventoryListView.Items.AddRange(listViewItemsResult.ToArray());
                     inventoryListView.AutoResizeColumn(2, ColumnHeaderAutoResizeStyle.ColumnContent);
+                    inventoryListView.EndUpdate();
                 }));
             }
             else
             {
+                inventoryListView.BeginUpdate();
                 inventoryListView.Items.Clear();
                 inventoryListView.Items.AddRange(listViewItemsResult.ToArray());
                 inventoryListView.AutoResizeColumn(2, ColumnHeaderAutoResizeStyle.ColumnContent);
+                inventoryListView.EndUpdate();
             }
         }
 
         private async Task DownloadImageFromWeb(IInventorySystem item, ImageList il, string? slug = null)
         {
             var key = slug ?? item.Id;
-            using (HttpClient client = new HttpClient())
+
+            // Check if the image already exists in the ImageList
+            lock (imageListLock)
             {
-                var response = await client.GetAsync(item.GetImage());
-                response.EnsureSuccessStatusCode();
-                using (var respStream = await response.Content.ReadAsStreamAsync())
+                if (il.Images.ContainsKey(key))
                 {
-                    Bitmap bmp = new Bitmap(respStream);
-                    if (inventoryListView.InvokeRequired)
-                    {
-                        inventoryListView.Invoke(new Action(() => il.Images.Add(key, bmp)));
-                    }
-                    else
-                    {
-                        il.Images.Add(key, bmp);
-                    }
+                    return;
                 }
             }
+
+            await Task.Run(async () =>
+            {
+                using (HttpClient client = new HttpClient())
+                {
+                    var response = await client.GetAsync(slug != null ? item.GetGameImageUrl(): item.GetImage());
+                    response.EnsureSuccessStatusCode();
+                    using (var respStream = await response.Content.ReadAsStreamAsync())
+                    {
+                        Bitmap bmp = new Bitmap(respStream);
+                        if (inventoryListView.InvokeRequired)
+                        {
+                            inventoryListView.Invoke(new Action(() =>
+                            {
+                                lock (imageListLock)
+                                {
+                                    il.Images.Add(key, bmp);
+                                }
+                            }));
+                        }
+                        else
+                        {
+                            lock (imageListLock)
+                            {
+                                il.Images.Add(key, bmp);
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         private void ReloadButton_Click(object sender, EventArgs e)

@@ -1,3 +1,6 @@
+using Discord;
+using System.Text.RegularExpressions;
+
 namespace TwitchDropsBot.Core.Object.TwitchGQL;
 
 public class TimeBasedDrop : IInventorySystem
@@ -14,7 +17,11 @@ public class TimeBasedDrop : IInventorySystem
     public Game? Game { get; set; }
     public string? GetGameImageUrl()
     {
-        return Game?.BoxArtURL;
+        var url = Game?.BoxArtURL;
+        
+        url = Regex.Replace(url, @"\d+x\d+", "16x16");
+
+        return url;
     }
     public string? GetGameSlug()
     {

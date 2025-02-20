@@ -40,8 +40,6 @@ namespace TwitchDropsBot.WinForms
                 {
                     Environment.Exit(1);
                 }
-
-                config = config.GetConfig();
             }
 
             foreach (ConfigUser user in config.Users)
@@ -49,7 +47,7 @@ namespace TwitchDropsBot.WinForms
                 TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId);
                 twitchUser.DiscordWebhookURl = config.WebhookURL;
 
-                StartBot(twitchUser);
+                Bot.StartBot(twitchUser);
                 tabControl1.TabPages.Add(CreateTabPage(twitchUser));
 
                 InitList();
@@ -58,52 +56,6 @@ namespace TwitchDropsBot.WinForms
 #if DEBUG
             AllocConsole();
 #endif
-        }
-
-        private Task StartBot(TwitchUser twitchUser)
-        {
-            Bot bot = new Bot(twitchUser);
-            TimeSpan waitingTime;
-            twitchUser.CancellationTokenSource = new CancellationTokenSource();
-            return Task.Run(async () =>
-            {
-                while (true)
-                {
-                    try
-                    {
-                        await bot.StartAsync();
-                        waitingTime = TimeSpan.FromSeconds(20);
-                    }
-                    catch (NoBroadcasterOrNoCampaignLeft ex)
-                    {
-                        twitchUser.Logger.Info(ex.Message);
-                        twitchUser.Logger.Info("Waiting 5 minutes before trying again.");
-                        waitingTime = TimeSpan.FromMinutes(5);
-                    }
-                    catch (StreamOffline ex)
-                    {
-                        twitchUser.Logger.Info(ex.Message);
-                        twitchUser.Logger.Info("Waiting 5 minutes before trying again.");
-                        waitingTime = TimeSpan.FromMinutes(5);
-                    }
-                    catch (OperationCanceledException ex)
-                    {
-                        twitchUser.Logger.Info(ex.Message);
-                        twitchUser.CancellationTokenSource = new CancellationTokenSource();
-                        waitingTime = TimeSpan.FromSeconds(10);
-                    }
-                    catch (Exception ex)
-                    {
-                        twitchUser.Logger.Error(ex);
-                        waitingTime = TimeSpan.FromMinutes(5);
-                    }
-
-                    twitchUser.StreamURL = null;
-                    twitchUser.Status = BotStatus.Idle;
-
-                    await Task.Delay(waitingTime);
-                }
-            });
         }
 
         void InitList()
@@ -307,7 +259,7 @@ namespace TwitchDropsBot.WinForms
             TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId);
             twitchUser.DiscordWebhookURl = config.WebhookURL;
 
-            StartBot(twitchUser);
+            Bot.StartBot(twitchUser);
 
             tabControl1.TabPages.Add(CreateTabPage(twitchUser));
         }

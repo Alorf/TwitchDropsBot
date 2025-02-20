@@ -23,6 +23,55 @@ public class Bot
         config = AppConfig.Instance;
     }
 
+    public static Task StartBot(TwitchUser twitchUser)
+    {
+        Bot bot = new Bot(twitchUser);
+        TimeSpan waitingTime;
+        twitchUser.CancellationTokenSource = new CancellationTokenSource();
+        return Task.Run(async () =>
+        {
+
+            AppConfig config = AppConfig.Instance;
+
+            while (true)
+            {
+                try
+                {
+                    await bot.StartAsync();
+                    waitingTime = TimeSpan.FromSeconds(20);
+                }
+                catch (NoBroadcasterOrNoCampaignLeft ex)
+                {
+                    twitchUser.Logger.Info(ex.Message);
+                    twitchUser.Logger.Info($"Waiting {config.waitingSeconds} seconds before trying again.");
+                    waitingTime = TimeSpan.FromSeconds(config.waitingSeconds);
+                }
+                catch (StreamOffline ex)
+                {
+                    twitchUser.Logger.Info(ex.Message);
+                    twitchUser.Logger.Info($"Waiting {config.waitingSeconds} seconds before trying again.");
+                    waitingTime = TimeSpan.FromSeconds(config.waitingSeconds);
+                }
+                catch (OperationCanceledException ex)
+                {
+                    twitchUser.Logger.Info(ex.Message);
+                    twitchUser.CancellationTokenSource = new CancellationTokenSource();
+                    waitingTime = TimeSpan.FromSeconds(10);
+                }
+                catch (System.Exception ex)
+                {
+                    twitchUser.Logger.Error(ex);
+                    waitingTime = TimeSpan.FromSeconds(config.waitingSeconds);
+                }
+
+                twitchUser.StreamURL = null;
+                twitchUser.Status = BotStatus.Idle;
+
+                await Task.Delay(waitingTime);
+            }
+        });
+    }
+
     public async Task StartAsync()
     {
         lock (_configLock)
@@ -43,7 +92,6 @@ public class Bot
 
         await CheckCancellation();
         await CheckForClaim(inventory);
-
         await CheckCancellation();
 
         if (twitchUser.OnlyConnectedAccounts)

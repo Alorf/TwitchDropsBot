@@ -37,7 +37,7 @@ foreach (ConfigUser user in config.Users)
 {
     TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId);
     twitchUser.DiscordWebhookURl = config.WebhookURL;
-    botTasks.Add(StartBot(twitchUser));
+    botTasks.Add(Bot.StartBot(twitchUser));
 }
 
 await Task.WhenAll(botTasks);
@@ -68,50 +68,4 @@ static async Task AuthDeviceAsync()
     config.Users.Add(user);
 
     config.SaveConfig();
-}
-
-static Task StartBot(TwitchUser twitchUser)
-{
-    Bot bot = new Bot(twitchUser);
-    TimeSpan waitingTime;
-    twitchUser.CancellationTokenSource = new CancellationTokenSource();
-    return Task.Run(async () =>
-    {
-        while (true)
-        {
-            try
-            {
-                await bot.StartAsync();
-                waitingTime = TimeSpan.FromSeconds(20);
-            }
-            catch (NoBroadcasterOrNoCampaignLeft ex)
-            {
-                twitchUser.Logger.Info(ex.Message);
-                twitchUser.Logger.Info("Waiting 5 minutes before trying again.");
-                waitingTime = TimeSpan.FromMinutes(5);
-            }
-            catch (StreamOffline ex)
-            {
-                twitchUser.Logger.Info(ex.Message);
-                twitchUser.Logger.Info("Waiting 5 minutes before trying again.");
-                waitingTime = TimeSpan.FromMinutes(5);
-            }
-            catch (OperationCanceledException ex)
-            {
-                twitchUser.Logger.Info(ex.Message);
-                twitchUser.CancellationTokenSource = new CancellationTokenSource();
-                waitingTime = TimeSpan.FromSeconds(10);
-            }
-            catch (Exception ex)
-            {
-                twitchUser.Logger.Error(ex);
-                waitingTime = TimeSpan.FromMinutes(5);
-            }
-
-            twitchUser.StreamURL = null;
-            twitchUser.Status = BotStatus.Idle;
-
-            await Task.Delay(waitingTime);
-        }
-    });
 }

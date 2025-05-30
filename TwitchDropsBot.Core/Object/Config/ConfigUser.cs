@@ -6,5 +6,6 @@ public class ConfigUser
     public string Id { get; set; }
     public string ClientSecret { get; set; }
     public string UniqueId { get; set; }
+    public List<string> FavouriteGames { get; set; }
     
 }

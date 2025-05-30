@@ -8,7 +8,8 @@ public class DropCampaign : AbstractCampaign
     public Allow Allow { get; set; }
     public List<TimeBasedDrop> TimeBasedDrops { get; set; }
     public Summary Summary { get; set; }
-    
+    public string AccountLinkURL { get; set; }
+
     public List<Channel>? GetChannels()
     {
         return Allow?.Channels;

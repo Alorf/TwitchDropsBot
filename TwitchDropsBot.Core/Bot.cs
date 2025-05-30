@@ -96,7 +96,7 @@ public class Bot
 
         if (twitchUser.OnlyConnectedAccounts)
         {
-            thingsToWatch.RemoveAll(x => x is DropCampaign dropCampaign && !dropCampaign.Self.IsAccountConnected);
+            thingsToWatch.RemoveAll(x => x is DropCampaign dropCampaign && !dropCampaign.Self.IsAccountConnected && dropCampaign.AccountLinkURL != "https://twitch.tv/");
         }
 
         if (twitchUser.OnlyFavouriteGames)
@@ -132,7 +132,7 @@ public class Bot
             campaign = result.campaign;
             broadcaster = result.broadcaster;
 
-            var campaignsAvailable = await twitchUser.GqlRequest.FetchAvailableDropsAsync(broadcaster?.Id);
+//            var campaignsAvailable = await twitchUser.GqlRequest.FetchAvailableDropsAsync(broadcaster?.Id);
 
             if (campaign == null || broadcaster == null /*|| campaignsAvailable.Count == 0*/)
             {
@@ -141,10 +141,10 @@ public class Bot
                     twitchUser.Logger.Log($"No broadcaster found for this campaign ({campaign?.Name}).");
                 }
 
-                if (broadcaster != null && campaignsAvailable.Count == 0)
-                {
-                    twitchUser.Logger.Log($"It seems like every drops have been watched for this campaign ({campaign?.Name} | {broadcaster.Login} - {broadcaster.Id}).");
-                }
+//              if (broadcaster != null && campaignsAvailable.Count == 0)
+//              {
+//                  twitchUser.Logger.Log($"It seems like every drops have been watched for this campaign ({campaign?.Name} | {broadcaster.Login} - {broadcaster.Id}).");
+//              }
 
                 var ToDelete = thingsToWatch.Find(x => x.Id == campaign.Id);
                 thingsToWatch.Remove(ToDelete);
@@ -315,7 +315,7 @@ public class Bot
                         }
 
                         if (tempBroadcaster.IsLive() && tempBroadcaster.BroadcastSettings.Game?.Id != null &&
-                            tempBroadcaster.BroadcastSettings.Game.Id == campaign.Game.Id)
+                            (campaign.Game.DisplayName == "Special Events" || tempBroadcaster.BroadcastSettings.Game.Id == campaign.Game.Id))
                         {
                             broadcaster = tempBroadcaster;
                             twitchUser.CurrentBroadcaster = broadcaster;

@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:TwitchDropsBot.AvaloniaUI.ViewModels"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
+             xmlns:views="clr-namespace:TwitchDropsBot.AvaloniaUI.Views"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="TwitchDropsBot.AvaloniaUI.Views.BotView"
+             x:DataType="viewModels:BotViewModel">
+
+		<TabControl Theme="{DynamicResource ScrollTabControl}" ItemsSource="{Binding Tabs}" Grid.Row="1" Grid.ColumnSpan="2">
+            <!-- Header Template -->
+            <TabControl.ItemTemplate>
+                <DataTemplate>
+                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                         <!--
+						 - 70x70 px
+						 <Image asyncImageLoader:ImageLoader.Source="" Width="20" Height="20">
+                            <Image.Clip>
+                                <EllipseGeometry Center="10,10" RadiusX="10" RadiusY="10"/>
+                            </Image.Clip>
+                        </Image> -->
+                        <TextBlock Text="{Binding Header}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </DataTemplate>
+            </TabControl.ItemTemplate>
+            <!-- Content Template -->
+            <TabControl.ContentTemplate>
+                <DataTemplate>
+                    <views:TabUserView DataContext="{Binding}"/>
+				</DataTemplate>
+            </TabControl.ContentTemplate>
+        </TabControl>
+</UserControl>

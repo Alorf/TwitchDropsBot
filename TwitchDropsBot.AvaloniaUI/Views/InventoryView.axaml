@@ -1,0 +1,67 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:viewModels="clr-namespace:TwitchDropsBot.AvaloniaUI.ViewModels"
+    xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
+    xmlns:lottie="clr-namespace:Avalonia.Labs.Lottie;assembly=Avalonia.Labs.Lottie"
+    x:Class="TwitchDropsBot.AvaloniaUI.Views.InventoryView"
+    x:DataType="viewModels:TabUserViewModel">
+
+	<TreeView ItemsSource="{Binding Inventory}" Grid.Column="1" Margin="8" >
+		<TreeView.Styles>
+			<Style Selector="TreeViewItem">
+				<Setter Property="Padding" Value="8,0,0,0"/>
+			</Style>
+		</TreeView.Styles>
+
+		<TreeView.DataTemplates>
+			<!-- Game -->
+			<TreeDataTemplate DataType="viewModels:InventoryGameViewModel" ItemsSource="{Binding Items}">
+				<Grid Height="48" ClipToBounds="True">
+					<lottie:Lottie Path="/Assets/watching.json"
+								   Height="35"
+								   Width="25"
+								   VerticalAlignment="Center"
+								   HorizontalAlignment="Left"
+								   Margin="0,0,0,0"
+								   IsVisible="{Binding IsCurrentGame}" />
+					<Image asyncImageLoader:ImageLoader.Source="{Binding GameImageUrl}"
+						   Stretch="UniformToFill"
+						   HorizontalAlignment="Stretch"
+						   VerticalAlignment="Stretch"
+						   Opacity="0.8">
+						<Image.OpacityMask>
+							<LinearGradientBrush StartPoint="0,0" EndPoint="125,0">
+								<GradientStop Color="#00FFFFFF" Offset="0.30"/>
+								<GradientStop Color="#FFFFFFFF" Offset="1"/>
+							</LinearGradientBrush>
+						</Image.OpacityMask>
+					</Image>
+					<!-- Name -->
+					<TextBlock Text="{Binding GameName}"
+							   FontWeight="Bold"
+							   FontSize="18"
+							   VerticalAlignment="Center"
+							   Margin="32,0,0,0"/>
+				</Grid>
+			</TreeDataTemplate>
+
+			<!-- Campaign -->
+			<TreeDataTemplate DataType="viewModels:InventoryCampaignViewModel" ItemsSource="{Binding Items}">
+				<TextBlock Text="{Binding Name}"
+						   FontWeight="Bold"
+						   TextWrapping="Wrap"
+						   TextTrimming="CharacterEllipsis"
+                               />
+			</TreeDataTemplate>
+
+			<!-- TimeBasedDrop (Item) -->
+			<TreeDataTemplate DataType="viewModels:InventoryItemViewModel">
+				<StackPanel Orientation="Horizontal" Spacing="8">
+					<Image asyncImageLoader:ImageLoader.Source="{Binding ImageUrl}" Width="24" Height="24"/>
+					<TextBlock Text="{Binding Title}" FontStyle="Italic" Foreground="SlateBlue" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
+				</StackPanel>
+			</TreeDataTemplate>
+		</TreeView.DataTemplates>
+	</TreeView>
+</UserControl>

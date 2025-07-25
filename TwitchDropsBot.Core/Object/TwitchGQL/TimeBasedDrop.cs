@@ -15,6 +15,15 @@ public class TimeBasedDrop : IInventorySystem
     public Campaign Campaign { get; set; }
     public List<BenefitEdge> BenefitEdges { get; set; }
     public Game? Game { get; set; }
+
+    public string Image
+    {
+        get
+        {
+            return GetImage();
+        }
+    }
+
     public string? GetGameImageUrl()
     {
         var url = Game?.BoxArtURL;

@@ -15,6 +15,7 @@ public class AppConfig
     public int LogLevel { get; set; }
     public string? WebhookURL { get; set; }
     public double waitingSeconds { get; set; }
+    public int AttemptToWatch { get; set; }
     public static TwitchClient TwitchClient { get; } = TwitchClientType.ANDROID_APP;
 
     public static AppConfig Instance
@@ -40,6 +41,7 @@ public class AppConfig
         OnlyConnectedAccounts = false;
         waitingSeconds = 60*5;
         LogLevel = 0;
+        AttemptToWatch = 3;
     }
 
     private static AppConfig LoadConfig()

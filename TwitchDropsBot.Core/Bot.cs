@@ -78,7 +78,7 @@ public class Bot
         {
             config.GetConfig();
         }
-        twitchUser.FavouriteGames = config.FavouriteGames;
+        twitchUser.FavouriteGames = config.Users.Find(x => x.Id == twitchUser.Id).FavouriteGames ?? config.FavouriteGames;
         twitchUser.OnlyFavouriteGames = config.OnlyFavouriteGames;
         twitchUser.OnlyConnectedAccounts = config.OnlyConnectedAccounts;
 
@@ -165,8 +165,14 @@ public class Bot
                     {
                         twitchUser.Logger.Log($"Drop found but not the right channel, watching 20 sec to init the drop (got {dropCurrentSession.Channel.Name} instead of {broadcaster.Login})");
                     }
-                    twitchUser.Logger.Log($"No time based drop found, watching 20 sec to init the drop");
-                    dropCurrentSession = await FakeWatchAsync(broadcaster);
+
+
+                    // Sometimes, we have to watch 2 or 3 times to init the drop or it will skip
+                    for (int i = 0; i < config.AttemptToWatch; i++)
+                    {
+                        twitchUser.Logger.Log($"No time based drop found, watching 20 sec to init the drop");
+                        dropCurrentSession = await FakeWatchAsync(broadcaster);
+                    }
                 }
 
                 if (campaign is DropCampaign dropCampaign)

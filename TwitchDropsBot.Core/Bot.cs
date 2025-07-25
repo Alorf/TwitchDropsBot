@@ -166,7 +166,9 @@ public class Bot
                         twitchUser.Logger.Log($"Drop found but not the right channel, watching 20 sec to init the drop (got {dropCurrentSession.Channel.Name} instead of {broadcaster.Login})");
                     }
 
-                    for (int i = 0; i < 3; i++)
+
+                    // Sometimes, we have to watch 2 or 3 times to init the drop or it will skip
+                    for (int i = 0; i < config.AttemptToWatch; i++)
                     {
                         twitchUser.Logger.Log($"No time based drop found, watching 20 sec to init the drop");
                         dropCurrentSession = await FakeWatchAsync(broadcaster);

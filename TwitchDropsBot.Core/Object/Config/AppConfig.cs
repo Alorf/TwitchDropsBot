@@ -8,6 +8,8 @@ public class AppConfig
     private static AppConfig? _instance;
     public List<ConfigUser> Users { get; set; }
     public List<string> FavouriteGames { get; set; }
+    public List<string> AvoidCampaign { get; set; }
+    public List<string> WatchSpecificStreamer { get; set; }
     public bool OnlyFavouriteGames { get; set; }
     public bool LaunchOnStartup { get; set; }
     public bool MinimizeInTray { get; set; }

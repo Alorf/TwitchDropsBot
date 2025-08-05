@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Discord.Webhook;
 using Discord;
 using System.Diagnostics;
@@ -294,6 +295,9 @@ public class Bot
         List<AbstractCampaign> campaigns)
     {
         AbstractBroadcaster broadcaster = null;
+
+        campaigns.RemoveAll(x => config.AvoidCampaign.Contains(x.Name, StringComparer.OrdinalIgnoreCase));
+
         foreach (var campaign in campaigns)
         {
             await CheckCancellation();
@@ -307,6 +311,11 @@ public class Bot
                 dropCampaign.Allow = tempDropCampaign.Allow;
 
                 List<Channel>? channels = dropCampaign.GetChannels();
+
+                if (config.WatchSpecificStreamer.Count > 0)
+                {
+                    channels = channels.Where(x => config.WatchSpecificStreamer.Contains(x.Name, StringComparer.OrdinalIgnoreCase)).ToList();
+                }
 
                 if (channels != null && channels.Count <= 10)
                 {

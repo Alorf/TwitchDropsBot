@@ -296,7 +296,10 @@ public class Bot
     {
         AbstractBroadcaster broadcaster = null;
 
-        campaigns.RemoveAll(x => config.AvoidCampaign.Contains(x.Name, StringComparer.OrdinalIgnoreCase));
+        if (config.AvoidCampaign.Count > 0)
+        {
+            campaigns.RemoveAll(x => config.AvoidCampaign.Contains(x.Name, StringComparer.OrdinalIgnoreCase)); campaigns.RemoveAll(x => config.AvoidCampaign.Contains(x.Name, StringComparer.OrdinalIgnoreCase));
+        }
 
         foreach (var campaign in campaigns)
         {

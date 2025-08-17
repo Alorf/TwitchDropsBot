@@ -99,7 +99,14 @@ namespace TwitchDropsBot.GTK
             foreach (ConfigUser user in config.Users)
             {
                 TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId);
+                twitchUser.DiscordWebhookURl = config.WebhookURL;
 
+                if (!user.Enabled)
+                {
+                    SystemLogger.Info($"User {twitchUser.Login} is not enabled, skipping...");
+                    continue;
+                }
+                
                 Bot.StartBot(twitchUser);
                 usersNotebook.AppendPage(CreateTabPage(twitchUser), new Label(twitchUser.Login));
                 usersNotebook.ShowAll();

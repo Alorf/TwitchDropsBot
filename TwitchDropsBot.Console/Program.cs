@@ -1,6 +1,4 @@
-﻿using System.Text.Json;
-using TwitchDropsBot.Core;
-using TwitchDropsBot.Core.Exception;
+﻿using TwitchDropsBot.Core;
 using TwitchDropsBot.Core.Object;
 using TwitchDropsBot.Core.Object.Config;
 using TwitchDropsBot.Core.Utilities;
@@ -37,6 +35,13 @@ foreach (ConfigUser user in config.Users)
 {
     TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId);
     twitchUser.DiscordWebhookURl = config.WebhookURL;
+    
+    if (!user.Enabled)
+    {
+        SystemLogger.Info($"User {twitchUser.Login} is not enabled, skipping...");
+        continue;
+    }
+    
     botTasks.Add(Bot.StartBot(twitchUser));
 }
 

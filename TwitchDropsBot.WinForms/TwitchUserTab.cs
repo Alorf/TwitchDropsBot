@@ -161,7 +161,7 @@ namespace TwitchDropsBot.WinForms
                 return ifExist;
             }
 
-            if (item.GetGameImageUrl() != null)
+            if (item.GetGameImageUrl(16) != null)
             {
                 await DownloadImageFromWeb(item, gameImageList, item.GetGameSlug());
             }
@@ -286,7 +286,7 @@ namespace TwitchDropsBot.WinForms
             {
                 using (HttpClient client = new HttpClient())
                 {
-                    var response = await client.GetAsync(slug != null ? item.GetGameImageUrl(): item.GetImage());
+                    var response = await client.GetAsync(slug != null ? item.GetGameImageUrl(16): item.GetImage());
                     response.EnsureSuccessStatusCode();
                     using (var respStream = await response.Content.ReadAsStreamAsync())
                     {

@@ -18,6 +18,8 @@ public class AppConfig
     public string? WebhookURL { get; set; }
     public double waitingSeconds { get; set; }
     public int AttemptToWatch { get; set; }
+    public bool headless { get; set; }
+    public string WatchManager { get; set; }
     public static TwitchClient TwitchClient { get; } = TwitchClientType.ANDROID_APP;
 
     public static AppConfig Instance
@@ -46,6 +48,8 @@ public class AppConfig
         waitingSeconds = 60*5;
         LogLevel = 0;
         AttemptToWatch = 3;
+        headless = true;
+        WatchManager = "WatchRequest";
     }
 
     private static AppConfig LoadConfig()

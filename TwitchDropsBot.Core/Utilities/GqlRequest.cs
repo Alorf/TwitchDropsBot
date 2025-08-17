@@ -1,7 +1,6 @@
 ﻿using GraphQL;
 using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.SystemTextJson;
-using System.Collections.Generic;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using TwitchDropsBot.Core.Object;
@@ -56,7 +55,7 @@ public class GqlRequest
         if (resp != null)
         {
             List<AbstractCampaign> campaigns = new List<AbstractCampaign>();
-            List<DropCampaign> dropCampaigns = resp.Data.CurrentUser.DropCampaigns;
+            List<DropCampaign> dropCampaigns = resp.Data.CurrentUser.DropCampaigns ?? new List<DropCampaign>();
             List<RewardCampaignsAvailableToUser> rewardCampaigns = resp.Data.RewardCampaignsAvailableToUser;
 
             dropCampaigns = dropCampaigns.FindAll(dropCampaign => dropCampaign is { Status: "ACTIVE" });
@@ -132,7 +131,7 @@ public class GqlRequest
 
         Inventory? inventory = resp?.Data.CurrentUser.Inventory;
 
-        if (inventory?.DropCampaignsInProgress == null)
+        if (inventory?.DropCampaignsInProgress is null)
         {
             inventory.DropCampaignsInProgress = new List<DropCampaign>();
         }
@@ -341,7 +340,7 @@ public class GqlRequest
                 }
 
                 twitchUser.Logger.Error($"Failed to execute the query {name} (attempt {i + 1}/{limit}).");
-                SystemLogger.Error($"(${e.Message})");
+                SystemLogger.Error($"[{twitchUser.Login}] Failed to execute the query {name} (attempt {i + 1}/{limit}).");
 
                 await Task.Delay(TimeSpan.FromSeconds(5));
             }

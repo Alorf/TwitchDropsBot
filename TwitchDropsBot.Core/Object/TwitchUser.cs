@@ -29,6 +29,7 @@ public class TwitchUser : INotifyPropertyChanged
     public string UniqueId { get; set; }
     public GqlRequest GqlRequest { get; set; }
     public List<string> FavouriteGames { get; set; }
+    public List<string> PersonalFavouriteGames { get; set; }
     public bool OnlyFavouriteGames { get; set; }
     public bool OnlyConnectedAccounts { get; set; }
     public AbstractCampaign? CurrentCampaign { get; set; }
@@ -97,12 +98,13 @@ public class TwitchUser : INotifyPropertyChanged
         }
     }
 
-    public TwitchUser(string login, string id, string clientSecret, string uniqueId)
+    public TwitchUser(string login, string id, string clientSecret, string uniqueId, List<string> personalFavouriteGames)
     {
         Login = login;
         Id = id;
         ClientSecret = clientSecret;
         UniqueId = uniqueId;
+        PersonalFavouriteGames = personalFavouriteGames ?? new List<string>();
         GqlRequest = new GqlRequest(this);
         Status = BotStatus.Idle;
         Logger = new Logger(this);

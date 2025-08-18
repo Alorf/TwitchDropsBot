@@ -92,7 +92,7 @@ public class WatchRequest : WatchManager
                     var stream = tempBroadcaster.Stream;
                     var payload = GetPayload(tempBroadcaster, stream);
 
-                    //do post request to checkUrl, passing the payload
+                    // Do post request to checkUrl, passing the payload
                     var request = new HttpRequestMessage(HttpMethod.Post, checkurl)
                     {
                         Content = new StringContent($"data={payload}", Encoding.UTF8, "application/x-www-form-urlencoded")
@@ -164,7 +164,7 @@ public class WatchRequest : WatchManager
         var assetUrl = match.Value;
         var jsContent = await client.GetStringAsync(assetUrl);
 
-        // Cherche directement la définition de spade_url
+        // Search for the spade_url in the JavaScript content
         var spadeRegex = new Regex(@"""spade_url""\s*:\s*""([^""]+)""");
         var spadeMatch = spadeRegex.Match(jsContent);
         if (spadeMatch.Success)

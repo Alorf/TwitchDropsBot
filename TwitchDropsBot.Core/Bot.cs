@@ -72,9 +72,8 @@ public class Bot
         {
             config.GetConfig();
         }
-
-        twitchUser.FavouriteGames =
-            config.Users.Find(x => x.Id == twitchUser.Id)?.FavouriteGames ?? config.FavouriteGames;
+        
+        twitchUser.FavouriteGames = twitchUser.PersonalFavouriteGames.Count > 0 ? twitchUser.PersonalFavouriteGames : config.FavouriteGames;
         twitchUser.OnlyFavouriteGames = config.OnlyFavouriteGames;
         twitchUser.OnlyConnectedAccounts = config.OnlyConnectedAccounts;
 

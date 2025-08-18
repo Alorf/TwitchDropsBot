@@ -33,7 +33,7 @@ List<Task> botTasks = new List<Task>();
 
 foreach (ConfigUser user in config.Users)
 {
-    TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId);
+    TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId, user.FavouriteGames);
     twitchUser.DiscordWebhookURl = config.WebhookURL;
     
     if (!user.Enabled)

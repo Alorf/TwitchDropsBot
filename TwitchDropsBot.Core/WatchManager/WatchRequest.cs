@@ -10,17 +10,21 @@ namespace TwitchDropsBot.Core.WatchManager;
 
 public class WatchRequest : WatchManager
 {
-    private string? StreamURL = null;
-    private GqlRequest GqlRequest;
-    private DateTime LastRequestTime = DateTime.MinValue;
+    private string? streamURL;
+    private GqlRequest gqlRequest;
+    private DateTime lastRequestTime;
+    private bool enableOldSystem;
     private static string? spadeUrl = null;
     private static DateTime lastSpadeUrlFetch = DateTime.MinValue;
     private static readonly TimeSpan spadeUrlRefreshInterval = TimeSpan.FromMinutes(30);
     private static readonly object spadeUrlLock = new();
     
-    public WatchRequest(TwitchUser twitchUser, CancellationTokenSource cancellationTokenSource) : base(twitchUser, cancellationTokenSource)
+    public WatchRequest(TwitchUser twitchUser, CancellationTokenSource cancellationTokenSource, bool enableOldSystem) : base(twitchUser, cancellationTokenSource)
     {
-        GqlRequest = twitchUser.GqlRequest;
+        gqlRequest = twitchUser.GqlRequest;
+        this.enableOldSystem = enableOldSystem;
+        lastRequestTime = DateTime.MinValue;
+        streamURL = null;
     }
 
     /*
@@ -37,55 +41,58 @@ public class WatchRequest : WatchManager
 
         try
         {
-            if (StreamURL == null)
+            if (enableOldSystem)
             {
-                StreamPlaybackAccessToken? streamPlaybackAccessToken =
-                    await GqlRequest.FetchPlaybackAccessTokenAsync(broadcaster.Login);
-
-                var requestBroadcastQualitiesURL =
-                    $"https://usher.ttvnw.net/api/channel/hls/{broadcaster.Login}.m3u8?sig={streamPlaybackAccessToken!.Signature}&token={streamPlaybackAccessToken!.Value}";
-
-                HttpResponseMessage response = await client.GetAsync(requestBroadcastQualitiesURL);
-                response.EnsureSuccessStatusCode();
-                string responseBody = await response.Content.ReadAsStringAsync();
-
-                string[] lines = responseBody.Split("\n");
-                var regex = new Regex(@"VIDEO=""([^""]+)""");
-                var qualitiesPlaylist = new Dictionary<string, string>();
-                foreach (var line in lines)
+                if (streamURL == null)
                 {
-                    if (line.StartsWith("https"))
+                    StreamPlaybackAccessToken? streamPlaybackAccessToken =
+                        await gqlRequest.FetchPlaybackAccessTokenAsync(broadcaster.Login);
+
+                    var requestBroadcastQualitiesURL =
+                        $"https://usher.ttvnw.net/api/channel/hls/{broadcaster.Login}.m3u8?sig={streamPlaybackAccessToken!.Signature}&token={streamPlaybackAccessToken!.Value}";
+
+                    HttpResponseMessage response = await client.GetAsync(requestBroadcastQualitiesURL);
+                    response.EnsureSuccessStatusCode();
+                    string responseBody = await response.Content.ReadAsStringAsync();
+
+                    string[] lines = responseBody.Split("\n");
+                    var regex = new Regex(@"VIDEO=""([^""]+)""");
+                    var qualitiesPlaylist = new Dictionary<string, string>();
+                    foreach (var line in lines)
                     {
-                        var previousLine = Array.IndexOf(lines, line) - 1;
-                        var match = regex.Match(lines[previousLine]);
-                        if (match.Success)
+                        if (line.StartsWith("https"))
                         {
-                            qualitiesPlaylist.Add(match.Groups[1].Value, line);
+                            var previousLine = Array.IndexOf(lines, line) - 1;
+                            var match = regex.Match(lines[previousLine]);
+                            if (match.Success)
+                            {
+                                qualitiesPlaylist.Add(match.Groups[1].Value, line);
+                            }
                         }
+                    }
+
+                    if (qualitiesPlaylist.TryGetValue("chunked", out var chunkedUrl))
+                    {
+                        streamURL = chunkedUrl;
+                    }
+                    else
+                    {
+                        streamURL = qualitiesPlaylist.Values.FirstOrDefault();
                     }
                 }
 
-                if (qualitiesPlaylist.TryGetValue("chunked", out var chunkedUrl))
-                {
-                    StreamURL = chunkedUrl;
-                }
-                else
-                {
-                    StreamURL = qualitiesPlaylist.Values.FirstOrDefault();
-                }
+                HttpResponseMessage response2 = await client.GetAsync(streamURL);
+                response2.EnsureSuccessStatusCode();
+                string responseBody2 = await response2.Content.ReadAsStringAsync();
+
+                string[] lines2 = responseBody2.Split("\n");
+                string lastLine2 = lines2[lines2.Length - 2];
+
+                HttpResponseMessage response3 = await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, lastLine2));
+                response3.EnsureSuccessStatusCode();
             }
-
-            HttpResponseMessage response2 = await client.GetAsync(StreamURL);
-            response2.EnsureSuccessStatusCode();
-            string responseBody2 = await response2.Content.ReadAsStringAsync();
-
-            string[] lines2 = responseBody2.Split("\n");
-            string lastLine2 = lines2[lines2.Length - 2];
-
-            HttpResponseMessage response3 = await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, lastLine2));
-            response3.EnsureSuccessStatusCode();
-
-            if ((requestTime - LastRequestTime).TotalSeconds >= 59)
+            
+            if ((requestTime - lastRequestTime).TotalSeconds >= 59)
             {
                 var checkurl = await getSpadeUrl();
 
@@ -94,7 +101,7 @@ public class WatchRequest : WatchManager
                     throw new System.Exception("Failed to fetch Spade URL.");
                 }
 
-                var tempBroadcaster = await GqlRequest.FetchStreamInformationAsync(broadcaster.Login);
+                var tempBroadcaster = await gqlRequest.FetchStreamInformationAsync(broadcaster.Login);
             
                 if (tempBroadcaster?.Stream != null)
                 {
@@ -110,7 +117,7 @@ public class WatchRequest : WatchManager
                     var payloadRequest = await client.SendAsync(request);
                     payloadRequest.EnsureSuccessStatusCode();
                 }
-                LastRequestTime = DateTime.Now;
+                lastRequestTime = DateTime.Now;
             }
             
         }
@@ -124,8 +131,8 @@ public class WatchRequest : WatchManager
 
     public override void Close()
     {
-        StreamURL = null;
-        LastRequestTime = DateTime.MinValue;
+        streamURL = null;
+        lastRequestTime = DateTime.MinValue;
     }
 
     private string GetPayload(AbstractBroadcaster broadcaster, Stream stream)

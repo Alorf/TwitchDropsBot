@@ -116,7 +116,7 @@ public class TwitchUser : INotifyPropertyChanged
         switch (managerType)
         {
             case "WatchRequest":
-                WatchManager = new WatchRequest(this, CancellationTokenSource);
+                WatchManager = new WatchRequest(this, CancellationTokenSource, false);
                 break;
             case "WatchBrowser":
                 WatchManager = new WatchBrowser(this, CancellationTokenSource);

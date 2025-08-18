@@ -13,7 +13,11 @@ public class WatchRequest : WatchManager
     private string? StreamURL = null;
     private GqlRequest GqlRequest;
     private DateTime LastRequestTime = DateTime.MinValue;
-
+    private static string? spadeUrl = null;
+    private static DateTime lastSpadeUrlFetch = DateTime.MinValue;
+    private static readonly TimeSpan spadeUrlRefreshInterval = TimeSpan.FromMinutes(30);
+    private static readonly object spadeUrlLock = new();
+    
     public WatchRequest(TwitchUser twitchUser, CancellationTokenSource cancellationTokenSource) : base(twitchUser, cancellationTokenSource)
     {
         GqlRequest = twitchUser.GqlRequest;
@@ -85,6 +89,11 @@ public class WatchRequest : WatchManager
             {
                 var checkurl = await getSpadeUrl();
 
+                if (checkurl is null)
+                {
+                    throw new System.Exception("Failed to fetch Spade URL.");
+                }
+
                 var tempBroadcaster = await GqlRequest.FetchStreamInformationAsync(broadcaster.Login);
             
                 if (tempBroadcaster?.Stream != null)
@@ -152,10 +161,14 @@ public class WatchRequest : WatchManager
 
     private async Task<string?> getSpadeUrl()
     {
+        lock (spadeUrlLock)
+        {
+            if (spadeUrl != null && (DateTime.Now - lastSpadeUrlFetch) < spadeUrlRefreshInterval)
+                return spadeUrl;
+        }
+
         using var client = new HttpClient();
-
         var html = await client.GetStringAsync("https://www.twitch.tv");
-
         var regex = new Regex(@"https://assets\.twitch\.tv/config/settings\.[a-zA-Z0-9]+\.js");
         var match = regex.Match(html);
         if (!match.Success)
@@ -163,12 +176,18 @@ public class WatchRequest : WatchManager
 
         var assetUrl = match.Value;
         var jsContent = await client.GetStringAsync(assetUrl);
-
-        // Search for the spade_url in the JavaScript content
         var spadeRegex = new Regex(@"""spade_url""\s*:\s*""([^""]+)""");
         var spadeMatch = spadeRegex.Match(jsContent);
+
         if (spadeMatch.Success)
-            return spadeMatch.Groups[1].Value;
+        {
+            lock (spadeUrlLock)
+            {
+                spadeUrl = spadeMatch.Groups[1].Value;
+                lastSpadeUrlFetch = DateTime.Now;
+            }
+            return spadeUrl;
+        }
 
         return null;
     }

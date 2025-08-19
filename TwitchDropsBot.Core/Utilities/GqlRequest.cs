@@ -20,6 +20,7 @@ public class GqlRequest
     private AppConfig config;
     private JsonElement postmanCollection;
     private static readonly object _postmanLock = new object();
+    private HttpRequest httpRequestGQL;
 
 
     public GqlRequest(TwitchUser twitchUser)
@@ -29,19 +30,16 @@ public class GqlRequest
         clientSessionId = GenerateClientSessionId("0123456789abcdef", 16);
         userAgent = twitchClient.UserAgents[new Random().Next(twitchClient.UserAgents.Count)];
 
-        HttpClient httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("OAuth", twitchUser.ClientSecret);
-        httpClient.DefaultRequestHeaders.Add("Client-Id", this.twitchClient.ClientID);
-        httpClient.DefaultRequestHeaders.Add("Origin", twitchClient.URL);
-        httpClient.DefaultRequestHeaders.Add("Referer", twitchClient.URL);
-        httpClient.DefaultRequestHeaders.Add("User-Agent", userAgent);
+        httpRequestGQL = new HttpRequest(twitchUser);
 
         graphQLClient =
-            new GraphQLHttpClient("https://gql.twitch.tv/gql", new SystemTextJsonSerializer(), httpClient);
+            new GraphQLHttpClient("https://gql.twitch.tv/gql", new SystemTextJsonSerializer(),
+                httpRequestGQL.HttpClient);
 
         lock (_postmanLock)
         {
-            var jsonString = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Postman/TwitchSave.postman_collection.json"));
+            var jsonString =
+                File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Postman/TwitchSave.postman_collection.json"));
             postmanCollection = JsonDocument.Parse(jsonString).RootElement;
         }
     }
@@ -63,7 +61,8 @@ public class GqlRequest
 
 
             //Select only campaigns with minute watched goal
-            rewardCampaigns = rewardCampaigns.FindAll(rewardCampaign => rewardCampaign.UnlockRequirements?.MinuteWatchedGoal != 0);
+            rewardCampaigns =
+                rewardCampaigns.FindAll(rewardCampaign => rewardCampaign.UnlockRequirements?.MinuteWatchedGoal != 0);
 
             var favGamesSet = new HashSet<string>(twitchUser.FavouriteGames.Select(game => game.ToLower()));
 
@@ -94,14 +93,12 @@ public class GqlRequest
 
     public async Task<DropCampaign?> FetchTimeBasedDropsAsync(string dropID)
     {
-
         var query = CreateQuery("DropCampaignDetails");
 
         if (query.Variables is Dictionary<string, object?> variables)
         {
             variables["channelLogin"] = twitchUser.Id;
             variables["dropID"] = dropID;
-
         }
 
         dynamic? resp = await DoGQLRequestAsync(query);
@@ -138,7 +135,8 @@ public class GqlRequest
 
         foreach (var dropCampaign in inventory.DropCampaignsInProgress)
         {
-            dropCampaign.TimeBasedDrops = dropCampaign.TimeBasedDrops.OrderBy(drop => drop.RequiredMinutesWatched).ToList();
+            dropCampaign.TimeBasedDrops =
+                dropCampaign.TimeBasedDrops.OrderBy(drop => drop.RequiredMinutesWatched).ToList();
         }
 
         return inventory;
@@ -173,7 +171,8 @@ public class GqlRequest
             {
                 if (variables["options"] is Dictionary<string, object?> options)
                 {
-                    if (options.TryGetValue("systemFilters", out var systemFiltersObj) && systemFiltersObj is List<object> systemFilters)
+                    if (options.TryGetValue("systemFilters", out var systemFiltersObj) &&
+                        systemFiltersObj is List<object> systemFilters)
                     {
                         options["systemFilters"] = new List<object> { "DROPS_ENABLED" };
                     }
@@ -260,7 +259,6 @@ public class GqlRequest
 
     public async Task<bool> ClaimDropAsync(string dropInstanceID)
     {
-
         var query = CreateQuery("DropsPage_ClaimDropRewards");
 
         query.Variables = new
@@ -271,25 +269,25 @@ public class GqlRequest
             }
         };
 
-        var customHeaders = new HttpClient();
+        var customHttpClient = new HttpClient();
+        foreach (var header in httpRequestGQL.HttpClient.DefaultRequestHeaders)
+        {
+            customHttpClient.DefaultRequestHeaders.TryAddWithoutValidation(header.Key, header.Value);
+        }
 
-        customHeaders.DefaultRequestHeaders.Add("Authorization", "OAuth " + twitchUser.ClientSecret);
-        customHeaders.DefaultRequestHeaders.Add("client-id", twitchClient.ClientID);
-        customHeaders.DefaultRequestHeaders.Add("client-session-id", clientSessionId);
-        customHeaders.DefaultRequestHeaders.Add("x-device-id", twitchUser.UniqueId);
-        customHeaders.DefaultRequestHeaders.Add("Origin", twitchClient.URL);
-        customHeaders.DefaultRequestHeaders.Add("Referer", twitchClient.URL);
-        customHeaders.DefaultRequestHeaders.Add("User-Agent", userAgent);
+        customHttpClient.DefaultRequestHeaders.Add("client-session-id", clientSessionId);
+        customHttpClient.DefaultRequestHeaders.Add("x-device-id", twitchUser.UniqueId);
 
         var redeemGraphQLClient =
-            new GraphQLHttpClient("https://gql.twitch.tv/gql", new SystemTextJsonSerializer(), customHeaders);
+            new GraphQLHttpClient("https://gql.twitch.tv/gql", new SystemTextJsonSerializer(), customHttpClient);
 
         dynamic? resp = await DoGQLRequestAsync(query, redeemGraphQLClient);
 
         return resp != null;
     }
 
-    private async Task<dynamic?> DoGQLRequestAsync(GraphQLRequest query, GraphQLHttpClient? client = null, string? name = null)
+    private async Task<dynamic?> DoGQLRequestAsync(GraphQLRequest query, GraphQLHttpClient? client = null,
+        string? name = null)
     {
         var avoidPrint = new List<string> { "Inventory", "ViewerDropsDashboard", "DirectoryPage_Game" };
 
@@ -330,7 +328,6 @@ public class GqlRequest
 
 
                 return graphQLResponse;
-
             }
             catch (System.Exception e)
             {
@@ -340,7 +337,8 @@ public class GqlRequest
                 }
 
                 twitchUser.Logger.Error($"Failed to execute the query {name} (attempt {i + 1}/{limit}).");
-                SystemLogger.Error($"[{twitchUser.Login}] Failed to execute the query {name} (attempt {i + 1}/{limit}).");
+                SystemLogger.Error(
+                    $"[{twitchUser.Login}] Failed to execute the query {name} (attempt {i + 1}/{limit}).");
 
                 await Task.Delay(TimeSpan.FromSeconds(5));
             }
@@ -358,7 +356,8 @@ public class GqlRequest
 
     public GraphQLRequest CreateQuery(string operationName)
     {
-        var item = postmanCollection.GetProperty("item").EnumerateArray().First(i => i.GetProperty("name").GetString() == $"{operationName}");
+        var item = postmanCollection.GetProperty("item").EnumerateArray()
+            .First(i => i.GetProperty("name").GetString() == $"{operationName}");
 
         var rawBody = item.GetProperty("request").GetProperty("body").GetProperty("raw");
 
@@ -410,6 +409,7 @@ public class GqlRequest
                 {
                     list.Add(ConvertJsonElement(item));
                 }
+
                 return list;
             case JsonValueKind.String:
                 return element.GetString();
@@ -418,14 +418,17 @@ public class GqlRequest
                 {
                     return intValue;
                 }
+
                 if (element.TryGetInt64(out long longValue))
                 {
                     return longValue;
                 }
+
                 if (element.TryGetDouble(out double doubleValue))
                 {
                     return doubleValue;
                 }
+
                 break;
             case JsonValueKind.True:
                 return true;

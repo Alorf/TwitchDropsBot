@@ -146,6 +146,19 @@ public class Bot
                 continue;
             }
             
+            if (campaign is DropCampaign)
+            {
+                var campaignsAvailable = await twitchUser.GqlRequest.FetchAvailableDropsAsync(broadcaster?.Id);
+
+                if (campaignsAvailable.Count == 0)
+                {
+                    twitchUser.Logger.Log(
+                        $"It seems like every drops have been watched for this campaign ({campaign?.Name} | {broadcaster.Login} - {broadcaster.Id}).");
+                    thingsToWatch.RemoveAll(x => x.Id == campaign.Id);
+                    continue;
+                }
+            }
+            
             twitchUser.Logger.Log(
                 $"Current drop campaign: {campaign.Name} ({campaign.Game?.DisplayName}), watching {broadcaster.Login} | {broadcaster.Id}");
             twitchUser.CurrentCampaign = campaign;

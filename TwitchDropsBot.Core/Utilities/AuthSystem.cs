@@ -101,6 +101,9 @@ public class AuthSystem
             }
         }
 
+        configUser.FavouriteGames = new List<string>();
+        configUser.Enabled = true;
+
         return configUser;
     }
 }

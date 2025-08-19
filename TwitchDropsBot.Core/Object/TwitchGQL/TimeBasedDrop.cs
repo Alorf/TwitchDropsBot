@@ -15,20 +15,16 @@ public class TimeBasedDrop : IInventorySystem
     public Campaign Campaign { get; set; }
     public List<BenefitEdge> BenefitEdges { get; set; }
     public Game? Game { get; set; }
-
-    public string Image
-    {
-        get
-        {
-            return GetImage();
-        }
-    }
-
-    public string? GetGameImageUrl()
+    public string? GetGameImageUrl(int size = 16)
     {
         var url = Game?.BoxArtURL;
-        
-        url = Regex.Replace(url, @"\d+x\d+", "16x16");
+
+        if (string.IsNullOrEmpty(url))
+        {
+            return null;
+        }
+
+        url = Regex.Replace(url, @"\d+x\d+", $"{size}x{size}");
 
         return url;
     }
@@ -41,7 +37,6 @@ public class TimeBasedDrop : IInventorySystem
     {
         return Game?.DisplayName ?? Game?.Name ?? "Unknown";
     }
-
 
     public string GetImage()
     {
@@ -56,5 +51,10 @@ public class TimeBasedDrop : IInventorySystem
     public string GetStatus()
     {
         return Self.IsClaimed ? "\u2714" : "\u26A0";
+    }
+
+    public string GetDistributionType()
+    {
+        return BenefitEdges[0].Benefit.DistributionType;
     }
 }

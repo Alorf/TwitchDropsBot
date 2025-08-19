@@ -6,7 +6,9 @@ The main goal of this project is to help users claim their Twitch drops when the
 
 > [!WARNING]  
 > This bot is still a work in progress. Sometimes it may fail to collect drops due to frequent updates to Twitch's backend.  
-> If you have any questions, feel free to open a detailed issue.
+
+> **Disclaimer**
+> This project is provided for educational purposes and personal use only. Use it at your own risk. By using this project, you acknowledge that you have been warned. The author cannot be held responsible for any suspension, limitation, or banning of Twitch accounts. Issues related to account limitations, suspensions, or bans will not be considered. Any use for automated farming or bot farms is strictly discouraged.
 
 ## Features
 

@@ -13,5 +13,8 @@ namespace TwitchDropsBot.Core.Object.TwitchGQL
 
         public Game? Game { get; set; }
         public string? Status { get; set; }
+        public List<TimeBasedDrop> TimeBasedDrops { get; set; }
+        public Allow Allow { get; set; }
+        public abstract Task NotifiateAsync(TwitchUser twitchUser);
     }
 }

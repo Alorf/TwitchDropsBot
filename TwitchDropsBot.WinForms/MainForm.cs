@@ -44,9 +44,14 @@ namespace TwitchDropsBot.WinForms
 
             foreach (ConfigUser user in config.Users)
             {
-                TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId);
+                TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId, user.FavouriteGames);
                 twitchUser.DiscordWebhookURl = config.WebhookURL;
 
+                if (!user.Enabled)
+                {
+                    SystemLogger.Info($"User {twitchUser.Login} is not enabled, skipping...");
+                    continue;
+                }                
                 Bot.StartBot(twitchUser);
                 tabControl1.TabPages.Add(CreateTabPage(twitchUser));
 
@@ -256,7 +261,7 @@ namespace TwitchDropsBot.WinForms
 
             // Create a bot for the new user
             ConfigUser user = config.Users.Last();
-            TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId);
+            TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId, user.FavouriteGames);
             twitchUser.DiscordWebhookURl = config.WebhookURL;
 
             Bot.StartBot(twitchUser);

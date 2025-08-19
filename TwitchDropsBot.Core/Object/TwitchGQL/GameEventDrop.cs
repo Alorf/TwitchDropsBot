@@ -9,7 +9,7 @@ public class GameEventDrop : IInventorySystem
     public int? TotalCount { get; set; }
     public DateTime lastAwardedAt { get; set; }
 
-    public string? GetGameImageUrl()
+    public string? GetGameImageUrl(int size)
     {
         return null;
     }

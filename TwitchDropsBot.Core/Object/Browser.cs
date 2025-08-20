@@ -100,10 +100,9 @@ public class Browser : IAsyncDisposable
                     "--disable-crash-reporter",
                     "--disable-speech-api",
                     "--no-zygote",
-                    "--disable-features=HardwareMediaKeyHandling",
+                    "--disable-features=HardwareMediaKeyHandling,IsolateOrigins,site-per-process",
                     "--disable-blink-features=AutomationControlled,IdleDetection,CSSDisplayAnimation",
                     "--disable-dev-shm-usage",
-                    "--disable-features=IsolateOrigins,site-per-process"
                 };
 
                 if (launchOptions.Args != null)

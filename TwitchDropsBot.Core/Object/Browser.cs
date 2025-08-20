@@ -1,108 +1,193 @@
-﻿using OpenQA.Selenium;
-using OpenQA.Selenium.Chrome;
-using OpenQA.Selenium.Firefox;
+﻿using Microsoft.Playwright;
+using TwitchDropsBot.Core.WatchManager;
 
 namespace TwitchDropsBot.Core.Object;
 
 public enum BrowserType
 {
-    Chrome,
-    Firefox
+    Chromium,
+    Firefox,
+    Webkit
 }
 
-public class Browser : IDisposable
+public class Browser : IAsyncDisposable
 {
     public BrowserType Type { get; }
     public bool Headless { get; }
     public int? WindowWidth { get; }
     public int? WindowHeight { get; }
     public string? UserDataDir { get; }
-    public IWebDriver WebDriver { get; private set; }
 
-    public Browser(TwitchUser twitchUser, BrowserType type = BrowserType.Chrome, bool headless = true, int? windowWidth = null,
-        int? windowHeight = null, string? userDataDir = null)
+    private IPlaywright? _playwright;
+    public IBrowser? BrowserInstance { get; private set; }
+    public IPage? Page { get; private set; }
+    private bool _disposed = false;
+
+    public Browser(TwitchUser twitchUser, BrowserType type = BrowserType.Chromium, bool headless = true,
+        int? windowWidth = 1280,
+        int? windowHeight = 720, string? userDataDir = null)
     {
         Type = type;
         Headless = headless;
         WindowWidth = windowWidth;
         WindowHeight = windowHeight;
-        UserDataDir = userDataDir + $"SeleniumData\\{twitchUser.Login}";
 
-        WebDriver = CreateWebDriver();
+        if (!string.IsNullOrEmpty(userDataDir))
+            UserDataDir = userDataDir + $"PlaywrightData\\{twitchUser.Login}";
+        else
+            UserDataDir = null;
+
+        InitializeAsync().GetAwaiter().GetResult();
     }
 
-    private IWebDriver CreateWebDriver()
+    private async Task InitializeAsync()
     {
+        _playwright = await Playwright.CreateAsync();
+
+        try
+        {
+            BrowserInstance = await CreateBrowserInstanceAsync();
+        }
+        catch (PlaywrightException ex) when (ex.Message.Contains("Executable doesn't exist"))
+        {
+            SystemLogger.Info("[BROWSER] Installation of Playwright...");
+
+            var exitCode = Microsoft.Playwright.Program.Main(new[] { "install", "--with-deps", "chromium" });
+            if (exitCode != 0)
+            {
+                throw new System.Exception($"Error when installing playwright (code {exitCode})");
+            }
+
+            SystemLogger.Info("[BROWSER] Install finished");
+            BrowserInstance = await CreateBrowserInstanceAsync();
+        }
+
+        Page = await CreatePageAsync();
+    }
+
+    private async Task<IBrowser> CreateBrowserInstanceAsync()
+    {
+        var launchOptions = new BrowserTypeLaunchOptions
+        {
+            Headless = Headless,
+            SlowMo = 50,
+            Channel = "msedge"
+        };
+
+        if (!string.IsNullOrEmpty(UserDataDir))
+        {
+            launchOptions.Args = new[] { $"--user-data-dir={UserDataDir}" };
+        }
+
         switch (Type)
         {
-            case BrowserType.Chrome:
-                var chromeOptions = new ChromeOptions();
-                chromeOptions.AddArgument("--mute-audio"); // Mute audio
-                if (Headless) chromeOptions.AddArgument("--headless=new");
-                if (WindowWidth.HasValue && WindowHeight.HasValue)
-                    chromeOptions.AddArgument($"--window-size={WindowWidth.Value},{WindowHeight.Value}");
+            case BrowserType.Chromium:
+                var args = new List<string>
+                {
+                    "--mute-audio",
+                    "--disable-infobars",
+                    "--no-sandbox",
+                    "--disable-login-animations",
+                    "--disable-modal-animations",
+                    "--no-sync",
+                    "--disable-sync",
+                    "--disable-renderer-backgrounding",
+                    "--no-default-browser-check",
+                    "--disable-default-apps",
+                    "--disable-component-update",
+                    "--disable-setuid-sandbox",
+                    "--disable-breakpad",
+                    "--disable-crash-reporter",
+                    "--disable-speech-api",
+                    "--no-zygote",
+                    "--disable-features=HardwareMediaKeyHandling",
+                    "--disable-blink-features=AutomationControlled,IdleDetection,CSSDisplayAnimation",
+                    "--disable-dev-shm-usage",
+                    "--disable-features=IsolateOrigins,site-per-process"
+                };
 
-                if (!string.IsNullOrEmpty(UserDataDir))
-                    chromeOptions.AddArgument($"--user-data-dir={UserDataDir}");
+                if (launchOptions.Args != null)
+                    args.AddRange(launchOptions.Args);
 
-                chromeOptions.AddArgument("--mute-audio");
-                chromeOptions.AddArgument("--disable-infobars");
-                chromeOptions.AddArgument("--no-sandbox");
-                chromeOptions.AddArgument("--disable-login-animations");
-                chromeOptions.AddArgument("--disable-modal-animations");
-                chromeOptions.AddArgument("--no-sync");
-                chromeOptions.AddArgument("--disable-sync");
-                chromeOptions.AddArgument("--disable-renderer-backgrounding");
-                chromeOptions.AddArgument("--no-default-browser-check");
-                chromeOptions.AddArgument("--disable-default-apps");
-                chromeOptions.AddArgument("--disable-component-update");
-                chromeOptions.AddArgument("--disable-setuid-sandbox");
-                chromeOptions.AddArgument("--disable-breakpad");
-                chromeOptions.AddArgument("--disable-crash-reporter");
-                chromeOptions.AddArgument("--disable-speech-api");
-                chromeOptions.AddArgument("--no-zygote");
-                chromeOptions.AddArgument("--disable-features=HardwareMediaKeyHandling");
-                chromeOptions.AddArgument(
-                    "--disable-blink-features=AutomationControlled,IdleDetection,CSSDisplayAnimation");
-                chromeOptions.AddArgument("--disable-dev-shm-usage");
-                
-                chromeOptions.AddExcludedArgument("enable-automation");
-                chromeOptions.AddAdditionalOption("useAutomationExtension", false);
-                chromeOptions.AddArgument("--disable-features=IsolateOrigins,site-per-process");
-                var driver = new ChromeDriver(chromeOptions);
-                
-                ((IJavaScriptExecutor)driver).ExecuteScript(
-                    "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
-                );
-
-                return driver;
+                launchOptions.Args = args.ToArray();
+                return await _playwright.Chromium.LaunchAsync(launchOptions);
 
             case BrowserType.Firefox:
-                var firefoxOptions = new FirefoxOptions();
-                firefoxOptions.SetPreference("media.volume_scale", "0.0");
-                if (Headless) firefoxOptions.AddArgument("--headless");
-                if (WindowWidth.HasValue && WindowHeight.HasValue)
-                    firefoxOptions.AddArgument($"--width={WindowWidth.Value}");
-                firefoxOptions.AddArgument($"--height={WindowHeight.Value}");
-                return new FirefoxDriver(firefoxOptions);
+                return await _playwright.Firefox.LaunchAsync(launchOptions);
+
+            case BrowserType.Webkit:
+                return await _playwright.Webkit.LaunchAsync(launchOptions);
 
             default:
                 throw new NotSupportedException("Web browser not supported.");
         }
     }
-    
-    public void Dispose()
+
+    private async Task<IPage> CreatePageAsync()
     {
-        try
+        if (BrowserInstance == null)
         {
-            WebDriver?.Close();
+            throw new InvalidOperationException("Browser not initialized");
         }
-        catch (System.Exception ex)
+
+        var page = await BrowserInstance.NewPageAsync(new BrowserNewPageOptions
         {
-            SystemLogger.Error("[BROWSER] Error while closing the browser: " + ex.Message);
+            ViewportSize = new ViewportSize
+            {
+                Width = WindowWidth ?? 1280,
+                Height = WindowHeight ?? 720
+            }
+        });
+
+        await page.AddInitScriptAsync(@"
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined
+            });
+        ");
+
+        return page;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (!_disposed)
+        {
+            try
+            {
+                if (Page != null)
+                {
+                    await Page.CloseAsync();
+                    Page = null;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                SystemLogger.Error("[BROWSER] Error while closing the page: " + ex.Message);
+            }
+
+            try
+            {
+                if (BrowserInstance != null)
+                {
+                    await BrowserInstance.CloseAsync();
+                    BrowserInstance = null;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                SystemLogger.Error("[BROWSER] Error while closing the browser: " + ex.Message);
+            }
+
+            _playwright?.Dispose();
+            _playwright = null;
+
+            _disposed = true;
+            GC.SuppressFinalize(this);
         }
-        
-        WebDriver?.Quit();
-        WebDriver?.Dispose();
+    }
+
+    ~Browser()
+    {
+        _ = DisposeAsync();
     }
 }

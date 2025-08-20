@@ -1,15 +1,17 @@
-﻿using OpenQA.Selenium.DevTools;
+﻿
+using Microsoft.Playwright;
 using TwitchDropsBot.Core.Exception;
 using TwitchDropsBot.Core.Object;
 using TwitchDropsBot.Core.Object.Config;
 using TwitchDropsBot.Core.Object.TwitchGQL;
+using BrowserType = TwitchDropsBot.Core.Object.BrowserType;
 
 namespace TwitchDropsBot.Core.WatchManager;
 
-public class WatchBrowser : WatchManager, IDisposable
+public class WatchBrowser : WatchManager, IAsyncDisposable
 {
-    private Browser? browser;
-    private bool disposed = false;
+    private Browser? _browser;
+    private bool _disposed = false;
 
     public WatchBrowser(TwitchUser twitchUser, CancellationTokenSource cancellationTokenSource) : base(twitchUser,
         cancellationTokenSource)
@@ -19,12 +21,10 @@ public class WatchBrowser : WatchManager, IDisposable
     public override async Task WatchStreamAsync(AbstractBroadcaster? broadcaster)
     {
         // Check if stream still live, if not throw error and close
-
         if (broadcaster != null)
         {
             var tempBroadcaster = await twitchUser.GqlRequest.FetchStreamInformationAsync(broadcaster.Login);
             
-
             if (tempBroadcaster != null)
             {
                 if (tempBroadcaster.Stream == null)
@@ -36,92 +36,102 @@ public class WatchBrowser : WatchManager, IDisposable
 
         cancellationTokenSource = new CancellationTokenSource();
 
-        if (browser != null) return;
+        if (_browser != null) return;
 
-        browser = new Browser(twitchUser, BrowserType.Chrome, AppConfig.Instance.headless, 1280, 720, AppContext.BaseDirectory);
+        _browser = new Browser(
+            twitchUser,
+            BrowserType.Chromium, 
+            AppConfig.Instance.headless, 
+            1280, 
+            720
+        );
         
-        disposed = false;
-        browser.WebDriver.Navigate().GoToUrl("https://www.twitch.tv/");
+        _disposed = false;
 
-        var cookieName = "auth-token";
-        var cookies = browser.WebDriver.Manage().Cookies.AllCookies;
-        var cookieExists = cookies.Any(c => c.Name == cookieName);
+        await _browser.Page.GotoAsync("https://www.twitch.tv/");
 
-        if (!cookieExists)
-        {
-            var cookie = new OpenQA.Selenium.Cookie(cookieName, twitchUser.ClientSecret, ".twitch.tv", "/",
-                DateTime.Now.AddDays(7));
-            browser.WebDriver.Manage().Cookies.AddCookie(cookie);
-        }
+        await _browser.Page.Context.AddCookiesAsync(new[] {
+            new Cookie {
+                Name = "auth-token",
+                Value = twitchUser.ClientSecret,
+                Domain = ".twitch.tv",
+                Path = "/",
+                Expires = DateTimeOffset.Now.AddDays(7).ToUnixTimeSeconds()
+            }
+        });
+
+        await _browser.Page.ReloadAsync();
         
-        browser.WebDriver.Navigate().Refresh();
-        browser.WebDriver.Navigate().GoToUrl($"https://www.twitch.tv/{broadcaster.Login}");
+        await _browser.Page.GotoAsync($"https://www.twitch.tv/{broadcaster.Login}");
 
+        // If classification overlay
         try
         {
-            var wait = new OpenQA.Selenium.Support.UI.WebDriverWait(browser.WebDriver, TimeSpan.FromSeconds(10));
-            var button = wait.Until(driver =>
-                driver.FindElement(OpenQA.Selenium.By.CssSelector(
-                    "button[data-a-target='content-classification-gate-overlay-start-watching-button']")));
-
-            button.Click();
+            await _browser.Page.WaitForSelectorAsync(
+                "button[data-a-target='content-classification-gate-overlay-start-watching-button']", 
+                new PageWaitForSelectorOptions { Timeout = 10000 });
+            await _browser.Page.ClickAsync(
+                "button[data-a-target='content-classification-gate-overlay-start-watching-button']");
         }
         catch(System.Exception ex)
         {
             twitchUser.Logger.Error("[BROWSER] No classification button found, continuing...");
         }
 
+        // Quality settings
         try
         {
-            var wait = new OpenQA.Selenium.Support.UI.WebDriverWait(browser.WebDriver, TimeSpan.FromSeconds(10));
-
-            // 1. Settings
-            var settingsButton = wait.Until(driver => driver.FindElement(OpenQA.Selenium.By.CssSelector("button[data-a-target='player-settings-button']")));
-            settingsButton.Click();
-
-            // 2. Quality
-            var qualityButton = wait.Until(driver => driver.FindElement(OpenQA.Selenium.By.CssSelector("button[data-a-target='player-settings-menu-item-quality']")));
-            qualityButton.Click();
-
-            // 3. Lowest Quality
-            var qualityMenu = wait.Until(driver => driver.FindElement(OpenQA.Selenium.By.CssSelector("div[data-a-target='player-settings-menu']")));
-            var qualityOptions = qualityMenu.FindElements(OpenQA.Selenium.By.CssSelector("div[data-a-target='player-settings-submenu-quality-option'] label"));
-
-            foreach (var option in qualityOptions)
+            await _browser.Page.WaitForSelectorAsync("button[data-a-target='player-settings-button']", 
+                new PageWaitForSelectorOptions { Timeout = 10000 });
+            await _browser.Page.ClickAsync("button[data-a-target='player-settings-button']");
+            
+            await _browser.Page.WaitForSelectorAsync("button[data-a-target='player-settings-menu-item-quality']",
+                new PageWaitForSelectorOptions { Timeout = 10000 });
+            await _browser.Page.ClickAsync("button[data-a-target='player-settings-menu-item-quality']");
+            
+            await _browser.Page.WaitForSelectorAsync("div[data-a-target='player-settings-menu']",
+                new PageWaitForSelectorOptions { Timeout = 10000 });
+            
+            var lowQualityOption = await _browser.Page.QuerySelectorAllAsync(
+                "div[data-a-target='player-settings-submenu-quality-option'] label");
+            
+            var lastOption = lowQualityOption.LastOrDefault();
+            if (lastOption != null)
             {
-                if (option.Text.Contains("160p"))
-                {
-                    option.Click();
-                    break;
-                }
+                await lastOption.ClickAsync();
             }
+            
         }
         catch (System.Exception ex)
         {
             twitchUser.Logger.Error(ex);
-        }   
+        }
         
-        await Task.Delay(TimeSpan.FromSeconds(10));
+        await Task.Delay(TimeSpan.FromSeconds(10), cancellationTokenSource.Token);
     }
 
     public override void Close()
     {
-        Dispose();
+        _ = DisposeAsync();
     }
-
-    public void Dispose()
+    
+    public async ValueTask DisposeAsync()
     {
-        if (!disposed)
+        if (!_disposed)
         {
-            browser?.Dispose();
-            browser = null;
-            disposed = true;
+            if (_browser != null)
+            {
+                await _browser.DisposeAsync();
+                _browser = null;
+            }
+            
+            _disposed = true;
             GC.SuppressFinalize(this);
         }
     }
 
     ~WatchBrowser()
     {
-        Dispose();
+        Close();
     }
 }

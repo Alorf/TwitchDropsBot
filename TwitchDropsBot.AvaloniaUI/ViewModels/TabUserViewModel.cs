@@ -317,6 +317,30 @@ public partial class TabUserViewModel : ViewModelBase, INotifyPropertyChanged
                     ? int.MaxValue
                     : favoriteGameNames.IndexOf(game.GameName));
         
+        //todo : Add an "Claimed" section
+        var claimedDrops = inventory.GameEventDrops;
+
+        if (claimedDrops != null)
+        {
+            //Create a section for claimed drops
+            var claimedGameVm = new InventoryGameViewModel();
+            claimedGameVm.GameName = "Claimed Drops";
+            claimedGameVm.GameImageUrl = "https://static-cdn.jtvnw.net/ttv-static/404_boxart.jpg";
+            claimedGameVm.IsCurrentGame = false;
+            foreach (var drop in claimedDrops)
+            {
+                var campaignVm = new InventoryItemViewModel
+                {
+                    Title = drop.Name,
+                    ImageUrl = drop.GetImage()
+                };
+
+                claimedGameVm.Items.Add(campaignVm);
+            }
+            
+            Inventory.Add(claimedGameVm);
+        }
+        
         foreach (var game in sortedGames)
         {
             Inventory.Add(game);

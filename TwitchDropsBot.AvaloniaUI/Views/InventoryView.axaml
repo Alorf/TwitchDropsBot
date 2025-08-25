@@ -8,12 +8,8 @@
     x:DataType="viewModels:TabUserViewModel">
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
 
-        <TreeView ItemsSource="{Binding Inventory}" Grid.Column="1" Margin="8">
-            <TreeView.Styles>
-                <Style Selector="TreeViewItem">
-                    <Setter Property="Padding" Value="8,0,0,0" />
-                </Style>
-            </TreeView.Styles>
+        <TreeView ItemsSource="{Binding Inventory}" Grid.Column="1">
+
 
             <TreeView.DataTemplates>
                 <!-- Game -->

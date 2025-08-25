@@ -43,8 +43,6 @@ public partial class BotViewModel : ViewModelBase
             Bot.StartBot(twitchUser);
             var tabUserViewModel = new TabUserViewModel(twitchUser, this);
             Tabs.Add(tabUserViewModel);
-            tabUserViewModel.InitInventory();
-
 
         }
 
@@ -59,7 +57,6 @@ public partial class BotViewModel : ViewModelBase
     
         var tabUserViewModel = new TabUserViewModel(twitchUser, this);
         Tabs.Add(tabUserViewModel);
-        tabUserViewModel.InitInventory();
     }
     
     public void RemoveTab(TabUserViewModel tab)

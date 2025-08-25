@@ -110,6 +110,28 @@ public class WatchBrowser : WatchManager, IAsyncDisposable
         await Task.Delay(TimeSpan.FromSeconds(10), cancellationTokenSource.Token);
     }
 
+    public override async Task<DropCurrentSession?> FakeWatchAsync(AbstractBroadcaster broadcaster, int tryCount = 3)
+    {
+        //Watch for 20*trycount seconds
+        var startTime = DateTime.Now;
+        await WatchStreamAsync(broadcaster);
+        
+        while (true)
+        {
+            CheckCancellation();
+            var timeElapsed = DateTime.Now - startTime;
+            if (timeElapsed.TotalSeconds > 20 * tryCount)
+            {
+                break;
+            }
+            await Task.Delay(TimeSpan.FromSeconds(1));
+        }
+        
+        Close();
+        
+        return await twitchUser.GqlRequest.FetchCurrentSessionContextAsync(broadcaster);
+    }
+
     public override void Close()
     {
         _ = DisposeAsync();

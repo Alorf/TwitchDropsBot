@@ -62,6 +62,7 @@ public class TwitchUser : INotifyPropertyChanged
     public Logger Logger { get; set; }
     public WatchManager.WatchManager WatchManager;
     public CancellationTokenSource CancellationTokenSource { get; set; }
+    public bool ReloadBot { get; set; }
     private Inventory? _inventory;
     public Inventory? Inventory
     {
@@ -108,9 +109,32 @@ public class TwitchUser : INotifyPropertyChanged
         Logger = new Logger(this);
         FavouriteGames = new List<string>();
         OnlyFavouriteGames = false;
+        
+        ReloadBot = true;
 
         string managerType = AppConfig.Instance.WatchManager;
 
+        switch (managerType)
+        {
+            case "WatchRequest":
+                WatchManager = new WatchRequest(this, CancellationTokenSource, false);
+                SystemLogger.Log("WatchRequest manager initialized.");
+                break;
+            case "WatchBrowser":
+                WatchManager = new WatchBrowser(this, CancellationTokenSource);
+                SystemLogger.Log("WatchBrowser manager initialized.");
+                break;
+            default:
+                WatchManager = new WatchBrowser(this, CancellationTokenSource);
+                SystemLogger.Log("Default WatchBrowser manager initialized.");
+                break;
+        }
+    }
+
+    public void SetWatchManager(string managerType)
+    {
+        if (WatchManager.GetType().Name == managerType) return;
+        
         switch (managerType)
         {
             case "WatchRequest":
@@ -123,11 +147,6 @@ public class TwitchUser : INotifyPropertyChanged
                 WatchManager = new WatchBrowser(this, CancellationTokenSource);
                 break;
         }
-        
-        
-        var managerTypeName = WatchManager.GetType().Name;
-        
-        Logger.Log($"WatchManager set to: {managerTypeName}");
     }
 
     private void InitNotifications()

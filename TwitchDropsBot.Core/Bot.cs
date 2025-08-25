@@ -51,6 +51,11 @@ public class Bot
                     twitchUser.Logger.Info(ex.Message);
                     twitchUser.CancellationTokenSource = new CancellationTokenSource();
                     waitingTime = TimeSpan.FromSeconds(10);
+                    
+                    if (!twitchUser.ReloadBot)
+                    {
+                        break;
+                    }
                 }
                 catch (System.Exception ex)
                 {
@@ -73,6 +78,7 @@ public class Bot
             config.GetConfig();
         }
         
+        twitchUser.SetWatchManager(config.WatchManager);
         twitchUser.FavouriteGames = twitchUser.PersonalFavouriteGames.Count > 0 ? twitchUser.PersonalFavouriteGames : config.FavouriteGames;
         twitchUser.OnlyFavouriteGames = config.OnlyFavouriteGames;
         twitchUser.OnlyConnectedAccounts = config.OnlyConnectedAccounts;
@@ -166,11 +172,7 @@ public class Bot
                 }
 
                 // Sometimes, we have to watch 2 or 3 times to init the drop or it will skip
-                for (var i = 0; i < config.AttemptToWatch; i++)
-                {
-                    twitchUser.Logger.Log("No time based drop found, watching 20 sec to init the drop");
-                    dropCurrentSession = await FakeWatchAsync(broadcaster);
-                }
+                dropCurrentSession = await twitchUser.WatchManager.FakeWatchAsync(broadcaster, config.AttemptToWatch);
             }
 
             if (campaign is DropCampaign dropCampaign)

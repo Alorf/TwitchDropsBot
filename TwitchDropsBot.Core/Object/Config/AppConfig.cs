@@ -85,4 +85,10 @@ public class AppConfig
         SaveConfig();
         return config;
     }
+    
+    public void RemoveUserBySecret(string secret)
+    {
+        Users.RemoveAll(user => user.ClientSecret == secret);
+        SaveConfig();
+    }
 }

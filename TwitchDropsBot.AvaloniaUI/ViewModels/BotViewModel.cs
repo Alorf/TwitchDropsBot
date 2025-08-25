@@ -1,6 +1,8 @@
 ﻿using System;
 using Avalonia.Utilities;
 using System.Collections.ObjectModel;
+using System.Threading;
+using System.Threading.Tasks;
 using TwitchDropsBot.Core;
 using TwitchDropsBot.Core.Object;
 using TwitchDropsBot.Core.Object.Config;
@@ -35,17 +37,38 @@ public partial class BotViewModel : ViewModelBase
         
         foreach (ConfigUser user in config.Users)
         {
-            TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId);
+            TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId, user.FavouriteGames);
             twitchUser.DiscordWebhookURl = config.WebhookURL;
 
             Bot.StartBot(twitchUser);
-            var tabUserViewModel = new TabUserViewModel(twitchUser);
+            var tabUserViewModel = new TabUserViewModel(twitchUser, this);
             Tabs.Add(tabUserViewModel);
             tabUserViewModel.InitInventory();
 
 
         }
 
+    }
+    
+    public void OnUserAuthenticated(ConfigUser user)
+    {
+        TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId, user.FavouriteGames);
+        twitchUser.DiscordWebhookURl = config.WebhookURL;
+    
+        Task.Run(() => Bot.StartBot(twitchUser));
+    
+        var tabUserViewModel = new TabUserViewModel(twitchUser, this);
+        Tabs.Add(tabUserViewModel);
+        tabUserViewModel.InitInventory();
+    }
+    
+    public void RemoveTab(TabUserViewModel tab)
+    {
+        if (Tabs.Contains(tab))
+        {
+            Tabs.Remove(tab);
+            tab.TwitchUser.CancellationTokenSource?.Cancel();
+        }
     }
 
 }

@@ -6,8 +6,8 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="TwitchDropsBot.AvaloniaUI.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
-        Title="AvaloniaApplication1">
+        Icon="/Assets/logo.ico"
+        Title="TwitchDropsBot">
 
     <Design.DataContext>
         <vm:MainWindowViewModel/>
@@ -15,13 +15,64 @@
 
 	<SplitView DisplayMode="CompactInline"
                         CompactPaneLength="48"
-                        OpenPaneLength="110" IsPaneOpen="True">
+                        OpenPaneLength="110" IsPaneOpen="{Binding #toggle.IsChecked, Mode=TwoWay}">
         <!-- Pane -->
         <SplitView.Pane>
             <StackPanel>
-				<Button Content="☰" Margin="8" HorizontalAlignment="Stretch"/>
-                <Button Content="Bot" Margin="8" HorizontalAlignment="Stretch" Command="{Binding NavigateToBotPageCommand}"/>
-                <Button Content="Settings" Margin="8" HorizontalAlignment="Stretch" Command="{Binding NavigateToSettingsPageCommand}"/>
+                <ToggleSwitch
+                    Name="toggle"
+                    Margin="8"
+                    HorizontalAlignment="Left"
+                    Padding="{StaticResource SemiThicknessTight}"
+                    Width="{StaticResource SemiSpacingExtraLoose}"
+                    Height="{StaticResource SemiSpacingExtraLoose}"
+                    Theme="{DynamicResource ButtonToggleSwitch}"
+                    Foreground="{DynamicResource ButtonDefaultTertiaryForeground}">
+                    <ToggleSwitch.Content>
+                        <PathIcon
+                            Theme="{DynamicResource InnerPathIcon}"
+                            Data="{StaticResource SemiIconSidebar}" />
+                    </ToggleSwitch.Content>
+                </ToggleSwitch>
+                <Button Margin="8" HorizontalAlignment="Stretch" Command="{Binding NavigateToBotPageCommand}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <PathIcon
+                            Grid.Column="0"
+                            Theme="{DynamicResource InnerPathIcon}"
+                            Data="{StaticResource SemiIconRobot}" 
+                            />
+                        <TextBlock
+                            Grid.Column="1"
+                            Text="Bot"
+                            Margin="8,0,0,0"
+                            IsVisible="{Binding #toggle.IsChecked}"
+                            VerticalAlignment="Center" />
+                    </Grid>
+                </Button>
+
+                <Button Margin="8" HorizontalAlignment="Stretch" Command="{Binding NavigateToSettingsPageCommand}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <PathIcon
+                            Grid.Column="0"
+                            Theme="{DynamicResource InnerPathIcon}"
+                            Data="{StaticResource SemiIconSetting}"
+                            />
+                        <TextBlock
+                            Grid.Column="1"
+                            Text="Settings"
+                            Margin="8,0,0,0"
+                            IsVisible="{Binding #toggle.IsChecked}"
+                            VerticalAlignment="Center" />
+                    </Grid>
+                </Button>
             </StackPanel>
         </SplitView.Pane>
 

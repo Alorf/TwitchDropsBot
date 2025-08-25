@@ -1,0 +1,74 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:TwitchDropsBot.AvaloniaUI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="TwitchDropsBot.AvaloniaUI.Views.Settings.FavouriteGamesSetting"
+             x:DataType="viewModels:SettingsViewModel">
+    <Border Classes="Shadow" Theme="{StaticResource CardBorder}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Title -->
+            <TextBlock Grid.Row="0" Grid.ColumnSpan="2"
+                       Text="Favourite game"
+                       FontWeight="SemiBold"
+                       Margin="0,0,0,10" />
+
+            <!-- Button Add/Remove -->
+
+            <StackPanel Grid.Row="2" Grid.Column="0" Spacing="10" Margin="0,0,10,0">
+                <!-- Input -->
+                <TextBox x:Name="GameInput" Watermark="Name of the game" VerticalAlignment="Stretch"
+                         HorizontalAlignment="Stretch" />
+
+                <!-- List -->
+                <ListBox x:Name="GamesListBox" MaxHeight="200"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         ItemsSource="{Binding FavouriteGames}"
+                         SelectedItem="{Binding SelectedGame, Mode=TwoWay}">
+                </ListBox>
+            </StackPanel>
+
+            <Grid Grid.Row="2" Grid.Column="1" RowSpacing="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Button Grid.Row="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                        Command="{Binding AddGameCommand}"
+                        CommandParameter="{Binding ElementName=GameInput, Path=Text}">
+                    <PathIcon Data="{StaticResource SemiIconPlus}" />
+                </Button>
+                <Button Grid.Row="1" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                        Command="{Binding MoveGameUpCommand}"
+                        CommandParameter="{Binding SelectedGame}">
+                    <PathIcon Data="{StaticResource SemiIconArrowUp}" />
+                </Button>
+                <Button Grid.Row="2" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                        Command="{Binding RemoveGameCommand}"
+                        CommandParameter="{Binding SelectedGame}">
+                    <PathIcon Data="{StaticResource SemiIconDelete}" />
+                </Button>
+                <Button Grid.Row="3" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                        Command="{Binding MoveGameDownCommand}"
+                        CommandParameter="{Binding SelectedGame}">
+                    <PathIcon Data="{StaticResource SemiIconArrowDown}" />
+                </Button>
+            </Grid>
+        </Grid>
+    </Border>
+
+</UserControl>

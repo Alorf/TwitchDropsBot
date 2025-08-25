@@ -3,31 +3,70 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:views="clr-namespace:TwitchDropsBot.AvaloniaUI.Views"
-             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              xmlns:viewModels="clr-namespace:TwitchDropsBot.AvaloniaUI.ViewModels"
-             xmlns:lottie="clr-namespace:Avalonia.Labs.Lottie;assembly=Avalonia.Labs.Lottie"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="TwitchDropsBot.AvaloniaUI.Views.TabUserView"
              x:DataType="viewModels:TabUserViewModel">
-    <Grid>
-		<Grid.RowDefinitions>
-			<RowDefinition Height="*"></RowDefinition>
-        </Grid.RowDefinitions>
+    
+    <Grid Margin="10">
+        
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="7*"/>
-            <ColumnDefinition Width="3*"/>
+            <ColumnDefinition Width="7*" />
+            <ColumnDefinition Width="3*" />
         </Grid.ColumnDefinitions>
 
-		<StackPanel Grid.Column="0" Margin="16" Spacing="12">
-			<TextBlock Text="Currently Watching"
-					   FontSize="20"
-					   FontWeight="Bold"
-					   Foreground="{DynamicResource TextPrimaryBrush}"
-					   Margin="0,0,0,8"/>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="10*"/>
+            <RowDefinition Height="80*" />
+            <RowDefinition Height="80*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
-			<views:DropCardView DataContext="{Binding}"></views:DropCardView>
-		</StackPanel>
-
-			<views:InventoryView Grid.Column="1" DataContext="{Binding}"></views:InventoryView>
+    <Grid ColumnSpacing="10" RowSpacing="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="80*"/>
+            <ColumnDefinition Width="20*"/>
+        </Grid.ColumnDefinitions>
+        
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <TextBlock Grid.Column="0"
+                   Text="Currently Watching"
+                   FontSize="20"
+                   FontWeight="Bold"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   Margin="0,0,0,8" />
+        
+        <WrapPanel Grid.Column="1" 
+                   ItemSpacing="10" 
+                   LineSpacing="10"
+                   HorizontalAlignment="Right" 
+                   VerticalAlignment="Top">
+            <Button Width="100" Command="{Binding ReloadUserCommand}">Reload</Button>
+            <Button Width="100" Command="{Binding DeleteUserCommand}">Delete</Button>
+        </WrapPanel>
     </Grid>
+        
+    <StackPanel Grid.Column="0" Grid.Row="1" Margin="10" Spacing="12" HorizontalAlignment="Left" VerticalAlignment="Top">
+        <views:DropCardView DataContext="{Binding}"></views:DropCardView>
+    </StackPanel>
+        
+        <TextBox
+            x:Name="LogsTextBox"
+            Grid.Column="0"
+            Grid.Row="2"
+            Margin="16"
+            AcceptsReturn="True"
+            IsReadOnly="True"
+            VerticalAlignment="Stretch"
+            VerticalContentAlignment="Top"
+            Text="{Binding Logs}"
+        />
+
+        <views:InventoryView Grid.Column="1" Grid.RowSpan="3" DataContext="{Binding}"></views:InventoryView>
+    </Grid>
+
+
 </UserControl>

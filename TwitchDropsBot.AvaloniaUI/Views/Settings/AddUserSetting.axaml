@@ -1,0 +1,24 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:TwitchDropsBot.AvaloniaUI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="TwitchDropsBot.AvaloniaUI.Views.Settings.AddUserSetting"
+             x:DataType="viewModels:LoginViewModel">
+    <Border Classes="Shadow" Theme="{StaticResource CardBorder}">
+        <WrapPanel HorizontalAlignment="Center" ItemSpacing="10" LineSpacing="10">
+            <Button Command="{Binding StartAuthenticationCommand}"
+                    IsEnabled="{Binding !IsAuthenticationStarted}">
+                Add new user
+            </Button>
+
+            <StackPanel IsVisible="{Binding IsAuthenticationStarted}" Margin="0,10,0,0" HorizontalAlignment="Center">
+                <TextBlock Text="{Binding StatusMessage}" Margin="0,0,0,10" HorizontalAlignment="Center" />
+                <TextBlock Text="{Binding UserCode}" FontSize="20" FontWeight="Bold" Margin="0,0,0,10"
+                           HorizontalAlignment="Center" />
+                <Button Command="{Binding OpenBrowserCommand}" HorizontalAlignment="Center">Open in browser</Button>
+            </StackPanel>
+        </WrapPanel>
+    </Border>
+</UserControl>

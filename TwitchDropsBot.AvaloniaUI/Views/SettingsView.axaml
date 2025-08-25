@@ -5,10 +5,20 @@
              xmlns:viewModels="clr-namespace:TwitchDropsBot.AvaloniaUI.ViewModels"
              xmlns:semi="clr-namespace:Semi.Avalonia;assembly=Semi.Avalonia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="TwitchDropsBot.AvaloniaUI.Views.SettingsViewModel">
-    
+             xmlns:views="clr-namespace:TwitchDropsBot.AvaloniaUI.Views"
+             xmlns:settings="clr-namespace:TwitchDropsBot.AvaloniaUI.Views.Settings"
+             x:Class="TwitchDropsBot.AvaloniaUI.Views.SettingsView"
+             x:DataType="viewModels:SettingsViewModel">
+
     <Design.DataContext>
-        <viewModels:SettingsViewModel/>
+        <viewModels:SettingsViewModel />
     </Design.DataContext>
-    TEst
+
+    <StackPanel>
+        <WrapPanel ItemSpacing="10" LineSpacing="10" HorizontalAlignment="Center">
+            <settings:FavouriteGamesSetting MinWidth="500"  DataContext="{Binding}" />
+            <settings:CheckboxesSetting MinWidth="500" DataContext="{Binding}" />
+            <settings:AddUserSetting MinWidth="500" DataContext="{Binding LoginViewModel}" />
+        </WrapPanel>
+    </StackPanel>
 </UserControl>

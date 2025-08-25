@@ -4,9 +4,9 @@ using Avalonia.Markup.Xaml;
 
 namespace TwitchDropsBot.AvaloniaUI.Views;
 
-public partial class SettingsViewModel : UserControl
+public partial class SettingsView : UserControl
 {
-    public SettingsViewModel()
+    public SettingsView()
     {
         InitializeComponent();
     }

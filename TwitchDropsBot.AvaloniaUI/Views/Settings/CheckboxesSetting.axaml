@@ -1,0 +1,43 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:TwitchDropsBot.AvaloniaUI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="TwitchDropsBot.AvaloniaUI.Views.Settings.CheckboxesSetting"
+             x:DataType="viewModels:SettingsViewModel">
+    <Border Classes="Shadow" Theme="{StaticResource CardBorder}">
+        <WrapPanel HorizontalAlignment="Center" ItemSpacing="10" LineSpacing="10">
+            <WrapPanel.Styles>
+                <Style Selector="CheckBox">
+                    <Setter Property="Width" Value="190" />
+                </Style>
+            </WrapPanel.Styles>
+
+            <CheckBox
+                Grid.Column="0"
+                Content="Launch on startup"
+                IsChecked="{Binding LaunchOnStartup}"
+                Theme="{DynamicResource CardCheckBox}" />
+            
+            <CheckBox
+                Grid.Column="1"
+                Content="Only Favourite Games"
+                IsChecked="{Binding OnlyFavouriteGames}"
+                Theme="{DynamicResource CardCheckBox}" />
+            
+            <CheckBox
+                Grid.Column="2"
+                Content="Only Connected Accounts"
+                IsChecked="{Binding OnlyConnectedAccounts}"
+                Theme="{DynamicResource CardCheckBox}" />
+            
+            <CheckBox
+                Grid.Column="3"
+                Content="Minimize in tray"
+                IsChecked="{Binding MinimizeInTray}"
+                Theme="{DynamicResource CardCheckBox}" />
+        </WrapPanel>
+    </Border>
+
+</UserControl>

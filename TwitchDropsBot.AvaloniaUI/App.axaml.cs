@@ -1,9 +1,11 @@
+using System;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using System.Linq;
+using Avalonia.Controls;
 using TwitchDropsBot.AvaloniaUI.ViewModels;
 using TwitchDropsBot.AvaloniaUI;
 using TwitchDropsBot.AvaloniaUI.Views;

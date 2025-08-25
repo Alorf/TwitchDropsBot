@@ -10,10 +10,28 @@
 		<semi:SemiTheme Locale="en-EN" />
         <labs:ControlThemes/>
         <semi:SemiPopupAnimations />
-
 	</Application.Styles>
-
+	
+	<Application.Resources>
+		<ResourceDictionary>
+			<ResourceDictionary.MergedDictionaries>
+				<ResourceInclude Source="/Assets/icons/icon.axaml"/>
+			</ResourceDictionary.MergedDictionaries>
+		</ResourceDictionary>
+	</Application.Resources>
     <Application.DataTemplates>
         <local:ViewLocator/>
     </Application.DataTemplates>
+	<TrayIcon.Icons>
+		<TrayIcons>
+			<TrayIcon Icon="/Assets/logo.ico" 
+			          ToolTipText="TwitchDropsBot">
+				<TrayIcon.Menu>
+					<NativeMenu>
+						<NativeMenuItem Header="Exit"/>
+					</NativeMenu>
+				</TrayIcon.Menu>
+			</TrayIcon>
+		</TrayIcons>
+	</TrayIcon.Icons>
 </Application>

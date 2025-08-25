@@ -197,7 +197,7 @@ public partial class TabUserViewModel : ViewModelBase, INotifyPropertyChanged
         
         if (dialogResult == ButtonResult.Yes)
         {
-            _twitchUser.Logger.Info("Suppression de l'utilisateur demandée");
+            _twitchUser.Logger.Info("User deletion requested");
             _twitchUser.CancellationTokenSource?.Cancel();
             _twitchUser.ReloadBot = false;
             _botPage.RemoveTab(this);

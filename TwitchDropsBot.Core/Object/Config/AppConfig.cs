@@ -68,13 +68,15 @@ public class AppConfig
 
     public void SaveConfig()
     {
+        var config = LoadConfig();
+        
         var options = new JsonSerializerOptions
         {
             WriteIndented = true,
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 
-        var jsonString = JsonSerializer.Serialize(this, options);
+        var jsonString = JsonSerializer.Serialize(config, options);
         var filePath = Path.Combine(AppContext.BaseDirectory, "config.json");
         File.WriteAllText(filePath, jsonString);
     }

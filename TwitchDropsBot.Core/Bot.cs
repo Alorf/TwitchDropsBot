@@ -1,3 +1,4 @@
+using Discord;
 using TwitchDropsBot.Core.Exception;
 using TwitchDropsBot.Core.Object;
 using TwitchDropsBot.Core.Object.Config;
@@ -22,7 +23,7 @@ public class Bot
         var bot = new Bot(twitchUser);
         TimeSpan waitingTime;
         twitchUser.CancellationTokenSource = new CancellationTokenSource();
-        
+
         return Task.Run(async () =>
         {
             var config = AppConfig.Instance;
@@ -46,6 +47,12 @@ public class Bot
                     twitchUser.Logger.Info($"Waiting {config.waitingSeconds} seconds before trying again.");
                     waitingTime = TimeSpan.FromSeconds(config.waitingSeconds);
                 }
+                catch (CurrentDropSessionChanged ex)
+                {
+                    twitchUser.Logger.Info(ex.Message);
+                    twitchUser.Logger.Info($"Waiting {config.waitingSeconds} seconds before trying again.");
+                    waitingTime = TimeSpan.FromSeconds(config.waitingSeconds);
+                }
                 catch (OperationCanceledException ex)
                 {
                     twitchUser.Logger.Info(ex.Message);
@@ -55,6 +62,20 @@ public class Bot
                 catch (System.Exception ex)
                 {
                     twitchUser.Logger.Error(ex);
+
+                    if (!string.IsNullOrEmpty(config.WebhookURL))
+                    {
+                        await twitchUser.SendWebhookAsync(new List<Embed>
+                        {
+                            new EmbedBuilder()
+                                .WithTitle($"ERROR : {twitchUser.Login} - {DateTime.Now}")
+                                .WithDescription($"```\n{ex}\n```")
+                                .WithColor(Discord.Color.Red)
+                                //.WithUrl(action.Url)
+                                .Build()
+                        });
+                    }
+
                     waitingTime = TimeSpan.FromSeconds(config.waitingSeconds);
                 }
 
@@ -72,8 +93,10 @@ public class Bot
         {
             config.GetConfig();
         }
-        
-        twitchUser.FavouriteGames = twitchUser.PersonalFavouriteGames.Count > 0 ? twitchUser.PersonalFavouriteGames : config.FavouriteGames;
+
+        twitchUser.FavouriteGames = twitchUser.PersonalFavouriteGames.Count > 0
+            ? twitchUser.PersonalFavouriteGames
+            : config.FavouriteGames;
         twitchUser.OnlyFavouriteGames = config.OnlyFavouriteGames;
         twitchUser.OnlyConnectedAccounts = config.OnlyConnectedAccounts;
 
@@ -128,13 +151,18 @@ public class Bot
             }
 
             CheckCancellation();
-            var result = await SelectBroadcasterAsync(thingsToWatch);
+            var result = await SelectBroadcasterAsync(thingsToWatch, inventory);
             campaign = result.campaign;
             broadcaster = result.broadcaster;
 
             if (campaign is null)
             {
                 twitchUser.Logger.Log("No campaign found.");
+                if (thingsToWatch.Count == 1)
+                {
+                    throw new NoBroadcasterOrNoCampaignLeft();
+                }
+
                 continue;
             }
 
@@ -145,20 +173,7 @@ public class Bot
 
                 continue;
             }
-            
-            if (campaign is DropCampaign)
-            {
-                var campaignsAvailable = await twitchUser.GqlRequest.FetchAvailableDropsAsync(broadcaster?.Id);
 
-                if (campaignsAvailable.Count == 0)
-                {
-                    twitchUser.Logger.Log(
-                        $"It seems like every drops have been watched for this campaign ({campaign?.Name} | {broadcaster.Login} - {broadcaster.Id}).");
-                    thingsToWatch.RemoveAll(x => x.Id == campaign.Id);
-                    continue;
-                }
-            }
-            
             twitchUser.Logger.Log(
                 $"Current drop campaign: {campaign.Name} ({campaign.Game?.DisplayName}), watching {broadcaster.Login} | {broadcaster.Id}");
             twitchUser.CurrentCampaign = campaign;
@@ -183,6 +198,13 @@ public class Bot
                 {
                     twitchUser.Logger.Log("No time based drop found, watching 20 sec to init the drop");
                     dropCurrentSession = await FakeWatchAsync(broadcaster);
+
+                    if (!string.IsNullOrEmpty(dropCurrentSession?.DropId) &&
+                        dropCurrentSession.Channel.Id == broadcaster.Id &&
+                        dropCurrentSession.CurrentMinutesWatched < dropCurrentSession.requiredMinutesWatched)
+                    {
+                        break;
+                    }
                 }
             }
 
@@ -212,7 +234,6 @@ public class Bot
                 if (rewardDropCampaign is null)
                 {
                     twitchUser.Logger.Log($"{campaign.Name} has no time based drops.");
-
                 }
                 else
                 {
@@ -239,7 +260,7 @@ public class Bot
             twitchUser.Logger.Log("Time based drops found but not broadcaster");
             return;
         }
-        
+
         if (dropCurrentSession is null)
         {
             twitchUser.Logger.Log("Time based drops found but not current drop session");
@@ -248,7 +269,7 @@ public class Bot
 
         twitchUser.Status = BotStatus.Watching;
         await WatchStreamAsync(broadcaster, dropCurrentSession);
-        await campaign?.NotifiateAsync(twitchUser);
+        await campaign.NotifiateAsync(twitchUser);
     }
 
     private async Task WatchStreamAsync(AbstractBroadcaster broadcaster, DropCurrentSession dropCurrentSession,
@@ -314,7 +335,7 @@ public class Bot
                 twitchUser.WatchManager.Close();
                 await twitchUser.WatchManager.WatchStreamAsync(broadcaster);
                 await Task.Delay(TimeSpan.FromSeconds(20));
-                
+
                 var newDropCurrentSession =
                     await twitchUser.GqlRequest.FetchCurrentSessionContextAsync(broadcaster);
 
@@ -332,7 +353,8 @@ public class Bot
 
             if (dropCurrentSession.requiredMinutesWatched == 0)
             {
-                break;
+                twitchUser.WatchManager.Close();
+                throw new CurrentDropSessionChanged();
             }
 
             twitchUser.Logger.Log(
@@ -340,28 +362,28 @@ public class Bot
 
             await Task.Delay(TimeSpan.FromSeconds(20));
         }
+
         twitchUser.WatchManager.Close();
     }
 
     private async Task<(AbstractCampaign? campaign, AbstractBroadcaster? broadcaster)> SelectBroadcasterAsync(
-        List<AbstractCampaign> campaigns)
+        List<AbstractCampaign> campaigns, Inventory inventory)
     {
         AbstractBroadcaster? broadcaster = null;
 
         if (config.AvoidCampaign.Count > 0)
         {
             campaigns.RemoveAll(x => config.AvoidCampaign.Contains(x.Name, StringComparer.OrdinalIgnoreCase));
-            campaigns.RemoveAll(x => config.AvoidCampaign.Contains(x.Name, StringComparer.OrdinalIgnoreCase));
         }
 
-        foreach (var campaign in campaigns)
+        foreach (var campaign in campaigns.ToList())
         {
             if (campaign.Game is null)
             {
                 twitchUser.Logger.Log($"Skipping campaign {campaign.Name} because game is null.");
                 continue;
             }
-            
+
             CheckCancellation();
             twitchUser.Logger.Log($"Checking {campaign.Game.DisplayName}...");
 
@@ -372,34 +394,75 @@ public class Bot
                 dropCampaign.Game = tempDropCampaign.Game;
                 dropCampaign.Allow = tempDropCampaign.Allow;
 
-                var channels = dropCampaign.GetChannels();
-
-                if (config.WatchSpecificStreamer.Count > 0 && channels is not null)
+                try
                 {
-                    channels = channels.Where(x =>
-                        config.WatchSpecificStreamer.Contains(x.Name, StringComparer.OrdinalIgnoreCase)).ToList();
+                    var isCompleted = dropCampaign.IsCompleted(inventory);
+                    if (isCompleted)
+                    {
+                        twitchUser.Logger.Log($"Campaign {campaign.Name} already completed, skipping");
+                        campaigns.Remove(campaign);
+                        continue;
+                    }
+                }
+                catch (System.Exception e)
+                {
+                    twitchUser.Logger.Error(e.Message);
                 }
 
-                if (channels != null && channels.Count <= 10)
+                var channels = dropCampaign.GetChannels();
+
+                if (channels is not null)
                 {
-                    foreach (var channel in channels)
+                    var channelGroups = channels.Select((channel, index) => new { channel, index })
+                        .GroupBy(x => x.index / 10)
+                        .Select(g => g.Select(x => x.channel.Name).ToList())
+                        .ToList();
+
+                    foreach (var channelGroup in channelGroups)
                     {
                         CheckCancellation();
-                        var tempBroadcaster = await twitchUser.GqlRequest.FetchStreamInformationAsync(channel.Name);
+                        var tempBroadcasters = await twitchUser.GqlRequest.FetchStreamInformationAsync(channelGroup);
 
-                        if (tempBroadcaster is null) continue;
-
-                        if (tempBroadcaster.IsLive() && tempBroadcaster.BroadcastSettings.Game?.Id != null &&
-                            (campaign.Game.DisplayName == "Special Events" ||
-                             tempBroadcaster.BroadcastSettings.Game.Id == campaign.Game.Id))
+                        if (tempBroadcasters is null)
                         {
-                            broadcaster = tempBroadcaster;
-                            twitchUser.CurrentBroadcaster = broadcaster;
-                            break;
+                            continue;
                         }
-                    }
 
-                    return (campaign, broadcaster);
+                        // from tempBroadcasters, select the first one that is live and that have the right game
+                        var tempBroadcaster = tempBroadcasters.FirstOrDefault(tempBroadcaster =>
+                            tempBroadcaster.IsLive() && tempBroadcaster.BroadcastSettings.Game?.Id != null &&
+                            (campaign.Game.DisplayName == "Special Events" ||
+                             tempBroadcaster.BroadcastSettings.Game.Id == campaign.Game.Id));
+
+                        if (tempBroadcaster is null)
+                        {
+                            if (channelGroup == channelGroups.Last())
+                            {
+                                if (AppConfig.Instance.ForceTryWithTags)
+                                {
+                                    twitchUser.Logger.Log(
+                                        "No live broadcaster found in this group of channels. Forcing with stream tags");
+                                }
+                                else
+                                {
+                                    twitchUser.Logger.Log("No live broadcaster found in this group of channels.");
+                                    return (campaign, tempBroadcaster);
+                                }
+                            }
+                            else
+                            {
+                                twitchUser.Logger.Log(
+                                    "No live broadcaster found in this group of channels. trying next group...");
+                                await Task.Delay(TimeSpan.FromSeconds(2));
+                            }
+
+                            continue;
+                        }
+
+                        broadcaster = tempBroadcaster;
+                        twitchUser.CurrentBroadcaster = broadcaster;
+                        return (campaign, broadcaster);
+                    }
                 }
             }
 
@@ -442,14 +505,10 @@ public class Bot
                     if (timeBasedDrop.Self.IsClaimed == false && timeBasedDrop.Self?.DropInstanceID != null)
                     {
                         await twitchUser.GqlRequest.ClaimDropAsync(timeBasedDrop.Self.DropInstanceID);
-                        haveClaimed = true;
+                        twitchUser.CurrentTimeBasedDrop = timeBasedDrop;
+                        await Task.Delay(TimeSpan.FromSeconds(20));
                     }
                 }
-            }
-
-            if (haveClaimed)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(20));
             }
         }
     }

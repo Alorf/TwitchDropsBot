@@ -6,4 +6,5 @@ public class Benefit
     public string Name { get; set; }
     public string ImageAssetURL { get; set; }
     public string DistributionType { get; set; }
+    public bool IsClaimed { get; set; }
 }

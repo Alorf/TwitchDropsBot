@@ -21,6 +21,7 @@ public class GqlRequest
     private JsonElement postmanCollection;
     private static readonly object _postmanLock = new object();
     private HttpRequest httpRequestGQL;
+    private readonly int requestLimit = 5;
 
 
     public GqlRequest(TwitchUser twitchUser)
@@ -58,7 +59,6 @@ public class GqlRequest
 
             dropCampaigns = dropCampaigns.FindAll(dropCampaign => dropCampaign is { Status: "ACTIVE" });
             rewardCampaigns.RemoveAll(campaign => campaign.Game == null);
-
 
             //Select only campaigns with minute watched goal
             rewardCampaigns =
@@ -199,6 +199,45 @@ public class GqlRequest
         return resp?.Data.StreamPlaybackAccessToken;
     }
 
+    public async Task<List<User>?> FetchStreamInformationAsync(List<string> channels)
+    {
+        var queries = new List<GraphQLRequest>();
+
+        foreach (var channel in channels)
+        {
+            var query = CreateQuery("VideoPlayerStreamInfoOverlayChannel");
+
+            if (query.Variables is Dictionary<string, object?> variables)
+            {
+                variables["channel"] = channel;
+            }
+
+            queries.Add(query);
+        }
+
+        dynamic? resp = await DoGQLRequestAsync(queries);
+        
+        List<User> users = new List<User>();
+        foreach (var item in resp.EnumerateArray())
+        {
+            if (item.GetProperty("data").GetProperty("user").ValueKind != JsonValueKind.Null)
+            {
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+    
+                var user = JsonSerializer.Deserialize<User>(item.GetProperty("data").GetProperty("user").GetRawText(), options);
+                if (user != null)
+                {
+                    users.Add(user);
+                }
+            }
+        }
+
+        return users;
+    }
+
     public async Task<User?> FetchStreamInformationAsync(string channel)
     {
         var query = CreateQuery("VideoPlayerStreamInfoOverlayChannel");
@@ -291,11 +330,10 @@ public class GqlRequest
     {
         var avoidPrint = new List<string> { "Inventory", "ViewerDropsDashboard", "DirectoryPage_Game" };
 
-        int limit = 5;
         client ??= graphQLClient;
         name ??= query.OperationName;
 
-        for (int i = 0; i < limit; i++)
+        for (int i = 0; i < requestLimit; i++)
         {
             try
             {
@@ -333,12 +371,69 @@ public class GqlRequest
             {
                 if (i == 4)
                 {
-                    throw new System.Exception($"Failed to execute the query {name} (attempt {i + 1}/{limit}).");
+                    throw new System.Exception($"Failed to execute the query {name} (attempt {i + 1}/{requestLimit}).");
                 }
 
-                twitchUser.Logger.Error($"Failed to execute the query {name} (attempt {i + 1}/{limit}).");
+                twitchUser.Logger.Error($"Failed to execute the query {name} (attempt {i + 1}/{requestLimit}).");
                 SystemLogger.Error(
-                    $"[{twitchUser.Login}] Failed to execute the query {name} (attempt {i + 1}/{limit}).");
+                    $"[{twitchUser.Login}] Failed to execute the query {name} (attempt {i + 1}/{requestLimit}).");
+
+                await Task.Delay(TimeSpan.FromSeconds(5));
+            }
+        }
+
+        return null;
+    }
+
+    private async Task<dynamic?> DoGQLRequestAsync(List<GraphQLRequest> queries, GraphQLHttpClient? client = null,
+        string? name = null)
+    {
+        client ??= graphQLClient;
+        name ??= queries[0].OperationName;
+        
+        // Convert each GraphQL request into an object with the desired format
+        var requestObjects = queries.Select(q => new
+        {
+            operationName = q.OperationName,
+            variables = q.Variables,
+            extensions = q.Extensions
+        }).ToList();
+
+        var jsonContent = JsonSerializer.Serialize(requestObjects);
+        
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "https://gql.twitch.tv/gql")
+        {
+            Content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json")
+        };
+
+        for (int i = 0; i < requestLimit; i++)
+        {
+            try
+            {
+                var httpResponse = await client.HttpClient.SendAsync(httpRequest);
+                httpResponse.EnsureSuccessStatusCode();
+
+                var responseContent = await httpResponse.Content.ReadAsStringAsync();
+                var responseArray = JsonSerializer.Deserialize<JsonElement>(responseContent);
+
+                if (config.LogLevel > 0)
+                {
+                    twitchUser.Logger.Log(name, "REQ", ConsoleColor.Blue);
+                    twitchUser.Logger.Log(responseContent, "REQ", ConsoleColor.Blue);
+                }
+
+                return responseArray;
+            }
+            catch (System.Exception e)
+            {
+                if (i == 4)
+                {
+                    throw new System.Exception($"Failed to execute the query {name} (attempt {i + 1}/{requestLimit}).");
+                }
+
+                twitchUser.Logger.Error($"Failed to execute the query {name} (attempt {i + 1}/{requestLimit}).");
+                SystemLogger.Error(
+                    $"[{twitchUser.Login}] Failed to execute the query {name} (attempt {i + 1}/{requestLimit}).");
 
                 await Task.Delay(TimeSpan.FromSeconds(5));
             }

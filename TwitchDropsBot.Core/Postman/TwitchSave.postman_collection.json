@@ -1,10 +1,10 @@
 {
 	"info": {
-		"_postman_id": "def5d70b-cf18-48b8-8c1d-51ebb538913e",
+		"_postman_id": "22808924-c908-4898-bb0c-2b87614f602d",
 		"name": "Twitch",
 		"description": "Twitch GQL  \n  \nPersistent request used in TwitchDropsBot",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "29873939"
+		"_exporter_id": "45966100"
 	},
 	"item": [
 		{
@@ -105,7 +105,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"operationName\": \"Inventory\",\r\n    \"variables\": {\r\n        \"fetchRewardCampaigns\": false\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"09acb7d3d7e605a92bdfdcc465f6aa481b71c234d8686a9ba38ea5ed51507592\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+					"raw": "{\r\n    \"operationName\": \"Inventory\",\r\n    \"variables\": {\r\n        \"fetchRewardCampaigns\": false\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"d86775d0ef16a63a33ad52e80eaff963b2d5b72fada7c991504a57496e1d8e4b\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -255,7 +255,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"operationName\": \"OnsiteNotifications_ListNotifications\",\r\n    \"variables\": {\r\n        \"cursor\": \"\",\r\n        \"displayType\" : \"VIEWER\",\r\n        \"language\" : \"en\",\r\n        \"limit\" : 10,\r\n        \"shouldLoadLastBroadcast\" : false\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"11cdb54a2706c2c0b2969769907675680f02a6e77d8afe79a749180ad16bfea6\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+					"raw": "{\r\n    \"operationName\": \"OnsiteNotifications_ListNotifications\",\r\n    \"variables\": {\r\n        \"cursor\": \"\",\r\n        \"displayType\" : \"VIEWER\",\r\n        \"language\" : \"en\",\r\n        \"limit\" : 10,\r\n        \"shouldLoadLastBroadcast\" : false\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"65bdc7f01ed3082f4382a154d190e23ad5459771c61318265cfdb59f63aad492\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -555,7 +555,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"operationName\": \"DropsHighlightService_AvailableDrops\",\r\n    \"variables\": {\r\n        \"channelID\": \"175831187\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"eff13f4a43157238e40b4cd74b0dac3a41b5f8fb31de1a3b19347fae84e60b92\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+					"raw": "{\r\n    \"operationName\": \"DropsHighlightService_AvailableDrops\",\r\n    \"variables\": {\r\n        \"channelID\": \"175831187\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"782dad0f032942260171d2d80a654f88bdd0c5a9dddc392e9bc92218a0f42d20\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"

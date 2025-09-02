@@ -62,7 +62,7 @@ public class AuthSystem
         return null;
     }
 
-    public static async Task<ConfigUser> ClientSecretUserAsync(string secret)
+    public static async Task<UserConfig> ClientSecretUserAsync(string secret)
     {
         var client = new HttpClient();
         var request = new HttpRequestMessage(HttpMethod.Get, "https://id.twitch.tv/oauth2/validate");
@@ -74,10 +74,10 @@ public class AuthSystem
         var responseContent = await response.Content.ReadAsStringAsync();
         var jsonResponse = JsonDocument.Parse(responseContent);
 
-        var configUser = new ConfigUser();
-        configUser.ClientSecret = secret;
-        configUser.Id = jsonResponse.RootElement.GetProperty("user_id").GetString();
-        configUser.Login = jsonResponse.RootElement.GetProperty("login").GetString();
+        var UserConfig = new UserConfig();
+        UserConfig.ClientSecret = secret;
+        UserConfig.Id = jsonResponse.RootElement.GetProperty("user_id").GetString();
+        UserConfig.Login = jsonResponse.RootElement.GetProperty("login").GetString();
 
 
         // Do request to TwitchClient URL to get the unique id
@@ -96,14 +96,14 @@ public class AuthSystem
             if (cookie.Contains("unique_id="))
             {
                 // Extract the unique id
-                configUser.UniqueId = cookie.Split(";").First().Split("=").Last();
+                UserConfig.UniqueId = cookie.Split(";").First().Split("=").Last();
                 break;
             }
         }
 
-        configUser.FavouriteGames = new List<string>();
-        configUser.Enabled = true;
+        UserConfig.FavouriteGames = new List<string>();
+        UserConfig.Enabled = true;
 
-        return configUser;
+        return UserConfig;
     }
 }

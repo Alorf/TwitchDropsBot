@@ -31,7 +31,7 @@ while (config.Users.Count == 0)
 TimeSpan waitingTime;
 List<Task> botTasks = new List<Task>();
 
-foreach (ConfigUser user in config.Users)
+foreach (UserConfig user in config.Users)
 {
     TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId, user.FavouriteGames);
     twitchUser.DiscordWebhookURl = config.WebhookURL;
@@ -65,7 +65,7 @@ static async Task AuthDeviceAsync()
 
     var secret = jsonResponse.RootElement.GetProperty("access_token").GetString();
 
-    ConfigUser user = await AuthSystem.ClientSecretUserAsync(secret);
+    UserConfig user = await AuthSystem.ClientSecretUserAsync(secret);
 
     // Save the user into config.json
     var config = AppConfig.Instance;

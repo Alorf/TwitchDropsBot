@@ -38,7 +38,7 @@ public class WatchBrowser : WatchManager, IDisposable
 
         if (browser != null) return;
 
-        browser = new Browser(twitchUser, BrowserType.Chrome, AppConfig.Instance.headless, 1280, 720, AppContext.BaseDirectory);
+        browser = new Browser(twitchUser, BrowserType.Chrome, AppConfig.Instance.WatchManagerConfig.headless, 1280, 720, AppContext.BaseDirectory);
         
         disposed = false;
         browser.WebDriver.Navigate().GoToUrl("https://www.twitch.tv/");

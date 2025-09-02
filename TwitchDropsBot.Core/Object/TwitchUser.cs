@@ -111,7 +111,7 @@ public class TwitchUser : INotifyPropertyChanged
         FavouriteGames = new List<string>();
         OnlyFavouriteGames = false;
 
-        string managerType = AppConfig.Instance.WatchManager;
+        string managerType = AppConfig.Instance.WatchManagerConfig.WatchManager;
 
         switch (managerType)
         {

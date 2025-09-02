@@ -42,7 +42,7 @@ namespace TwitchDropsBot.WinForms
                 }
             }
 
-            foreach (ConfigUser user in config.Users)
+            foreach (UserConfig user in config.Users)
             {
                 TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId, user.FavouriteGames);
                 twitchUser.DiscordWebhookURl = config.WebhookURL;
@@ -260,7 +260,7 @@ namespace TwitchDropsBot.WinForms
             }
 
             // Create a bot for the new user
-            ConfigUser user = config.Users.Last();
+            UserConfig user = config.Users.Last();
             TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId, user.FavouriteGames);
             twitchUser.DiscordWebhookURl = config.WebhookURL;
 

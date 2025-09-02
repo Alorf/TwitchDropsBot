@@ -1,6 +1,6 @@
 namespace TwitchDropsBot.Core.Object.Config;
 
-public class ConfigUser
+public class UserConfig
 {
     public string Login { get; set; }
     public string Id { get; set; }

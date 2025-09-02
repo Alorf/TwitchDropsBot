@@ -99,7 +99,7 @@ namespace TwitchDropsBot.WinForms
                 var secret = jsonResponse.RootElement.GetProperty("access_token").GetString();
 
                 CheckCancellation();
-                ConfigUser user = await AuthSystem.ClientSecretUserAsync(secret);
+                UserConfig user = await AuthSystem.ClientSecretUserAsync(secret);
                 CheckCancellation();
 
                 // Save the user into config.json

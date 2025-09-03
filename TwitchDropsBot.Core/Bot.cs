@@ -393,6 +393,12 @@ public class Bot
                 dropCampaign.TimeBasedDrops = tempDropCampaign.TimeBasedDrops;
                 dropCampaign.Game = tempDropCampaign.Game;
                 dropCampaign.Allow = tempDropCampaign.Allow;
+                
+                if (!dropCampaign.TimeBasedDrops.Any())
+                {
+                    twitchUser.Logger.Log($"No time based drops found for this campaign ({dropCampaign.Name}), skipping.");
+                    continue;
+                }
 
                 try
                 {

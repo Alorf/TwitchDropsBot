@@ -7,6 +7,7 @@ using TwitchDropsBot.Core.Object;
 using TwitchDropsBot.Core.Object.Config;
 using TwitchDropsBot.Core.Object.TwitchGQL;
 using Game = TwitchDropsBot.Core.Object.TwitchGQL.Game;
+using System.Linq;
 
 namespace TwitchDropsBot.Core.Utilities;
 
@@ -64,7 +65,8 @@ public class GqlRequest
             rewardCampaigns =
                 rewardCampaigns.FindAll(rewardCampaign => rewardCampaign.UnlockRequirements?.MinuteWatchedGoal != 0);
 
-            var favGamesSet = new HashSet<string>(twitchUser.FavouriteGames.Select(game => game.ToLower()));
+            var favGame = (from game in twitchUser.FavouriteGames select game.ToLower()).Distinct();
+            var favGamesSet = favGame;
 
             foreach (var dropCampaign in dropCampaigns)
             {
@@ -199,7 +201,7 @@ public class GqlRequest
         return resp?.Data.StreamPlaybackAccessToken;
     }
 
-    public async Task<List<User>?> FetchStreamInformationAsync(List<string> channels)
+    public async Task<List<User>?> FetchStreamInformationAsync(string[] channels)
     {
         var queries = new List<GraphQLRequest>();
 
@@ -390,16 +392,16 @@ public class GqlRequest
     {
         client ??= graphQLClient;
         name ??= queries[0].OperationName;
-        
-        // Convert each GraphQL request into an object with the desired format
-        var requestObjects = queries.Select(q => new
-        {
-            operationName = q.OperationName,
-            variables = q.Variables,
-            extensions = q.Extensions
-        }).ToList();
 
-        var jsonContent = JsonSerializer.Serialize(requestObjects);
+        var body = from q in queries
+            select new
+            {
+                operationName = q.OperationName,
+                variables = q.Variables,
+                extensions = q.Extensions
+            };
+        
+        var jsonContent = JsonSerializer.Serialize(body);
         
         var httpRequest = new HttpRequestMessage(HttpMethod.Post, "https://gql.twitch.tv/gql")
         {

@@ -128,14 +128,17 @@ public class Bot
 
         // Order things to watch by the order of favorite game names and drop that is ending soon
         CheckCancellation();
-        thingsToWatch = thingsToWatch
-            .Where(x => x.Game is not null)
-            .OrderBy(x =>
-                favoriteGameNames.IndexOf(x.Game!.DisplayName) == -1
+        
+        var linqToWatch = from thingToWatch in thingsToWatch
+            where thingToWatch.Game is not null
+            orderby
+                favoriteGameNames.IndexOf(thingToWatch.Game!.DisplayName) == -1
                     ? int.MaxValue
-                    : favoriteGameNames.IndexOf(x.Game.DisplayName))
-            .ThenBy(x => (x as DropCampaign)?.EndAt ?? DateTime.MaxValue)
-            .ToList();
+                    : favoriteGameNames.IndexOf(thingToWatch.Game.DisplayName),
+                (thingToWatch as DropCampaign)?.EndAt ?? DateTime.MaxValue
+            select thingToWatch;
+        
+        thingsToWatch = linqToWatch.ToList();
 
         var timeBasedDropFound = false;
         AbstractCampaign? campaign;
@@ -419,10 +422,7 @@ public class Bot
 
                 if (channels is not null)
                 {
-                    var channelGroups = channels.Select((channel, index) => new { channel, index })
-                        .GroupBy(x => x.index / 10)
-                        .Select(g => g.Select(x => x.channel.Name).ToList())
-                        .ToList();
+                    var channelGroups = channels.Select(x => x.Name).Chunk(10).ToList();
 
                     foreach (var channelGroup in channelGroups)
                     {

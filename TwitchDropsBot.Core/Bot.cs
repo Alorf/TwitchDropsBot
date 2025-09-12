@@ -400,6 +400,7 @@ public class Bot
                 if (!dropCampaign.TimeBasedDrops.Any())
                 {
                     twitchUser.Logger.Log($"No time based drops found for this campaign ({dropCampaign.Name}), skipping.");
+                    campaigns.Remove(campaign);
                     continue;
                 }
 

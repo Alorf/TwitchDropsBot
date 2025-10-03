@@ -14,5 +14,16 @@ public abstract class WatchManager
     }
 
     public abstract Task WatchStreamAsync(AbstractBroadcaster broadcaster);
+    public abstract Task<DropCurrentSession?> FakeWatchAsync(AbstractBroadcaster broadcaster, int tryCount = 0);
     public abstract void Close();
+    
+    protected void CheckCancellation()
+    {
+        if (cancellationTokenSource != null &&
+            cancellationTokenSource.Token.IsCancellationRequested)
+        {
+            throw new OperationCanceledException();
+        }
+    }
+    
 }

@@ -129,6 +129,20 @@ public class WatchRequest : WatchManager
         }
     }
 
+    public override async Task<DropCurrentSession?> FakeWatchAsync(AbstractBroadcaster broadcaster, int tryCount = 1)
+    {
+
+        for (int i = 0; i < tryCount; i++)
+        {
+            CheckCancellation();
+            await WatchStreamAsync(broadcaster);
+            await Task.Delay(TimeSpan.FromSeconds(20));
+            Close();
+        }
+
+        return await twitchUser.GqlRequest.FetchCurrentSessionContextAsync(broadcaster);
+    }
+
     public override void Close()
     {
         streamURL = null;

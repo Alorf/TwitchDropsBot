@@ -1,108 +1,100 @@
-﻿using OpenQA.Selenium;
-using OpenQA.Selenium.Chrome;
-using OpenQA.Selenium.Firefox;
+﻿using Microsoft.Extensions.Logging;
+using PuppeteerSharp;
 
 namespace TwitchDropsBot.Core.Object;
 
-public enum BrowserType
+public class Browser
 {
-    Chrome,
-    Firefox
-}
+    public TwitchUser TwitchUser { get; }
+    private bool headless;
+    private IBrowser? _browser;
+    public IBrowser? PuppeteerBrowser => _browser;
 
-public class Browser : IDisposable
-{
-    public BrowserType Type { get; }
-    public bool Headless { get; }
-    public int? WindowWidth { get; }
-    public int? WindowHeight { get; }
-    public string? UserDataDir { get; }
-    public IWebDriver WebDriver { get; private set; }
-
-    public Browser(TwitchUser twitchUser, BrowserType type = BrowserType.Chrome, bool headless = true, int? windowWidth = null,
-        int? windowHeight = null, string? userDataDir = null)
+    public Browser(TwitchUser twitchUser, bool headless)
     {
-        Type = type;
-        Headless = headless;
-        WindowWidth = windowWidth;
-        WindowHeight = windowHeight;
-        UserDataDir = userDataDir + $"SeleniumData\\{twitchUser.Login}";
-
-        WebDriver = CreateWebDriver();
+        TwitchUser = twitchUser;
+        this.headless = headless;
     }
 
-    private IWebDriver CreateWebDriver()
+    private async Task SetupBrowserAsync()
     {
-        switch (Type)
+        var fetcher = new BrowserFetcher();
+        var installed = fetcher.GetInstalledBrowsers();
+        if (!installed.Any())
         {
-            case BrowserType.Chrome:
-                var chromeOptions = new ChromeOptions();
-                chromeOptions.AddArgument("--mute-audio"); // Mute audio
-                if (Headless) chromeOptions.AddArgument("--headless=new");
-                if (WindowWidth.HasValue && WindowHeight.HasValue)
-                    chromeOptions.AddArgument($"--window-size={WindowWidth.Value},{WindowHeight.Value}");
-
-                if (!string.IsNullOrEmpty(UserDataDir))
-                    chromeOptions.AddArgument($"--user-data-dir={UserDataDir}");
-
-                chromeOptions.AddArgument("--mute-audio");
-                chromeOptions.AddArgument("--disable-infobars");
-                chromeOptions.AddArgument("--no-sandbox");
-                chromeOptions.AddArgument("--disable-login-animations");
-                chromeOptions.AddArgument("--disable-modal-animations");
-                chromeOptions.AddArgument("--no-sync");
-                chromeOptions.AddArgument("--disable-sync");
-                chromeOptions.AddArgument("--disable-renderer-backgrounding");
-                chromeOptions.AddArgument("--no-default-browser-check");
-                chromeOptions.AddArgument("--disable-default-apps");
-                chromeOptions.AddArgument("--disable-component-update");
-                chromeOptions.AddArgument("--disable-setuid-sandbox");
-                chromeOptions.AddArgument("--disable-breakpad");
-                chromeOptions.AddArgument("--disable-crash-reporter");
-                chromeOptions.AddArgument("--disable-speech-api");
-                chromeOptions.AddArgument("--no-zygote");
-                chromeOptions.AddArgument("--disable-features=HardwareMediaKeyHandling");
-                chromeOptions.AddArgument(
-                    "--disable-blink-features=AutomationControlled,IdleDetection,CSSDisplayAnimation");
-                chromeOptions.AddArgument("--disable-dev-shm-usage");
-                
-                chromeOptions.AddExcludedArgument("enable-automation");
-                chromeOptions.AddAdditionalOption("useAutomationExtension", false);
-                chromeOptions.AddArgument("--disable-features=IsolateOrigins,site-per-process");
-                var driver = new ChromeDriver(chromeOptions);
-                
-                ((IJavaScriptExecutor)driver).ExecuteScript(
-                    "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
-                );
-
-                return driver;
-
-            case BrowserType.Firefox:
-                var firefoxOptions = new FirefoxOptions();
-                firefoxOptions.SetPreference("media.volume_scale", "0.0");
-                if (Headless) firefoxOptions.AddArgument("--headless");
-                if (WindowWidth.HasValue && WindowHeight.HasValue)
-                    firefoxOptions.AddArgument($"--width={WindowWidth.Value}");
-                firefoxOptions.AddArgument($"--height={WindowHeight.Value}");
-                return new FirefoxDriver(firefoxOptions);
-
-            default:
-                throw new NotSupportedException("Web browser not supported.");
+            await fetcher.DownloadAsync();
         }
     }
-    
-    public void Dispose()
+
+    public async Task InitAsync()
     {
-        try
+        await SetupBrowserAsync();
+
+        var launchOptions = new LaunchOptions
         {
-            WebDriver?.Close();
-        }
-        catch (System.Exception ex)
-        {
-            SystemLogger.Error("[BROWSER] Error while closing the browser: " + ex.Message);
-        }
+            Headless = this.headless,
+            Args =
+            [
+                "--mute-audio",
+                "--disable-infobars",
+                "--no-sandbox",
+                "--disable-login-animations",
+                "--disable-modal-animations",
+                "--no-sync",
+                "--disable-sync",
+                "--disable-renderer-backgrounding",
+                "--no-default-browser-check",
+                "--disable-default-apps",
+                "--disable-component-update",
+                "--disable-setuid-sandbox",
+                "--disable-breakpad",
+                "--disable-crash-reporter",
+                "--disable-speech-api",
+                "--no-zygote",
+                "--disable-features=HardwareMediaKeyHandling",
+                "--disable-blink-features=AutomationControlled,IdleDetection,CSSDisplayAnimation",
+            ],
+            IgnoredDefaultArgs = ["--enable-automation", "--hide-scrollbars", "--enable-blink-features=IdleDetection"],
+            DefaultViewport = new ViewPortOptions
+            {
+                Width = 960,
+                Height = 1000
+            },
+            UserDataDir = "./BrowserData/" + TwitchUser.Login
+        };
         
-        WebDriver?.Quit();
-        WebDriver?.Dispose();
+        _browser = await Puppeteer.LaunchAsync(launchOptions);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_browser != null)
+        {
+            try
+            {
+                await _browser.CloseAsync();
+                await _browser.DisposeAsync();
+            }
+            catch (System.Exception ex)
+            {
+                TwitchUser.Logger.Info("[BROWSER] CloseAsync failed, forcing kill...");
+            }
+            finally
+            {
+                try
+                {
+                    if (!_browser.Process.HasExited)
+                    {
+                        _browser.Process.Kill(true);
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    TwitchUser.Logger.Info("[BROWSER] Failed to kill Chromium process");
+                }
+
+                _browser = null;
+            }
+        }
     }
 }

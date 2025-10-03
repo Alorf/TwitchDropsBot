@@ -1,7 +1,5 @@
 using Discord;
 using Discord.Webhook;
-using OpenQA.Selenium;
-using OpenQA.Selenium.Chrome;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text;

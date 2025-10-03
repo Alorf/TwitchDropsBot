@@ -197,18 +197,8 @@ public class Bot
                 }
 
                 // Sometimes, we have to watch 2 or 3 times to init the drop or it will skip
-                for (var i = 0; i < config.AttemptToWatch; i++)
-                {
-                    twitchUser.Logger.Log("No time based drop found, watching 20 sec to init the drop");
-                    dropCurrentSession = await FakeWatchAsync(broadcaster);
+                dropCurrentSession = await twitchUser.WatchManager.FakeWatchAsync(broadcaster, config.AttemptToWatch);
 
-                    if (!string.IsNullOrEmpty(dropCurrentSession?.DropId) &&
-                        dropCurrentSession.Channel.Id == broadcaster.Id &&
-                        dropCurrentSession.CurrentMinutesWatched < dropCurrentSession.requiredMinutesWatched)
-                    {
-                        break;
-                    }
-                }
             }
 
             if (campaign is DropCampaign dropCampaign)
@@ -518,17 +508,6 @@ public class Bot
                 }
             }
         }
-    }
-
-    private async Task<DropCurrentSession?> FakeWatchAsync(AbstractBroadcaster broadcaster)
-    {
-        // Trying to init the drop
-
-        await twitchUser.WatchManager.WatchStreamAsync(broadcaster);
-        await Task.Delay(TimeSpan.FromSeconds(20));
-        twitchUser.WatchManager.Close();
-
-        return await twitchUser.GqlRequest.FetchCurrentSessionContextAsync(broadcaster);
     }
 
     private void CheckCancellation()

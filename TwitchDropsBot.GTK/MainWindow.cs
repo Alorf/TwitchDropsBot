@@ -92,8 +92,6 @@ namespace TwitchDropsBot.GTK
                         Environment.Exit(0);
                         break;
                 }
-
-                config = config.GetConfig();
             }
 
             foreach (UserConfig user in config.Users)

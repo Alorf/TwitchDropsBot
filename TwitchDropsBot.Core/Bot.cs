@@ -89,11 +89,6 @@ public class Bot
 
     private async Task StartAsync()
     {
-        lock (_configLock)
-        {
-            config.GetConfig();
-        }
-
         twitchUser.FavouriteGames = twitchUser.PersonalFavouriteGames.Count > 0
             ? twitchUser.PersonalFavouriteGames
             : config.FavouriteGames;

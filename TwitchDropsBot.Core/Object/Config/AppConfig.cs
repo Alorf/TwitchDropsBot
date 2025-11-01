@@ -51,7 +51,6 @@ public class AppConfig
         Users = new List<UserConfig>();
         FavouriteGames = new List<string>();
         AvoidCampaign = new List<string>();
-        WatchSpecificStreamer = new List<string>();
         OnlyFavouriteGames = false;
         LaunchOnStartup = false;
         MinimizeInTray = true;

@@ -98,16 +98,21 @@ public class TwitchUser : INotifyPropertyChanged
 
     public TwitchUser(string login, string id, string clientSecret, string uniqueId, List<string> personalFavouriteGames)
     {
+        var config = AppConfig.Instance;
+        
         Login = login;
         Id = id;
         ClientSecret = clientSecret;
         UniqueId = uniqueId;
         PersonalFavouriteGames = personalFavouriteGames ?? new List<string>();
+        
         GqlRequest = new GqlRequest(this);
-        Status = BotStatus.Idle;
         Logger = new Logger(this);
-        FavouriteGames = new List<string>();
-        OnlyFavouriteGames = false;
+        Status = BotStatus.Idle;
+        
+        FavouriteGames = personalFavouriteGames is not null && personalFavouriteGames.Count > 0 ? personalFavouriteGames : config.FavouriteGames;
+        OnlyFavouriteGames = config.OnlyFavouriteGames;
+        OnlyConnectedAccounts = config.OnlyConnectedAccounts;
 
         string managerType = AppConfig.Instance.WatchManagerConfig.WatchManager;
 

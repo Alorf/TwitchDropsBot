@@ -131,7 +131,8 @@ public class WatchRequest : WatchManager
 
     public override async Task<DropCurrentSession?> FakeWatchAsync(AbstractBroadcaster broadcaster, int tryCount = 1)
     {
-
+        twitchUser.Logger.Log("Watching 20 seconds to ensure drops are registered...");
+        
         for (int i = 0; i < tryCount; i++)
         {
             CheckCancellation();

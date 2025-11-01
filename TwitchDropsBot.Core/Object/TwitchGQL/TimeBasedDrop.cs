@@ -1,5 +1,6 @@
 using Discord;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 
 namespace TwitchDropsBot.Core.Object.TwitchGQL;
 
@@ -11,6 +12,10 @@ public class TimeBasedDrop : IInventorySystem
     public DateTime EndAt { get; set; }
     public int RequiredMinutesWatched { get; set; }
     public int RequiredSubs { get; set; }
+    
+    [JsonIgnore]
+    public AbstractCampaign? AbstractCampaign { get; set; }
+    
     public Self? Self { get; set; }
     public Campaign Campaign { get; set; }
     public List<BenefitEdge> BenefitEdges { get; set; }
@@ -63,7 +68,7 @@ public class TimeBasedDrop : IInventorySystem
      return IsClaimed() ? "\u2714" : "\u26A0";
     }
 
-    public string GetDistributionType()
+    public DistributionType GetDistributionType()
     {
         return BenefitEdges[0].Benefit.DistributionType;
     }

@@ -9,7 +9,7 @@ public class RewardCampaignsAvailableToUser : AbstractCampaign
     public string? Summary { get; set; }
     public UnlockRequirements? UnlockRequirements { get; set; }
     public List<Reward>? Rewards { get; set; }
-    public string DistributionType { get; set; }
+    public DistributionType DistributionType { get; set; }
     public override async Task NotifiateAsync(TwitchUser twitchUser)
     {
         // Todo: distinct badge rewards from code rewards
@@ -18,7 +18,7 @@ public class RewardCampaignsAvailableToUser : AbstractCampaign
 
         switch (DistributionType)
         {
-            case "CODE":
+            case DistributionType.CODE:
                 //Regex to find code
                 var codeRegex = new System.Text.RegularExpressions.Regex(@"(?<=\*\*).+?(?=\*\*)", System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
                 twitchUser.Logger.Log("Got code !");
@@ -47,5 +47,19 @@ public class RewardCampaignsAvailableToUser : AbstractCampaign
         }
         await twitchUser.SendWebhookAsync(embeds);
 
+    }
+
+    public override bool IsCompleted(Inventory inventory)
+    {
+        if (inventory.CompletedRewardCampaigns is null)
+        {
+            return false;
+        }
+
+        List<CompletedRewardCampaigns> completedRewardCampaigns = inventory.CompletedRewardCampaigns;
+
+        var anyCompletedRewardCampaigns = completedRewardCampaigns.Any(x => x.id == Id);
+
+        return anyCompletedRewardCampaigns;
     }
 }

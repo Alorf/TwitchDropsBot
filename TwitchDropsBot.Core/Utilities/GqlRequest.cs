@@ -93,14 +93,14 @@ public class GqlRequest
         return new List<AbstractCampaign>();
     }
 
-    public async Task<DropCampaign?> FetchTimeBasedDropsAsync(string dropID)
+    public async Task<DropCampaign?> FetchTimeBasedDropsAsync(string dropId)
     {
         var query = CreateQuery("DropCampaignDetails");
 
         if (query.Variables is Dictionary<string, object?> variables)
         {
             variables["channelLogin"] = twitchUser.Id;
-            variables["dropID"] = dropID;
+            variables["dropID"] = dropId;
         }
 
         dynamic? resp = await DoGQLRequestAsync(query);
@@ -109,7 +109,7 @@ public class GqlRequest
         {
             DropCampaign dropCampaign = resp.Data.User.DropCampaign;
 
-            if (dropCampaign.Id != dropID)
+            if (dropCampaign.Id != dropId)
             {
                 twitchUser.Logger.Error("The drop ID does not match the drop campaign ID.");
             }
@@ -125,7 +125,11 @@ public class GqlRequest
     public async Task<Inventory?> FetchInventoryDropsAsync()
     {
         var query = CreateQuery("Inventory");
-
+        if (query.Variables is Dictionary<string, object?> variables)
+        {
+            variables["fetchRewardCampaigns"] = true;
+        }
+        
         dynamic? resp = await DoGQLRequestAsync(query);
 
         Inventory? inventory = resp?.Data.CurrentUser.Inventory;
@@ -254,6 +258,14 @@ public class GqlRequest
         return resp?.Data.User;
     }
 
+    /// <summary>
+    /// Fetch information about drops from a broadcaster's current session.
+    /// usefull data available : CurrentMinutesWatched, requiredMinutesWatched
+    /// </summary>
+    /// <param name="channel">The broadcaster information to retrieve the session.</param>
+    /// <returns>
+    /// Return a <see cref="DropCurrentSession"/> from a broadcaster, or <c>null</c> if no data could be retrieved.
+    /// </returns>
     public async Task<DropCurrentSession?> FetchCurrentSessionContextAsync(AbstractBroadcaster channel)
     {
         var query = CreateQuery("DropCurrentSessionContext");

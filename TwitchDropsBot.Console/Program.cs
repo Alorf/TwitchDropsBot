@@ -10,8 +10,8 @@ if (args.Length > 0 && args[0] == "--add-account" && config.Users.Count != 0)
     do
     {
         SystemLogger.Info("Do you want to add another account? (Y/N)");
-        string answer = Console.ReadLine();
-        if (answer.ToLower() == "n")
+        string? answer = Console.ReadLine();
+        if (answer?.ToLower() == "n")
         {
             break;
         }
@@ -55,6 +55,12 @@ static async Task AuthDeviceAsync()
 
     SystemLogger.Info($"Please go to {verificationUri} and enter the code: {userCode}");
 
+    if (deviceCode is null)
+    {
+        SystemLogger.Error("Failed to get device code.");
+        Environment.Exit(1);
+    }
+
     jsonResponse = await AuthSystem.CodeConfirmationAsync(deviceCode);
 
     if (jsonResponse == null)
@@ -64,7 +70,13 @@ static async Task AuthDeviceAsync()
     }
 
     var secret = jsonResponse.RootElement.GetProperty("access_token").GetString();
-
+    
+    if (secret is null)
+    {
+        SystemLogger.Error("Failed to get secret.");
+        Environment.Exit(1);
+    }
+    
     UserConfig user = await AuthSystem.ClientSecretUserAsync(secret);
 
     // Save the user into config.json

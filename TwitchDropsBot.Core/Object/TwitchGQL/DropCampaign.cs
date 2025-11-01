@@ -15,12 +15,30 @@ public class DropCampaign : AbstractCampaign
     public Summary Summary { get; set; }
     public string AccountLinkURL { get; set; }
 
-    public List<Channel>? GetChannels()
+    public override async Task NotifiateAsync(TwitchUser twitchUser)
     {
-        return Allow?.Channels;
+        TimeBasedDrop? timeBasedDrop = twitchUser.CurrentTimeBasedDrop;
+
+        List<Embed> embeds = new List<Embed>();
+        
+        string? name = Game?.Name ?? Game?.DisplayName;
+
+        Embed embed = new EmbedBuilder()
+            .WithTitle($"{twitchUser.Login} recieve a new item for **{name ?? "Uknown Game"}**!")
+            .WithDescription($"**{timeBasedDrop.GetName()}** have been claimed")
+            .WithColor(new Color(2326507))
+            .WithThumbnailUrl(timeBasedDrop.GetImage())
+            //.WithUrl(action.Url)
+            .Build();
+
+        embeds.Add(embed);
+
+
+        await twitchUser.SendWebhookAsync(embeds,
+            timeBasedDrop.GetGameImageUrl(128) ?? timeBasedDrop.GetImage().ToString());
     }
 
-    public bool IsCompleted(Inventory inventory)
+    public override bool IsCompleted(Inventory inventory)
     {
         if (inventory.DropCampaignsInProgress.Any(x => x.Id == Id))
         {
@@ -51,26 +69,5 @@ public class DropCampaign : AbstractCampaign
         var allTimeBasedDropsClaimed = TimeBasedDrops.All(drop => drop.IsClaimed());
 
         return allTimeBasedDropsClaimed;
-    }
-
-    public override async Task NotifiateAsync(TwitchUser twitchUser)
-    {
-        TimeBasedDrop? timeBasedDrop = twitchUser.CurrentTimeBasedDrop;
-
-        List<Embed> embeds = new List<Embed>();
-
-        Embed embed = new EmbedBuilder()
-            .WithTitle($"{twitchUser.Login} recieve a new item for **{Game?.DisplayName}**!")
-            .WithDescription($"**{timeBasedDrop.GetName()}** have been claimed")
-            .WithColor(new Color(2326507))
-            .WithThumbnailUrl(timeBasedDrop.GetImage())
-            //.WithUrl(action.Url)
-            .Build();
-
-        embeds.Add(embed);
-
-
-        await twitchUser.SendWebhookAsync(embeds,
-            timeBasedDrop.GetGameImageUrl(128) ?? timeBasedDrop.GetImage().ToString());
     }
 }

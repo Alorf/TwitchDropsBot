@@ -5,8 +5,8 @@ using System.Reflection;
 using System.Windows.Forms;
 using TwitchDropsBot.Core;
 using TwitchDropsBot.Core.Object;
-using TwitchDropsBot.Core.Object.TwitchGQL;
-using Action = System.Action;
+using TwitchDropsBot.Core.Twitch.Models;
+using TwitchDropsBot.Core.Twitch.Models.Interfaces;
 
 namespace TwitchDropsBot.WinForms
 {
@@ -111,11 +111,11 @@ namespace TwitchDropsBot.WinForms
         private void UpdateProgress()
         {
             if (twitchUser.CurrentDropCurrentSession != null &&
-                twitchUser.CurrentDropCurrentSession.requiredMinutesWatched > 0)
+                twitchUser.CurrentDropCurrentSession.RequiredMinutesWatched > 0)
             {
                 var percentage = (int)((twitchUser.CurrentDropCurrentSession.CurrentMinutesWatched /
                                         (double)twitchUser.CurrentDropCurrentSession
-                                            .requiredMinutesWatched) * 100);
+                                            .RequiredMinutesWatched) * 100);
 
                 if (percentage > 100) // for some reason it gave me 101 sometimes
                 {
@@ -125,7 +125,7 @@ namespace TwitchDropsBot.WinForms
                 progressBar.Invoke((System.Windows.Forms.MethodInvoker)(() => progressBar.Value = percentage));
                 labelPercentage.Invoke((System.Windows.Forms.MethodInvoker)(() => labelPercentage.Text = $"{percentage}%"));
                 labelMinRemaining.Invoke((System.Windows.Forms.MethodInvoker)(() => labelMinRemaining.Text =
-                                           $"Minutes remaining : {twitchUser.CurrentDropCurrentSession.requiredMinutesWatched - twitchUser.CurrentDropCurrentSession.CurrentMinutesWatched}"));
+                                           $"Minutes remaining : {twitchUser.CurrentDropCurrentSession.RequiredMinutesWatched - twitchUser.CurrentDropCurrentSession.CurrentMinutesWatched}"));
             }
         }
 
@@ -187,7 +187,7 @@ namespace TwitchDropsBot.WinForms
         private async Task LoadInventoryAsync()
         {
             List<IInventorySystem> inventoryItems = new List<IInventorySystem>();
-            var gameEventDrops = twitchUser.Inventory?.GameEventDrops?.OrderBy(drop => drop.lastAwardedAt).Reverse().ToList() ?? new List<GameEventDrop>();
+            var gameEventDrops = twitchUser.Inventory?.GameEventDrops?.OrderBy(drop => drop.LastAwardedAt).Reverse().ToList() ?? new List<UserDropReward>();
             var dropCampaignsInProgress = twitchUser.Inventory?.DropCampaignsInProgress;
 
             if (dropCampaignsInProgress != null)

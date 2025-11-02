@@ -1,7 +1,7 @@
 ﻿using TwitchDropsBot.Core;
 using TwitchDropsBot.Core.Object;
 using TwitchDropsBot.Core.Object.Config;
-using TwitchDropsBot.Core.Utilities;
+using TwitchDropsBot.Core.Twitch.Services;
 
 AppConfig config = AppConfig.Instance;
 
@@ -48,7 +48,7 @@ foreach (UserConfig user in config.Users)
 await Task.WhenAll(botTasks);
 static async Task AuthDeviceAsync()
 {
-    var jsonResponse = await AuthSystem.GetCodeAsync();
+    var jsonResponse = await TwitchAuthService.GetCodeAsync();
     var deviceCode = jsonResponse.RootElement.GetProperty("device_code").GetString();
     var userCode = jsonResponse.RootElement.GetProperty("user_code").GetString();
     var verificationUri = jsonResponse.RootElement.GetProperty("verification_uri").GetString();
@@ -61,7 +61,7 @@ static async Task AuthDeviceAsync()
         Environment.Exit(1);
     }
 
-    jsonResponse = await AuthSystem.CodeConfirmationAsync(deviceCode);
+    jsonResponse = await TwitchAuthService.CodeConfirmationAsync(deviceCode);
 
     if (jsonResponse == null)
     {
@@ -77,7 +77,7 @@ static async Task AuthDeviceAsync()
         Environment.Exit(1);
     }
     
-    UserConfig user = await AuthSystem.ClientSecretUserAsync(secret);
+    UserConfig user = await TwitchAuthService.ClientSecretUserAsync(secret);
 
     // Save the user into config.json
     var config = AppConfig.Instance;

@@ -1,5 +1,5 @@
 ﻿using TwitchDropsBot.Core.Object;
-using TwitchDropsBot.Core.Object.TwitchGQL;
+using TwitchDropsBot.Core.Twitch.Models;
 
 namespace TwitchDropsBot.Core.WatchManager;
 
@@ -13,8 +13,8 @@ public abstract class WatchManager
         this.cancellationTokenSource = cancellationTokenSource;
     }
 
-    public abstract Task WatchStreamAsync(AbstractBroadcaster broadcaster);
-    public abstract Task<DropCurrentSession?> FakeWatchAsync(AbstractBroadcaster broadcaster, int tryCount = 0);
+    public abstract Task WatchStreamAsync(User broadcaster);
+    public abstract Task<DropCurrentSession?> FakeWatchAsync(User broadcaster, int tryCount = 0);
     public abstract void Close();
     
     protected void CheckCancellation()

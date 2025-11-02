@@ -1,6 +1,7 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.IO;
+using TwitchDropsBot.Core.Twitch.Clients;
 
 namespace TwitchDropsBot.Core.Object.Config;
 

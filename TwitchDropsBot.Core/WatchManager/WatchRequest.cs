@@ -2,16 +2,17 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using TwitchDropsBot.Core.Object;
-using TwitchDropsBot.Core.Object.TwitchGQL;
-using TwitchDropsBot.Core.Utilities;
-using Stream = TwitchDropsBot.Core.Object.TwitchGQL.Stream;
+using TwitchDropsBot.Core.Twitch.GraphQL;
+using TwitchDropsBot.Core.Twitch.Models;
+using DropCurrentSession = TwitchDropsBot.Core.Twitch.Models.DropCurrentSession;
+using Stream = TwitchDropsBot.Core.Twitch.Models.Stream;
 
 namespace TwitchDropsBot.Core.WatchManager;
 
 public class WatchRequest : WatchManager
 {
     private string? streamURL;
-    private GqlRequest gqlRequest;
+    private TwitchGraphQLClient twitchGraphQlClient;
     private DateTime lastRequestTime;
     private bool enableOldSystem;
     private static string? spadeUrl = null;
@@ -21,7 +22,7 @@ public class WatchRequest : WatchManager
     
     public WatchRequest(TwitchUser twitchUser, CancellationTokenSource cancellationTokenSource, bool enableOldSystem) : base(twitchUser, cancellationTokenSource)
     {
-        gqlRequest = twitchUser.GqlRequest;
+        twitchGraphQlClient = twitchUser.TwitchGraphQlClient;
         this.enableOldSystem = enableOldSystem;
         lastRequestTime = DateTime.MinValue;
         streamURL = null;
@@ -31,7 +32,7 @@ public class WatchRequest : WatchManager
      * Inspired by DevilXD's TwitchDropsMiner
      * https://github.dev/DevilXD/TwitchDropsMiner/blob/b20f98da7a72ddca20eb462229faf330026b3511/channel.py#L76
      */
-    public override async Task WatchStreamAsync(AbstractBroadcaster broadcaster)
+    public override async Task WatchStreamAsync(User broadcaster)
     {
         DateTime requestTime = DateTime.Now;
         HttpClient client = new HttpClient();
@@ -45,8 +46,8 @@ public class WatchRequest : WatchManager
             {
                 if (streamURL == null)
                 {
-                    StreamPlaybackAccessToken? streamPlaybackAccessToken =
-                        await gqlRequest.FetchPlaybackAccessTokenAsync(broadcaster.Login);
+                    PlaybackAccessToken? streamPlaybackAccessToken =
+                        await twitchGraphQlClient.FetchPlaybackAccessTokenAsync(broadcaster.Login);
 
                     var requestBroadcastQualitiesURL =
                         $"https://usher.ttvnw.net/api/channel/hls/{broadcaster.Login}.m3u8?sig={streamPlaybackAccessToken!.Signature}&token={streamPlaybackAccessToken!.Value}";
@@ -101,7 +102,7 @@ public class WatchRequest : WatchManager
                     throw new System.Exception("Failed to fetch Spade URL.");
                 }
 
-                var tempBroadcaster = await gqlRequest.FetchStreamInformationAsync(broadcaster.Login);
+                var tempBroadcaster = await twitchGraphQlClient.FetchStreamInformationAsync(broadcaster.Login);
             
                 if (tempBroadcaster?.Stream != null)
                 {
@@ -129,7 +130,7 @@ public class WatchRequest : WatchManager
         }
     }
 
-    public override async Task<DropCurrentSession?> FakeWatchAsync(AbstractBroadcaster broadcaster, int tryCount = 1)
+    public override async Task<DropCurrentSession?> FakeWatchAsync(User broadcaster, int tryCount = 1)
     {
         twitchUser.Logger.Log("Watching 20 seconds to ensure drops are registered...");
         
@@ -141,7 +142,7 @@ public class WatchRequest : WatchManager
             Close();
         }
 
-        return await twitchUser.GqlRequest.FetchCurrentSessionContextAsync(broadcaster);
+        return await twitchUser.TwitchGraphQlClient.FetchCurrentSessionContextAsync(broadcaster);
     }
 
     public override void Close()
@@ -150,7 +151,7 @@ public class WatchRequest : WatchManager
         lastRequestTime = DateTime.MinValue;
     }
 
-    private string GetPayload(AbstractBroadcaster broadcaster, Stream stream)
+    private string GetPayload(User broadcaster, Stream stream)
     {
         
         var payload = new[]

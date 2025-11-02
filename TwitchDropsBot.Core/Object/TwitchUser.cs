@@ -6,8 +6,9 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using TwitchDropsBot.Core.Object.Config;
-using TwitchDropsBot.Core.Object.TwitchGQL;
-using TwitchDropsBot.Core.Utilities;
+using TwitchDropsBot.Core.Twitch.GraphQL;
+using TwitchDropsBot.Core.Twitch.Models;
+using TwitchDropsBot.Core.Twitch.Models.Custom;
 using TwitchDropsBot.Core.WatchManager;
 
 namespace TwitchDropsBot.Core.Object;
@@ -25,14 +26,14 @@ public class TwitchUser : INotifyPropertyChanged
     public string Id { get; set; }
     public string ClientSecret { get; set; }
     public string UniqueId { get; set; }
-    public GqlRequest GqlRequest { get; set; }
+    public TwitchGraphQLClient TwitchGraphQlClient { get; set; }
     public List<string> FavouriteGames { get; set; }
     public List<string> PersonalFavouriteGames { get; set; }
     public bool OnlyFavouriteGames { get; set; }
     public bool OnlyConnectedAccounts { get; set; }
     public AbstractCampaign? CurrentCampaign { get; set; }
     public TimeBasedDrop? CurrentTimeBasedDrop { get; set; }
-    public AbstractBroadcaster? CurrentBroadcaster { get; set; }
+    public User? CurrentBroadcaster { get; set; }
     private DropCurrentSession? _currentDropCurrentSession;
     public DropCurrentSession? CurrentDropCurrentSession
     {
@@ -106,7 +107,7 @@ public class TwitchUser : INotifyPropertyChanged
         UniqueId = uniqueId;
         PersonalFavouriteGames = personalFavouriteGames ?? new List<string>();
         
-        GqlRequest = new GqlRequest(this);
+        TwitchGraphQlClient = new TwitchGraphQLClient(this);
         Logger = new Logger(this);
         Status = BotStatus.Idle;
         

@@ -2,7 +2,7 @@
 using TwitchDropsBot.Core.Exception;
 using TwitchDropsBot.Core.Object;
 using TwitchDropsBot.Core.Object.Config;
-using TwitchDropsBot.Core.Object.TwitchGQL;
+using TwitchDropsBot.Core.Twitch.Models;
 using Browser = TwitchDropsBot.Core.Object.Browser;
 
 namespace TwitchDropsBot.Core.WatchManager;
@@ -17,12 +17,12 @@ public class WatchBrowser : WatchManager, IAsyncDisposable
     {
     }
 
-    public override async Task WatchStreamAsync(AbstractBroadcaster? broadcaster)
+    public override async Task WatchStreamAsync(User? broadcaster)
     {
         // Check if stream still live, if not throw error and close
         if (broadcaster != null)
         {
-            var tempBroadcaster = await twitchUser.GqlRequest.FetchStreamInformationAsync(broadcaster.Login);
+            var tempBroadcaster = await twitchUser.TwitchGraphQlClient.FetchStreamInformationAsync(broadcaster.Login);
 
             if (tempBroadcaster != null)
             {
@@ -106,7 +106,7 @@ public class WatchBrowser : WatchManager, IAsyncDisposable
         await Task.Delay(TimeSpan.FromSeconds(10), cancellationTokenSource.Token);
     }
 
-    public override async Task<DropCurrentSession?> FakeWatchAsync(AbstractBroadcaster broadcaster, int tryCount = 3)
+    public override async Task<DropCurrentSession?> FakeWatchAsync(User broadcaster, int tryCount = 3)
     {
         // Watch for 20*trycount seconds
         var startTime = DateTime.Now;
@@ -126,7 +126,7 @@ public class WatchBrowser : WatchManager, IAsyncDisposable
 
         Close();
 
-        return await twitchUser.GqlRequest.FetchCurrentSessionContextAsync(broadcaster);
+        return await twitchUser.TwitchGraphQlClient.FetchCurrentSessionContextAsync(broadcaster);
     }
 
     public override void Close()

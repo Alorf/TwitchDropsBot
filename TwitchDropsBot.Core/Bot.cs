@@ -2,7 +2,10 @@ using Discord;
 using TwitchDropsBot.Core.Exception;
 using TwitchDropsBot.Core.Object;
 using TwitchDropsBot.Core.Object.Config;
-using TwitchDropsBot.Core.Object.TwitchGQL;
+using TwitchDropsBot.Core.Twitch.Models;
+using TwitchDropsBot.Core.Twitch.Models.Custom;
+using TwitchDropsBot.Core.Twitch.Models.Extensions;
+
 
 namespace TwitchDropsBot.Core;
 
@@ -95,8 +98,8 @@ public class Bot
         twitchUser.OnlyConnectedAccounts = config.OnlyConnectedAccounts;
 
         // Get campaigns
-        var thingsToWatch = await twitchUser.GqlRequest.FetchDropsAsync();
-        var inventory = await twitchUser.GqlRequest.FetchInventoryDropsAsync();
+        var thingsToWatch = await twitchUser.TwitchGraphQlClient.FetchDropsAsync();
+        var inventory = await twitchUser.TwitchGraphQlClient.FetchInventoryDropsAsync();
 
         twitchUser.Inventory = inventory;
         twitchUser.Status = BotStatus.Seeking;
@@ -136,7 +139,7 @@ public class Bot
 
         TimeBasedDrop? timeBasedDrop = null;
         DropCurrentSession? dropCurrentSession = null;
-        AbstractBroadcaster? broadcaster = null;
+        User? broadcaster = null;
         AbstractCampaign? campaign = null;
 
         do
@@ -175,7 +178,7 @@ public class Bot
                 continue;
             }
 
-            if (dropCurrentSession.CurrentMinutesWatched > dropCurrentSession.requiredMinutesWatched)
+            if (dropCurrentSession.CurrentMinutesWatched > dropCurrentSession.RequiredMinutesWatched)
             {
                 twitchUser.Logger.Log("CurrentMinutesWatched > requiredMinutesWatched, skipping");
                 thingsToWatch.Remove(campaign);
@@ -193,7 +196,7 @@ public class Bot
             {
                 twitchUser.Logger.Log(
                     $"DropCurrentSession found but not the right channel ({dropCurrentSession.Channel.Name} instead of {broadcaster.Login}), changing...");
-                dropCurrentSession = await twitchUser.GqlRequest.FetchCurrentSessionContextAsync(broadcaster);
+                dropCurrentSession = await twitchUser.TwitchGraphQlClient.FetchCurrentSessionContextAsync(broadcaster);
                 if (dropCurrentSession is null)
                 {
                     twitchUser.Logger.Log("Can't fetch new current drop session");
@@ -224,16 +227,16 @@ public class Bot
         twitchUser.Status = BotStatus.Watching;
         twitchUser.Logger.Log($"Current drop campaign: {campaign.Name} ({campaign.Game.DisplayName}), watching {broadcaster.Login} | {broadcaster.Id}");
         await WatchStreamAsync(broadcaster, dropCurrentSession, campaign);
-        if (campaign is RewardCampaignsAvailableToUser)
+        if (campaign is RewardCampaign)
         {
-            //await campaign.NotifiateAsync(twitchUser);    
+            await campaign.NotifiateAsync(twitchUser);    
         }
     }
 
-    private async Task<DropCurrentSession?> CheckDropCurrentSession(AbstractBroadcaster broadcaster,
+    private async Task<DropCurrentSession?> CheckDropCurrentSession(User broadcaster,
         AbstractCampaign campaign)
     {
-        var dropCurrentSession = await twitchUser.GqlRequest.FetchCurrentSessionContextAsync(broadcaster);
+        var dropCurrentSession = await twitchUser.TwitchGraphQlClient.FetchCurrentSessionContextAsync(broadcaster);
 
         if (dropCurrentSession is null)
         {
@@ -241,27 +244,27 @@ public class Bot
             return null;
         }
 
-        if (string.IsNullOrEmpty(dropCurrentSession.DropId) || dropCurrentSession.CurrentMinutesWatched == dropCurrentSession.requiredMinutesWatched)
+        if (string.IsNullOrEmpty(dropCurrentSession.DropId) || dropCurrentSession.CurrentMinutesWatched == dropCurrentSession.RequiredMinutesWatched)
         {
             await twitchUser.WatchManager.FakeWatchAsync(broadcaster, config.AttemptToWatch);
-            dropCurrentSession = await twitchUser.GqlRequest.FetchCurrentSessionContextAsync(broadcaster);
+            dropCurrentSession = await twitchUser.TwitchGraphQlClient.FetchCurrentSessionContextAsync(broadcaster);
         }
 
         return dropCurrentSession;
     }
 
-    private async Task WatchStreamAsync(AbstractBroadcaster broadcaster, DropCurrentSession dropCurrentSession,
+    private async Task WatchStreamAsync(User broadcaster, DropCurrentSession dropCurrentSession,
         AbstractCampaign campaign,
         int? minutes = null)
     {
         var stuckCounter = 0;
         var previousMinuteWatched = 0;
         var minuteWatched = dropCurrentSession.CurrentMinutesWatched;
-        var requiredMinutesToWatch = dropCurrentSession.requiredMinutesWatched;
+        var requiredMinutesToWatch = dropCurrentSession.RequiredMinutesWatched;
         
         while (minuteWatched <
                (minutes ?? requiredMinutesToWatch) ||
-               dropCurrentSession.requiredMinutesWatched == 0) // While all the drops are not claimed
+               dropCurrentSession.RequiredMinutesWatched == 0) // While all the drops are not claimed
         {
             CheckCancellation();
 
@@ -280,7 +283,7 @@ public class Bot
             try
             {
                 var newDropCurrentSession =
-                    await twitchUser.GqlRequest.FetchCurrentSessionContextAsync(broadcaster);
+                    await twitchUser.TwitchGraphQlClient.FetchCurrentSessionContextAsync(broadcaster);
 
                 if (newDropCurrentSession is null)
                 {
@@ -316,7 +319,7 @@ public class Bot
                 await Task.Delay(TimeSpan.FromSeconds(20));
 
                 var newDropCurrentSession =
-                    await twitchUser.GqlRequest.FetchCurrentSessionContextAsync(broadcaster);
+                    await twitchUser.TwitchGraphQlClient.FetchCurrentSessionContextAsync(broadcaster);
 
                 if (newDropCurrentSession is null)
                 {
@@ -338,7 +341,7 @@ public class Bot
                 twitchUser.Logger.Log("No drop current session found");
                 //Check if the stream still alive
 
-                var broadcasterData = twitchUser.GqlRequest.FetchStreamInformationAsync(broadcaster.Login);
+                var broadcasterData = twitchUser.TwitchGraphQlClient.FetchStreamInformationAsync(broadcaster.Login);
                     
                 if (broadcasterData?.Result is null)
                 {
@@ -366,10 +369,10 @@ public class Bot
         twitchUser.WatchManager.Close();
     }
 
-    private async Task<(AbstractCampaign? campaign, AbstractBroadcaster? broadcaster)> SelectBroadcasterAsync(
+    private async Task<(AbstractCampaign? campaign, User? broadcaster)> SelectBroadcasterAsync(
         List<AbstractCampaign> campaigns, Inventory inventory)
     {
-        AbstractBroadcaster? broadcaster = null;
+        User? broadcaster = null;
 
         if (config.AvoidCampaign.Count > 0)
         {
@@ -387,7 +390,7 @@ public class Bot
             CheckCancellation();
             twitchUser.Logger.Log($"Checking {campaign.Game.DisplayName} ({campaign.Name})...");
 
-            var tempDropCampaign = await twitchUser.GqlRequest.FetchTimeBasedDropsAsync(campaign.Id);
+            var tempDropCampaign = await twitchUser.TwitchGraphQlClient.FetchTimeBasedDropsAsync(campaign.Id);
             campaign.TimeBasedDrops = tempDropCampaign.TimeBasedDrops;
             campaign.Game = tempDropCampaign.Game;
             campaign.Allow = tempDropCampaign.Allow;
@@ -427,7 +430,7 @@ public class Bot
                 foreach (var channelGroup in channelGroups)
                 {
                     CheckCancellation();
-                    var tempBroadcasters = await twitchUser.GqlRequest.FetchStreamInformationAsync(channelGroup);
+                    var tempBroadcasters = await twitchUser.TwitchGraphQlClient.FetchStreamInformationAsync(channelGroup);
 
                     if (tempBroadcasters is null)
                     {
@@ -471,7 +474,7 @@ public class Bot
             }
 
             // Search for channel that potentially have the drops
-            var game = await twitchUser.GqlRequest.FetchDirectoryPageGameAsync(campaign.Game.Slug,
+            var game = await twitchUser.TwitchGraphQlClient.FetchDirectoryPageGameAsync(campaign.Game.Slug,
                 campaign is DropCampaign);
 
             if (game is null)
@@ -507,7 +510,7 @@ public class Bot
                 {
                     if (timeBasedDrop.Self.IsClaimed == false && timeBasedDrop.Self?.DropInstanceID != null)
                     {
-                        await twitchUser.GqlRequest.ClaimDropAsync(timeBasedDrop.Self.DropInstanceID);
+                        await twitchUser.TwitchGraphQlClient.ClaimDropAsync(timeBasedDrop.Self.DropInstanceID);
                         twitchUser.CurrentTimeBasedDrop = timeBasedDrop;
                         await dropCampaignInProgress.NotifiateAsync(twitchUser);
                         await Task.Delay(TimeSpan.FromSeconds(20));

@@ -2,7 +2,7 @@
 using System.Text.Json;
 using TwitchDropsBot.Core;
 using TwitchDropsBot.Core.Object.Config;
-using TwitchDropsBot.Core.Utilities;
+using TwitchDropsBot.Core.Twitch.Services;
 
 namespace TwitchDropsBot.WinForms
 {
@@ -71,7 +71,7 @@ namespace TwitchDropsBot.WinForms
             try
             {
                 CheckCancellation();
-                var jsonResponse = await AuthSystem.GetCodeAsync();
+                var jsonResponse = await TwitchAuthService.GetCodeAsync();
                 var deviceCode = jsonResponse.RootElement.GetProperty("device_code").GetString();
                 code = jsonResponse.RootElement.GetProperty("user_code").GetString();
                 var verificationUri = jsonResponse.RootElement.GetProperty("verification_uri").GetString();
@@ -86,7 +86,7 @@ namespace TwitchDropsBot.WinForms
                 });
 
                 CheckCancellation();
-                jsonResponse = await AuthSystem.CodeConfirmationAsync(deviceCode, token);
+                jsonResponse = await TwitchAuthService.CodeConfirmationAsync(deviceCode, token);
                 CheckCancellation();
 
                 if (jsonResponse == null)
@@ -99,7 +99,7 @@ namespace TwitchDropsBot.WinForms
                 var secret = jsonResponse.RootElement.GetProperty("access_token").GetString();
 
                 CheckCancellation();
-                UserConfig user = await AuthSystem.ClientSecretUserAsync(secret);
+                UserConfig user = await TwitchAuthService.ClientSecretUserAsync(secret);
                 CheckCancellation();
 
                 // Save the user into config.json

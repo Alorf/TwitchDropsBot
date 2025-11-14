@@ -69,12 +69,6 @@ public class WatchRequest : IKickWatchManager
                 _wssToken = await _kickHttpRepository.GetWssToken();
             }
 
-            if (_clientWebSocket.State != WebSocketState.None)
-            {
-                _clientWebSocket = new ClientWebSocket();
-                _wssToken = await _kickHttpRepository.GetWssToken();
-            }
-
             if (_clientWebSocket.State != WebSocketState.Open)
             {
                 var uri = new Uri($"{WEBSOCKET_CONNECTION_URL}?token={_wssToken}");
@@ -178,6 +172,7 @@ public class WatchRequest : IKickWatchManager
                         catch (Exception ex)
                         {
                             _logger.Debug(ex, "Error while responding to close frame");
+                            throw new Exception("Error while responding to close frame");
                         }
 
                         return;

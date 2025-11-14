@@ -1,4 +1,5 @@
 using TwitchDropsBot.Core;
+using TwitchDropsBot.Core.Platform.Shared.Services;
 
 namespace TwitchDropsBot.WinForms
 {
@@ -22,7 +23,7 @@ namespace TwitchDropsBot.WinForms
             }
             catch (Exception e)
             {
-                SystemLogger.Error(e);
+                SystemLoggerService.Logger.Error(e, e.Message);
                 Environment.Exit(1);
             }
 #else

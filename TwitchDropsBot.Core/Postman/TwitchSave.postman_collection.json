@@ -390,7 +390,19 @@
 							"});"
 						],
 						"type": "text/javascript",
-						"packages": {}
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
 					}
 				}
 			],
@@ -773,6 +785,68 @@
 					"body": "{\n    \"data\": {\n        \"channel\": {\n            \"id\": \"507845042\",\n            \"viewerDropCampaigns\": [\n                {\n                    \"id\": \"744ecde6-9638-11ef-b422-227cbbaddcd5\",\n                    \"name\": \"Fallout Day - Subscribe to a Fallout 76 streamer to receive the 5 x Perk Card Packs, 5 x Score Booster, and 5 x Re-Roller Rewards Pack!\",\n                    \"game\": {\n                        \"id\": \"506246\",\n                        \"name\": \"Fallout 76\",\n                        \"__typename\": \"Game\"\n                    },\n                    \"detailsURL\": \"https://bethesda.net/en/article/106BFARWJOIlAkrwv406Qu/watch-the-fallout-day-broadcast\",\n                    \"endAt\": \"2024-11-21T07:59:59Z\",\n                    \"imageURL\": \"https://static-cdn.jtvnw.net/twitch-quests-assets/CAMPAIGN/quests_fallout76_q4_2024/FO76-Logo_SOS-TwitchDrop24_150x200-01_blk.png\",\n                    \"eventBasedDrops\": [],\n                    \"timeBasedDrops\": [\n                        {\n                            \"id\": \"7467ab72-9638-11ef-b422-227cbbaddcd5\",\n                            \"name\": \"November 2024 Fallout 76 Rewards Pack Reward Group\",\n                            \"startAt\": \"2024-11-01T18:00:00Z\",\n                            \"endAt\": \"2024-11-21T07:59:59Z\",\n                            \"benefitEdges\": [\n                                {\n                                    \"benefit\": {\n                                        \"id\": \"74171112-9638-11ef-b422-227cbbaddcd5\",\n                                        \"name\": \"Fallout 76 Rewards Pack\",\n                                        \"game\": {\n                                            \"name\": \"Fallout 76\",\n                                            \"id\": \"506246\",\n                                            \"__typename\": \"Game\"\n                                        },\n                                        \"imageAssetURL\": \"https://static-cdn.jtvnw.net/twitch-quests-assets/CAMPAIGN/quests_fallout76_q4_2024/falloutdayreward_sas.png\",\n                                        \"__typename\": \"DropBenefit\"\n                                    },\n                                    \"entitlementLimit\": 1,\n                                    \"__typename\": \"DropBenefitEdge\"\n                                }\n                            ],\n                            \"requiredMinutesWatched\": 0,\n                            \"__typename\": \"TimeBasedDrop\"\n                        }\n                    ],\n                    \"summary\": {\n                        \"includesMWRequirement\": false,\n                        \"includesSubRequirement\": true,\n                        \"isSitewide\": false,\n                        \"isRewardCampaign\": true,\n                        \"isPermanentlyDismissible\": false,\n                        \"__typename\": \"DropCampaignSummary\"\n                    },\n                    \"__typename\": \"DropCampaign\"\n                }\n            ],\n            \"__typename\": \"Channel\"\n        }\n    },\n    \"extensions\": {\n        \"durationMilliseconds\": 75,\n        \"operationName\": \"DropsHighlightService_AvailableDrops\",\n        \"requestID\": \"01JCXEDD0CDRD8A4ZR99WTPGK7\"\n    }\n}"
 				}
 			]
+		},
+		{
+			"name": "RewardCodeModal",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "client-id",
+						"value": "{{clientId}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"operationName\": \"RewardCodeModal\",\r\n    \"variables\": {\r\n        \"rewardCampaignID\": \"{{rewardCampaignId}}\",\r\n        \"rewardID\": \"{{rewardCampaignId}}\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"version\": 1,\r\n            \"sha256Hash\": \"b48d2bd6e80366684092d14c97ced7a86497246c4dab0f3d877c7a308eefdd7f\"\r\n        }\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://gql.twitch.tv/gql",
+					"protocol": "https",
+					"host": [
+						"gql",
+						"twitch",
+						"tv"
+					],
+					"path": [
+						"gql"
+					]
+				},
+				"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+			},
+			"response": []
 		}
 	],
 	"auth": {
@@ -845,6 +919,7 @@
 			"listen": "prerequest",
 			"script": {
 				"type": "text/javascript",
+				"requests": {},
 				"exec": [
 					""
 				]
@@ -854,6 +929,7 @@
 			"listen": "test",
 			"script": {
 				"type": "text/javascript",
+				"requests": {},
 				"exec": [
 					""
 				]
@@ -862,39 +938,20 @@
 	],
 	"variable": [
 		{
-			"key": "clientId",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "token",
-			"value": "",
-			"type": "default"
-		},
-		{
 			"key": "channelLoginId",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "channelToWatch",
-			"value": "",
-			"type": "default"
+			"value": ""
 		},
 		{
 			"key": "slug",
-			"value": "",
-			"type": "default"
+			"value": ""
 		},
 		{
 			"key": "dropDetailsId",
-			"value": "",
-			"type": "string"
+			"value": ""
 		},
 		{
 			"key": "dropClaimId",
-			"value": "",
-			"type": "string"
+			"value": ""
 		}
 	]
 }

@@ -2,7 +2,7 @@
 
 namespace TwitchDropsBot.Core.Platform.Kick.Models;
 
-public class Reward
+public partial class Reward : IEquatable<Reward>
 {
     [JsonPropertyName("category_id")]
     public int CategoryId { get; set; }

@@ -39,7 +39,7 @@ public class KickBot : BaseBot<KickUser>
             thingsToWatch.RemoveAll(x => !x.Category?.IsFavorite ?? false);
         }
 
-        var (campaign, broadcaster) = await SelectBroadcasterAsync(thingsToWatch);
+        var (campaign, broadcaster) = await SelectBroadcasterAsync(thingsToWatch, inventory);
 
         if (campaign is null)
         {
@@ -55,19 +55,18 @@ public class KickBot : BaseBot<KickUser>
         }
 
         // Remove all Rewards from thingsToWatch that are already claimed in the inventory list
-        var Reward = inventory.FirstOrDefault(c => c.Id == campaign.Id)?.Rewards
-            .FirstOrDefault(r => r.Progress != 1);
+        var reward = campaign.Rewards.First();
 
-        if (Reward is null)
+        if (reward is null)
         {
             Logger.Error("Reward is null");
             throw new Exception("Reward is null");
         }
 
-        Logger.Information($"Time based drops : {Reward.Name}");
+        Logger.Information($"Time based drops : {reward.Name}");
         Logger.Information(
             $"Current drop campaign: {campaign.Name} ({campaign.Category.Name}), watching {broadcaster.slug} | {broadcaster.Id}");
-        await WatchStreamAsync(broadcaster, campaign, Reward);
+        await WatchStreamAsync(broadcaster, campaign, reward);
     }
 
     private async Task WatchStreamAsync(Channel broadcaster, Campaign campaign, Reward reward, int? minutes = null)
@@ -130,29 +129,31 @@ public class KickBot : BaseBot<KickUser>
         BotUser.WatchManager.Close();
     }
 
-    private async Task<(Campaign? campaign, Channel? broadcaster)> SelectBroadcasterAsync(List<Campaign> campaigns)
+    private async Task<(Campaign? campaign, Channel? broadcaster)> SelectBroadcasterAsync(List<Campaign> campaigns, List<Campaign> inventory)
     {
         foreach (var campaign in campaigns.ToList())
         {
             Logger.Information($"Checking {campaign.Category.Name} ({campaign.Name})...");
+            
+            var matchingCampaignInventory = inventory.Find(x => x.Id == campaign.Id);
 
-            // try
-            // {
-            //     var isCompleted = campaign.IsCompleted();
-            //     if (isCompleted)
-            //     {
-            //         Logger.Information($"Campaign {campaign.Name} already completed, skipping");
-            //         campaigns.Remove(campaign);
-            //         continue;
-            //     }
-            // }
-            // catch (System.Exception e)
-            // {
-            //     Logger.Error(e.Message);
-            // }
+            if (matchingCampaignInventory is null)
+            {
+                Logger.Error("matchingCampaignInventory is null");
+                campaigns.Remove(campaign);
+                continue;
+            }
+            
+            var claimedRewards = matchingCampaignInventory.Rewards.FindAll(x => x.Claimed);
+            campaign.Rewards.RemoveAll(r => claimedRewards.Contains(r));
 
-            campaign.Rewards.RemoveAll(x => x.Claimed);
-
+            if (campaign.Rewards.Count == 0)
+            {
+                Logger.Information($"No rewards available for {campaign.Name}, skipping...");
+                campaigns.Remove(campaign);
+                continue;
+            }
+            
             var channels = campaign.Channels;
 
             if (channels.Count > 0)

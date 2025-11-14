@@ -4,7 +4,9 @@ using System.ComponentModel;
 using System.Reflection;
 using System.Windows.Forms;
 using TwitchDropsBot.Core;
-using TwitchDropsBot.Core.Object;
+using TwitchDropsBot.Core.Platform.Shared.Bots;
+using TwitchDropsBot.Core.Platform.Twitch.Bot;
+using TwitchDropsBot.Core.Platform.Twitch.Models;
 using TwitchDropsBot.Core.Twitch.Models;
 using TwitchDropsBot.Core.Twitch.Models.Interfaces;
 
@@ -27,7 +29,8 @@ namespace TwitchDropsBot.WinForms
             }
             catch (Exception ex)
             {
-                twitchUser.Logger.Error(ex);
+                // twitchUser.Logger.Error(ex);
+                AppendLog(ex.Message);
             }
 
             this.twitchUser = twitchUser;
@@ -35,10 +38,14 @@ namespace TwitchDropsBot.WinForms
 
             currentTabPage.Text = twitchUser.Login;
 
-            twitchUser.Logger.OnLog += (message) => AppendLog($"LOG: {message}");
-            twitchUser.Logger.OnError += (message) => AppendLog($"ERROR: {message}");
-            twitchUser.Logger.OnException += (exception) => AppendLog($"ERROR: {exception.ToString()}");
-            twitchUser.Logger.OnInfo += (message) => AppendLog($"INFO: {message}");
+            if (twitchUser.UISink != null)
+            {
+                twitchUser.UISink.OnLogReceived += (message, level) =>
+                {
+                    var prefix = level.ToString().ToUpper();
+                    AppendLog($"{prefix}: {message}");
+                };
+            }
         }
 
         private async void TwitchUser_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -57,14 +64,17 @@ namespace TwitchDropsBot.WinForms
             {
                 if (twitchUser?.Inventory != null)
                 {
-                    twitchUser.Logger.Info("Inventory requested");
+                    // twitchUser.Logger.Information("Inventory requested");
+                    AppendLog("Inventory requested");
+
                     try
                     {
                         await LoadInventoryAsync();
                     }
                     catch (Exception ex)
                     {
-                        twitchUser.Logger.Error(ex);
+                        // twitchUser.Logger.Error(ex);
+                        AppendLog(ex.Message);
                     }
 
                 }
@@ -318,7 +328,9 @@ namespace TwitchDropsBot.WinForms
             if (twitchUser.CancellationTokenSource != null &&
                 !twitchUser.CancellationTokenSource.IsCancellationRequested)
             {
-                twitchUser.Logger.Info("Reload requested");
+                // twitchUser.Logger.Info("Reload requested");
+                AppendLog("Reload requested");
+
                 twitchUser.CancellationTokenSource?.Cancel();
             }
         }

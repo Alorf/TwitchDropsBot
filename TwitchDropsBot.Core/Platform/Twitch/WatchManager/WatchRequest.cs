@@ -115,7 +115,7 @@ public class WatchRequest : ITwitchWatchManager
 
                 if (tempBroadcaster is not null)
                 {
-                    if (tempBroadcaster.Stream is null || tempBroadcaster?.BroadcastSettings?.Game.Id != game.Id)
+                    if (tempBroadcaster.Stream is null || tempBroadcaster?.BroadcastSettings?.Game?.Id != game.Id)
                     {
                         throw new StreamOffline();
                     }

@@ -1,37 +1,43 @@
-using TwitchDropsBot.Core.Object;
 using TwitchDropsBot.Core;
 using System.Runtime.InteropServices;
 using System.Security.Policy;
-using TwitchDropsBot.Core.Exception;
 using Microsoft.Win32;
 using System.Windows.Forms;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using TwitchDropsBot.Core.Object.Config;
+
+using TwitchDropsBot.Core.Platform.Shared.Bots;
+using TwitchDropsBot.Core.Platform.Shared.Services;
+using TwitchDropsBot.Core.Platform.Shared.Settings;
+using TwitchDropsBot.Core.Platform.Twitch;
+using TwitchDropsBot.Core.Platform.Twitch.Bot;
+using TwitchDropsBot.Core.Platform.Twitch.Settings;
 
 namespace TwitchDropsBot.WinForms
 {
     public partial class MainForm : Form
     {
-        private AppConfig config;
+        private BotSettings config;
         public MainForm()
         {
+            var services = AppService.Init();
+
             InitializeComponent();
             this.SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
             this.UpdateStyles();
 
-            config = AppConfig.Instance;
+            config = AppSettingsService.Settings;
 
-            checkBoxFavourite.Checked = config.OnlyFavouriteGames;
+            checkBoxFavourite.Checked = config.TwitchSettings.OnlyFavouriteGames;
             checkBoxStartup.Checked = config.LaunchOnStartup;
             checkBoxMinimizeInTray.Checked = config.MinimizeInTray;
-            checkBoxConnectedAccounts.Checked = config.OnlyConnectedAccounts;
+            checkBoxConnectedAccounts.Checked = config.TwitchSettings.OnlyConnectedAccounts;
 
-            while (config.Users.Count == 0)
+            while (config.TwitchSettings.TwitchUsers.Count == 0)
             {
-                SystemLogger.Info("No users found in the configuration file.");
-                SystemLogger.Info("Login process will start.");
+                SystemLoggerService.Logger.Information("No users found in the configuration file.");
+                SystemLoggerService.Logger.Information("Login process will start.");
 
                 AuthDevice authDevice = new AuthDevice();
                 authDevice.ShowDialog();
@@ -42,17 +48,19 @@ namespace TwitchDropsBot.WinForms
                 }
             }
 
-            foreach (UserConfig user in config.Users)
+            foreach (TwitchUserSettings userSettings in config.TwitchSettings.TwitchUsers)
             {
-                TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId, user.FavouriteGames);
-                twitchUser.DiscordWebhookURl = config.WebhookURL;
-
-                if (!user.Enabled)
+                if (!userSettings.Enabled)
                 {
-                    SystemLogger.Info($"User {twitchUser.Login} is not enabled, skipping...");
+                    SystemLoggerService.Logger.Information($"User {userSettings.Login} is not enabled, skipping...");
                     continue;
-                }                
-                Bot.StartBot(twitchUser);
+                } 
+                
+                TwitchUser twitchUser = new TwitchUser(userSettings, AppService.GetUISink());
+                var twitchBot = twitchUser.CreateBot();
+                
+                BotRunner.StartBot(twitchBot);
+
                 tabControl1.TabPages.Add(CreateTabPage(twitchUser));
 
                 InitList();
@@ -145,7 +153,7 @@ namespace TwitchDropsBot.WinForms
             SetStartup(config.LaunchOnStartup);
 
 
-            config.SaveConfig();
+            AppSettingsService.SaveConfig();
         }
 
         private void SetStartup(bool enable)
@@ -165,9 +173,9 @@ namespace TwitchDropsBot.WinForms
 
         private void checkBoxFavourite_CheckedChanged(object sender, EventArgs e)
         {
-            config.OnlyFavouriteGames = checkBoxFavourite.Checked;
+            config.TwitchSettings.OnlyFavouriteGames = checkBoxFavourite.Checked;
 
-            config.SaveConfig();
+            AppSettingsService.SaveConfig();
         }
 
         private void buttonAdd_Click(object sender, EventArgs e)
@@ -188,7 +196,7 @@ namespace TwitchDropsBot.WinForms
                 config.FavouriteGames.Add(gameName);
             }
 
-            config.SaveConfig();
+            AppSettingsService.SaveConfig();
 
             FavGameListBox.Items.Add(gameName);
             FavGameListBox.SelectedItem = gameName;
@@ -205,7 +213,7 @@ namespace TwitchDropsBot.WinForms
                     config.FavouriteGames.Remove(gameName);
                 }
 
-                config.SaveConfig();
+                AppSettingsService.SaveConfig();
 
                 FavGameListBox.Items.Remove(gameName);
             }
@@ -221,7 +229,7 @@ namespace TwitchDropsBot.WinForms
                 config.FavouriteGames.RemoveAt(index);
                 config.FavouriteGames.Insert(index - 1, item);
 
-                config.SaveConfig();
+                AppSettingsService.SaveConfig();
 
                 FavGameListBox.Items.RemoveAt(index);
                 FavGameListBox.Items.Insert(index - 1, item);
@@ -239,7 +247,7 @@ namespace TwitchDropsBot.WinForms
                 config.FavouriteGames.RemoveAt(index);
                 config.FavouriteGames.Insert(index + 1, item);
 
-                config.SaveConfig();
+                AppSettingsService.SaveConfig();
 
                 FavGameListBox.Items.RemoveAt(index);
                 FavGameListBox.Items.Insert(index + 1, item);
@@ -260,12 +268,12 @@ namespace TwitchDropsBot.WinForms
             }
 
             // Create a bot for the new user
-            UserConfig user = config.Users.Last();
-            TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId, user.FavouriteGames);
-            twitchUser.DiscordWebhookURl = config.WebhookURL;
-
-            Bot.StartBot(twitchUser);
-
+            var userSettings = config.TwitchSettings.TwitchUsers.Last();
+            TwitchUser twitchUser = new TwitchUser(userSettings, AppService.GetUISink());
+            
+            var twitchBot = twitchUser.CreateBot();
+            BotRunner.StartBot(twitchBot);
+            
             tabControl1.TabPages.Add(CreateTabPage(twitchUser));
         }
 
@@ -278,14 +286,14 @@ namespace TwitchDropsBot.WinForms
         {
             config.MinimizeInTray = checkBoxMinimizeInTray.Checked;
 
-            config.SaveConfig();
+            AppSettingsService.SaveConfig();
         }
 
         private void checkBoxConnectedAccounts_CheckedChanged(object sender, EventArgs e)
         {
-            config.OnlyConnectedAccounts = checkBoxConnectedAccounts.Checked;
+            config.TwitchSettings.OnlyConnectedAccounts = checkBoxConnectedAccounts.Checked;
 
-            config.SaveConfig();
+            AppSettingsService.SaveConfig();
         }
     }
 }

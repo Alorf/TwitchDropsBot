@@ -36,14 +36,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Object\" />
       <Folder Include="Platform\Shared\Interfaces\" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Reference Include="TwitchDropsBot.Core">
-        <HintPath>..\TwitchDropsBot.GTK\bin\Debug\net8.0\TwitchDropsBot.Core.dll</HintPath>
-      </Reference>
     </ItemGroup>
 
 </Project>

@@ -2,6 +2,7 @@ using Gtk;
 using System;
 using System.Reflection;
 using TwitchDropsBot.Core;
+using TwitchDropsBot.Core.Platform.Shared.Services;
 
 namespace TwitchDropsBot.GTK
 {
@@ -10,6 +11,7 @@ namespace TwitchDropsBot.GTK
         [STAThread]
         public static void Main(string[] args)
         {
+            AppService.Init();
             Application.Init();
 
             var app = new Application("org.TwitchDropsBot.GTK.TwitchDropsBot.GTK", GLib.ApplicationFlags.None);

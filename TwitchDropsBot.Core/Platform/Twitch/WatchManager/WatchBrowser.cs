@@ -23,7 +23,7 @@ public class WatchBrowser : WatchBrowser<TwitchUser, Game, User>, ITwitchWatchMa
             
             if (tempBroadcaster != null)
             {
-                if (tempBroadcaster.Stream == null || tempBroadcaster.Stream?.Game?.Id != game.Id)
+                if (tempBroadcaster.Stream == null || tempBroadcaster.BroadcastSettings?.Game?.Id != game.Id)
                 {
                     throw new StreamOffline();
                 }
@@ -46,7 +46,8 @@ public class WatchBrowser : WatchBrowser<TwitchUser, Game, User>, ITwitchWatchMa
                 Expires = DateTimeOffset.Now.AddDays(7).ToUnixTimeSeconds()
             });
 
-        await Page.EvaluateExpressionAsync("localStorage.setItem('video-quality', '{\"default\":\"160p30\"}')");
+        // Some stream does not have 160p30
+        await Page.EvaluateExpressionAsync("localStorage.setItem('video-quality', '{\"default\":\"360p30\"}')");
 
         await Page.ReloadAsync();
 

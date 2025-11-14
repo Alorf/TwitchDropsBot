@@ -8,7 +8,9 @@ using System.Data;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using TwitchDropsBot.Core.Object;
+using TwitchDropsBot.Core.Platform.Shared.Bots;
+using TwitchDropsBot.Core.Platform.Twitch.Bot;
+using TwitchDropsBot.Core.Platform.Twitch.Models;
 using TwitchDropsBot.Core.Twitch.Models;
 using TwitchDropsBot.Core.Twitch.Models.Interfaces;
 using UI = Gtk.Builder.ObjectAttribute;
@@ -36,17 +38,22 @@ namespace TwitchDropsBot.GTK
             twitchUser.PropertyChanged += TwitchUser_PropertyChanged;
             reloadButton.Clicked += ReloadButton_Click;
             
-            twitchUser.Logger.OnLog += (message) => AppendLog($"LOG: {message}");
-            twitchUser.Logger.OnError += (message) => AppendLog($"ERROR: {message}");
-            twitchUser.Logger.OnException += (exception) => AppendLog($"ERROR: {exception.ToString()}");
-            twitchUser.Logger.OnInfo += (message) => AppendLog($"INFO: {message}");
+            if (twitchUser.UISink != null)
+            {
+                twitchUser.UISink.OnLogReceived += (message, level) =>
+                {
+                    var prefix = level.ToString().ToUpper();
+                    AppendLog($"{prefix}: {message}");
+                };
+            }
         }
         private void ReloadButton_Click(object sender, EventArgs e)
         {
             if (twitchUser.CancellationTokenSource != null &&
                 !twitchUser.CancellationTokenSource.IsCancellationRequested)
             {
-                twitchUser.Logger.Info("Reload requested");
+                // twitchUser.Logger.Info("Reload requested");
+                AppendLog("Reload requested");
                 twitchUser.CancellationTokenSource?.Cancel();
             }
         }
@@ -108,14 +115,18 @@ namespace TwitchDropsBot.GTK
             {
                 if (twitchUser?.Inventory != null)
                 {
-                    twitchUser.Logger.Info("Inventory requested");
+                    // twitchUser.Logger.Info("Inventory requested");
+                    await AppendLog("Inventory requested");
+
                     try
                     {
                         await LoadInventoryAsync();
                     }
                     catch (Exception ex)
                     {
-                        twitchUser.Logger.Error(ex);
+                        // twitchUser.Logger.Error(ex);
+                        await AppendLog(ex.Message);
+
                     }
                     
                 }
@@ -283,13 +294,15 @@ namespace TwitchDropsBot.GTK
                 {
                     if (t.IsCanceled)
                     {
-                        twitchUser.Logger.Info("LoadInventoryAsync was canceled.");
+                        // twitchUser.Logger.Info("LoadInventoryAsync was canceled.");
+                        AppendLog("LoadInventoryAsync was canceled.");
                         return;
                     }
 
                     if (t.IsFaulted)
                     {
-                        twitchUser.Logger.Error("An error occurred while loading inventory.");
+                        // twitchUser.Logger.Error("An error occurred while loading inventory.");
+                        AppendLog("An error occurred while loading inventory.");
                         return;
                     }
 

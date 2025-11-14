@@ -1,16 +1,19 @@
 using Gtk;
 using System;
-using TwitchDropsBot.Core.Object.Config;
-using TwitchDropsBot.Core.Object;
 using UI = Gtk.Builder.ObjectAttribute;
 using System.Runtime.InteropServices;
 using System.Threading;
 using TwitchDropsBot.Core;
-using TwitchDropsBot.Core.Exception;
 using System.Linq;
 using Microsoft.Win32;
 using System.Reflection;
 using Gdk;
+using TwitchDropsBot.Core.Platform.Shared.Bots;
+using TwitchDropsBot.Core.Platform.Shared.Services;
+using TwitchDropsBot.Core.Platform.Shared.Settings;
+using TwitchDropsBot.Core.Platform.Twitch;
+using TwitchDropsBot.Core.Platform.Twitch.Bot;
+using TwitchDropsBot.Core.Platform.Twitch.Settings;
 using Application = Gtk.Application;
 using Task = System.Threading.Tasks.Task;
 using Window = Gtk.Window;
@@ -41,7 +44,7 @@ namespace TwitchDropsBot.GTK
 
         private StatusIcon trayIcon;
         private Menu trayMenu;
-        private AppConfig config;
+        private BotSettings config;
 
         public MainWindow() : this(new Builder("MainWindow.glade"))
         {
@@ -49,7 +52,7 @@ namespace TwitchDropsBot.GTK
             Pixbuf icon = new Pixbuf(assembly, "TwitchDropsBot.GTK.images.logo.png");
             trayIcon = new StatusIcon(icon);
             trayIcon.Visible = false;
-            config = AppConfig.Instance;
+            config = AppSettingsService.Settings;
 
             addAccountButton.Clicked += buttonAddNewAccount_Click;
             putInTrayButton.Clicked += (sender, args) =>
@@ -59,8 +62,8 @@ namespace TwitchDropsBot.GTK
 
             // Set the checkbox values
             launchOnStartupCheckbox.Active = config.LaunchOnStartup;
-            onlyFavouritesCheckbox.Active = config.OnlyFavouriteGames;
-            onlyConnectedCheckbox.Active = config.OnlyConnectedAccounts;
+            onlyFavouritesCheckbox.Active = config.TwitchSettings.OnlyFavouriteGames;
+            onlyConnectedCheckbox.Active = config.TwitchSettings.OnlyConnectedAccounts;
             putInTrayCheckbox.Active = config.MinimizeInTray;
 
             this.WindowStateEvent += (sender, args) =>
@@ -77,10 +80,10 @@ namespace TwitchDropsBot.GTK
                 launchOnStartupCheckbox.Sensitive = false;
             }
 
-            while (config.Users.Count == 0)
+            while (config.TwitchSettings.TwitchUsers.Count == 0)
             {
-                SystemLogger.Info("No users found in the configuration file.");
-                SystemLogger.Info("Login process will start.");
+                SystemLoggerService.Logger.Information("No users found in the configuration file.");
+                SystemLoggerService.Logger.Information("Login process will start.");
 
                 AuthDevice authDevice = new AuthDevice();
                 ResponseType response = (ResponseType)authDevice.Run();
@@ -94,18 +97,18 @@ namespace TwitchDropsBot.GTK
                 }
             }
 
-            foreach (UserConfig user in config.Users)
+            foreach (TwitchUserSettings userSettings in config.TwitchSettings.TwitchUsers)
             {
-                TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId, user.FavouriteGames);
-                twitchUser.DiscordWebhookURl = config.WebhookURL;
-
-                if (!user.Enabled)
+                if (!userSettings.Enabled)
                 {
-                    SystemLogger.Info($"User {twitchUser.Login} is not enabled, skipping...");
+                    SystemLoggerService.Logger.Information($"User {userSettings.Login} is not enabled, skipping...");
                     continue;
                 }
                 
-                Bot.StartBot(twitchUser);
+                TwitchUser twitchUser = new TwitchUser(userSettings, AppService.GetUISink());
+                var twitchBot = twitchUser.CreateBot();
+                
+                BotRunner.StartBot(twitchBot);
                 usersNotebook.AppendPage(CreateTabPage(twitchUser), new Label(twitchUser.Login));
                 usersNotebook.ShowAll();
 
@@ -133,10 +136,11 @@ namespace TwitchDropsBot.GTK
             }
 
             // Create a bot for the new user
-            UserConfig user = config.Users.Last();
-            TwitchUser twitchUser = new TwitchUser(user.Login, user.Id, user.ClientSecret, user.UniqueId, user.FavouriteGames);
-
-            Bot.StartBot(twitchUser);
+            TwitchUserSettings userSettings = config.TwitchSettings.TwitchUsers.Last();
+            TwitchUser twitchUser = new TwitchUser(userSettings, AppService.GetUISink());
+            var twitchBot = twitchUser.CreateBot();
+            
+            BotRunner.StartBot(twitchBot);
 
             usersNotebook.AppendPage(CreateTabPage(twitchUser), new Label(twitchUser.Login));
             usersNotebook.ShowAll();
@@ -148,25 +152,25 @@ namespace TwitchDropsBot.GTK
             {
                 config.LaunchOnStartup = launchOnStartupCheckbox.Active;
                 SetStartup(launchOnStartupCheckbox.Active);
-                config.SaveConfig();
+                AppSettingsService.SaveConfig();
             };
 
             onlyFavouritesCheckbox.Toggled += (sender, args) =>
             {
-                config.OnlyFavouriteGames = onlyFavouritesCheckbox.Active;
-                config.SaveConfig();
+                config.TwitchSettings.OnlyFavouriteGames = onlyFavouritesCheckbox.Active;
+                AppSettingsService.SaveConfig();
             };
 
             onlyConnectedCheckbox.Toggled += (sender, args) =>
             {
-                config.OnlyConnectedAccounts = onlyConnectedCheckbox.Active;
-                config.SaveConfig();
+                config.TwitchSettings.OnlyConnectedAccounts = onlyConnectedCheckbox.Active;
+                AppSettingsService.SaveConfig();
             };
 
             putInTrayCheckbox.Toggled += (sender, args) =>
             {
                 config.MinimizeInTray = putInTrayCheckbox.Active;
-                config.SaveConfig();
+                AppSettingsService.SaveConfig();
             };
 
             //favgame lost focus
@@ -213,7 +217,7 @@ namespace TwitchDropsBot.GTK
                     config.FavouriteGames.Add(gameName);
                 }
 
-                config.SaveConfig();
+                AppSettingsService.SaveConfig();
 
                 var newRow = new ListBoxRow();
                 newRow.Add(new Label(gameName) { Halign = Align.Start });
@@ -235,7 +239,7 @@ namespace TwitchDropsBot.GTK
                         config.FavouriteGames.Remove(gameName);
                     }
 
-                    config.SaveConfig();
+                    AppSettingsService.SaveConfig();
 
                     favGameListBox.Remove(selectedRow);
                 }
@@ -253,7 +257,7 @@ namespace TwitchDropsBot.GTK
 
                         config.FavouriteGames.RemoveAt(index);
                         config.FavouriteGames.Insert(index - 1, gameName);
-                        config.SaveConfig();
+                        AppSettingsService.SaveConfig();
 
                         MoveRow(selectedRow, index - 1);
                     }
@@ -273,7 +277,7 @@ namespace TwitchDropsBot.GTK
                         config.FavouriteGames.RemoveAt(index);
                         config.FavouriteGames.Insert(index + 1, gameName);
 
-                        config.SaveConfig();
+                        AppSettingsService.SaveConfig();
 
                         MoveRow(selectedRow, index + 1);
                     }

@@ -1,8 +1,10 @@
 ﻿using System.Diagnostics;
 using System.Text.Json;
 using TwitchDropsBot.Core;
-using TwitchDropsBot.Core.Object.Config;
-using TwitchDropsBot.Core.Twitch.Services;
+
+using TwitchDropsBot.Core.Platform.Shared.Services;
+using TwitchDropsBot.Core.Platform.Shared.Settings;
+using TwitchDropsBot.Core.Platform.Twitch.Services;
 
 namespace TwitchDropsBot.WinForms
 {
@@ -10,11 +12,11 @@ namespace TwitchDropsBot.WinForms
     {
         private string? code;
         private CancellationTokenSource? cts;
-        private AppConfig config;
+        private BotSettings config;
 
         public AuthDevice()
         {
-            config = AppConfig.Instance;
+            config = AppSettingsService.Settings;
             this.Load += new EventHandler(AuthDevice_Load);
             this.Disposed += new EventHandler(AuthDevice_Disposed);
             InitializeComponent();
@@ -46,7 +48,7 @@ namespace TwitchDropsBot.WinForms
             }
             catch (OperationCanceledException)
             {
-                SystemLogger.Info("Operation Cancelled");
+                SystemLoggerService.Logger.Information("Operation Cancelled");
             }
         }
 
@@ -99,14 +101,14 @@ namespace TwitchDropsBot.WinForms
                 var secret = jsonResponse.RootElement.GetProperty("access_token").GetString();
 
                 CheckCancellation();
-                UserConfig user = await TwitchAuthService.ClientSecretUserAsync(secret);
+                var user = await TwitchAuthService.ClientSecretUserAsync(secret);
                 CheckCancellation();
 
                 // Save the user into config.json
-                config.Users.RemoveAll(x => x.Id == user.Id);
-                config.Users.Add(user);
+                config.TwitchSettings.TwitchUsers.RemoveAll(x => x.Id == user.Id);
+                config.TwitchSettings.TwitchUsers.Add(user);
 
-                config.SaveConfig();
+                AppSettingsService.SaveConfig();
 
                 this.Invoke((MethodInvoker)delegate
                 {
@@ -118,7 +120,7 @@ namespace TwitchDropsBot.WinForms
             }
             catch (OperationCanceledException ex)
             {
-                SystemLogger.Info(ex.Message);
+                SystemLoggerService.Logger.Information(ex.Message);
             }
             catch (Exception ex)
             {

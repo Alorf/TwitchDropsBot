@@ -1,5 +1,7 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using Serilog;
 using TwitchDropsBot.Core.Platform.Kick.Bot;
 using TwitchDropsBot.Core.Platform.Kick.Device;
 using TwitchDropsBot.Core.Platform.Kick.Models;
@@ -12,10 +14,13 @@ namespace TwitchDropsBot.Core.Platform.Kick.Repository;
 public class KickHttpRepository : BotRepository<KickUser>
 {
     private readonly HttpClient _httpClient;
-    
-    public KickHttpRepository(KickUser kickUser)
+    private readonly ILogger _logger;
+
+    public KickHttpRepository(KickUser kickUser, ILogger logger)
     {
         BotUser = kickUser;
+
+        _logger = logger;
 
         _httpClient = new HttpClient()
         {
@@ -30,31 +35,23 @@ public class KickHttpRepository : BotRepository<KickUser>
 
     public async Task<List<Campaign>> GetDropsCampaignsAsync(CancellationToken cancellationToken = default)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, "https://web.kick.com/api/v1/drops/campaigns")
-        {
-            Version = HttpVersion.Version30,
-            VersionPolicy = HttpVersionPolicy.RequestVersionExact
-        };
-    
-        request.Headers.Add("Accept", "application/json");
+        var result = await DoHTTPRequest<List<Campaign>>(
+            HttpMethod.Get,
+            "https://web.kick.com/api/v1/drops/campaigns",
+            operationName: "GetDropsCampaigns",
+            cancellationToken: cancellationToken
+        );
 
-        var response = await _httpClient.SendAsync(request, cancellationToken);
-        response.EnsureSuccessStatusCode();
-        
-        var result = await response.Content.ReadFromJsonAsync<ResponseType<List<Campaign>>>(cancellationToken);
-
-        if (result is null)
+        if (result?.data is null)
         {
             return new List<Campaign>();
         }
 
         var campaigns = result.data;
-
         campaigns.RemoveAll(x => x.Status == "expired" || x.Status == "upcoming");
 
-        var favGame = (from game in BotUser.FavouriteGames select game.ToLower()).Distinct();
-        var favGamesSet = favGame;
-        
+        var favGamesSet = BotUser.FavouriteGames.Select(g => g.ToLower()).Distinct().ToHashSet();
+
         foreach (var campaign in campaigns)
         {
             if (favGamesSet.Contains(campaign.Category.Name.ToLower()))
@@ -66,172 +63,221 @@ public class KickHttpRepository : BotRepository<KickUser>
         return campaigns;
     }
 
-    public async Task ClaimDrop(Campaign campaign, Reward reward)
+    public async Task ClaimDrop(Campaign campaign, Reward reward, CancellationToken cancellationToken = default)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, "https://web.kick.com/api/v1/drops/claim")
-        {
-            Version = HttpVersion.Version30,
-            VersionPolicy = HttpVersionPolicy.RequestVersionExact
-        };
-        
-        request.Headers.Add("Authorization", $"Bearer {BotUser.BearerToken}");
-        
         var body = new
         {
             reward_id = reward.Id,
             campaign_id = campaign.Id
         };
-        
-        request.Content = JsonContent.Create(body);
-        
-        var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
+
+        await DoHTTPRequest<object>(
+            HttpMethod.Post,
+            "https://web.kick.com/api/v1/drops/claim",
+            body: body,
+            requiresAuth: true,
+            operationName: "ClaimDrop",
+            cancellationToken: cancellationToken
+        );
     }
 
-    public async Task<ICollection<Livestream>> GetLivestreamCampaignsAsync(Campaign campaign)
+    public async Task<ICollection<Livestream>> GetLivestreamCampaignsAsync(Campaign campaign, CancellationToken cancellationToken = default)
     {
         var url = $"https://web.kick.com/api/v1/drops/campaigns/{campaign.Id}/livestreams";
-        
-        var request = new HttpRequestMessage(HttpMethod.Get, url)
-        {
-            Version = HttpVersion.Version30,
-            VersionPolicy = HttpVersionPolicy.RequestVersionExact
-        };
-        
-        var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-        
-        var result = await response.Content.ReadFromJsonAsync<ResponseType<List<Livestream>>>();
 
-        if (result is null)
-        {
-            return new List<Livestream>();
-        }
-        
-        return result.data;
+        var result = await DoHTTPRequest<List<Livestream>>(
+            HttpMethod.Get,
+            url,
+            operationName: "GetLivestreamCampaigns",
+            cancellationToken: cancellationToken
+        );
+
+        return result?.data ?? new List<Livestream>();
     }
 
-    public async Task<List<Campaign>> GetInventory()
+    public async Task<List<Campaign>> GetInventory(CancellationToken cancellationToken = default)
     {
-        var url = $"https://web.kick.com/api/v1/drops/progress";
-        
-        var request = new HttpRequestMessage(HttpMethod.Get, url)
-        {
-            Version = HttpVersion.Version30,
-            VersionPolicy = HttpVersionPolicy.RequestVersionExact
-        };
-        
-        request.Headers.Add("Authorization", $"Bearer {BotUser.BearerToken}");
-        
-        var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-        
-        var result = await response.Content.ReadFromJsonAsync<ResponseType<List<Campaign>>>();
+        var result = await DoHTTPRequest<List<Campaign>>(
+            HttpMethod.Get,
+            "https://web.kick.com/api/v1/drops/progress",
+            requiresAuth: true,
+            operationName: "GetInventory",
+            cancellationToken: cancellationToken
+        );
 
-        if (result is null)
-        {
-            return new List<Campaign>();
-        }
-        
-        return result.data;
+        return result?.data ?? new List<Campaign>();
     }
 
-    public async Task<CampaignSummary?> GetSummary(Campaign campaign)
+    public async Task<CampaignSummary?> GetSummary(Campaign campaign, CancellationToken cancellationToken = default)
     {
         var url = $"https://web.kick.com/api/v1/drops/progress/summary?campaign_id={campaign.Id}";
-        
-        var request = new HttpRequestMessage(HttpMethod.Get, url)
-        {
-            Version = HttpVersion.Version30,
-            VersionPolicy = HttpVersionPolicy.RequestVersionExact
-        };
-        
-        request.Headers.Add("Authorization", $"Bearer {BotUser.BearerToken}");
-        
-        var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-        
-        var result = await response.Content.ReadFromJsonAsync<ResponseType<List<CampaignSummary>>>();
-        if (result is null)
+
+        var result = await DoHTTPRequest<List<CampaignSummary>>(
+            HttpMethod.Get,
+            url,
+            requiresAuth: true,
+            operationName: "GetSummary",
+            cancellationToken: cancellationToken
+        );
+
+        if (result?.data is null)
         {
             return null;
         }
-        
-        List<CampaignSummary> summaries = result.data;
 
-        var summary = summaries.Find(x => x.Id == campaign.Id);
-        
-        return summary;
+        return result.data.Find(x => x.Id == campaign.Id);
     }
 
-    public async Task<Channel?> GetChannelAsync(string slug)
+    public async Task<Channel?> GetChannelAsync(string slug, CancellationToken cancellationToken = default)
     {
         var url = $"https://kick.com/api/v2/channels/{slug}/info";
-        
+
+        // Note: Cette méthode retourne directement un Channel, pas un ResponseType
         var request = new HttpRequestMessage(HttpMethod.Get, url)
         {
             Version = HttpVersion.Version30,
             VersionPolicy = HttpVersionPolicy.RequestVersionExact
         };
-        
-        var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-        
-        var result = await response.Content.ReadFromJsonAsync<Channel>();
 
-        if (result is null)
-        {
-            return null;
-        }
-        
-        return result;
+        var response = await _httpClient.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<Channel>(cancellationToken);
     }
 
-    public async Task<List<Livestream>> FindStreams(Campaign campaign)
+    public async Task<List<Livestream>> FindStreams(Campaign campaign, CancellationToken cancellationToken = default)
     {
-        //https://mobile.kick.com/api/v1/livestreams?limit=24&category_id=13&sort=viewer_count_desc
         var url = $"https://mobile.kick.com/api/v1/livestreams";
         var categoryId = campaign.Category.Id;
         var limit = 24;
         var sort = "viewer_count_desc";
-        
-        var request = new HttpRequestMessage(HttpMethod.Get, $"{url}?limit={limit}&category_id={categoryId}&sort={WebUtility.UrlEncode(sort)}")
+
+        var headers = new Dictionary<string, string>
         {
-            Version = HttpVersion.Version30,
-            VersionPolicy = HttpVersionPolicy.RequestVersionExact
+            { "User-Agent", "okhttp/4.7.2" }
         };
 
-        request.Headers.UserAgent.ParseAdd("okhttp/4.7.2");
-        
-        var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-        
-        var result = await response.Content.ReadFromJsonAsync<ResponseType<LivestreamsResponse>>();
-        var livestreams = result.data.livestreams;
-        return livestreams;
+        var result = await DoHTTPRequest<LivestreamsResponse>(
+            HttpMethod.Get,
+            $"{url}?limit={limit}&category_id={categoryId}&sort={WebUtility.UrlEncode(sort)}",
+            headers: headers,
+            operationName: "FindStreams",
+            cancellationToken: cancellationToken
+        );
+
+        return result?.data?.livestreams ?? new List<Livestream>();
     }
 
-    public async Task<string> GetWssToken()
+    public async Task<string> GetWssToken(CancellationToken cancellationToken = default)
     {
-        var url = "https://websockets.kick.com/viewer/v1/token";
-
-        var request = new HttpRequestMessage(HttpMethod.Get, url)
+        var headers = new Dictionary<string, string>
         {
-            Version = HttpVersion.Version30,
-            VersionPolicy = HttpVersionPolicy.RequestVersionExact
+            { "User-Agent", KickDeviceType.MOBILE.UserAgents.First() },
+            { "x-client-token", KickDeviceType.MOBILE.ClientToken }
         };
-        
-        //Set custom header
-        request.Headers.UserAgent.ParseAdd(KickDeviceType.MOBILE.UserAgents.First());
-        request.Headers.Add("x-client-token", KickDeviceType.MOBILE.ClientToken);
-        request.Headers.Add("Authorization", $"Bearer {BotUser.BearerToken}");
-        
-        var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
 
-        var result = await response.Content.ReadFromJsonAsync<ResponseType<WssTokenResponseType>>();
-        var token = result.data.Token;
+        var result = await DoHTTPRequest<WssTokenResponseType>(
+            HttpMethod.Get,
+            "https://websockets.kick.com/viewer/v1/token",
+            headers: headers,
+            requiresAuth: true,
+            operationName: "GetWssToken",
+            cancellationToken: cancellationToken
+        );
 
-        return token;
+        if (result?.data?.Token is null)
+        {
+            throw new Exception("Failed to retrieve WSS token");
+        }
+
+        return result.data.Token;
+    }
+
+    private async Task<ResponseType<T>?> DoHTTPRequest<T>(
+        HttpMethod method,
+        string url,
+        object? body = null,
+        Dictionary<string, string>? headers = null,
+        bool requiresAuth = false,
+        string? operationName = null,
+        CancellationToken cancellationToken = default)
+    {
+        const int requestLimit = 5;
+        var avoidPrint = new List<string> { "GetInventory", "GetSummary", "GetDropsCampaigns" };
+
+        operationName ??= $"{method.Method} {url}";
+
+        for (int i = 0; i < requestLimit; i++)
+        {
+            try
+            {
+                var request = new HttpRequestMessage(method, url)
+                {
+                    Version = HttpVersion.Version30,
+                    VersionPolicy = HttpVersionPolicy.RequestVersionExact
+                };
+
+                request.Headers.Add("Accept", "application/json");
+
+                if (headers is not null)
+                {
+                    foreach (var header in headers)
+                    {
+                        // Gestion spéciale pour User-Agent
+                        if (header.Key.Equals("User-Agent", StringComparison.OrdinalIgnoreCase))
+                        {
+                            request.Headers.UserAgent.Clear();
+                            request.Headers.UserAgent.ParseAdd(header.Value);
+                        }
+                        else
+                        {
+                            request.Headers.Add(header.Key, header.Value);
+                        }
+                    }
+                }
+
+                if (requiresAuth)
+                {
+                    request.Headers.Add("Authorization", $"Bearer {BotUser.BearerToken}");
+                }
+
+                if (body != null &&
+                    (method == HttpMethod.Post || method == HttpMethod.Put || method == HttpMethod.Patch))
+                {
+                    request.Content = JsonContent.Create(body);
+                }
+
+                var response = await _httpClient.SendAsync(request, cancellationToken);
+                response.EnsureSuccessStatusCode();
+
+                var result = await response.Content.ReadFromJsonAsync<ResponseType<T>>(cancellationToken);
+
+                if (result == null)
+                {
+                    throw new Exception($"Failed to deserialize response for {operationName}");
+                }
+
+                if (!avoidPrint.Contains(operationName))
+                {
+                    _logger.Debug($"Request successful: {operationName}");
+                    _logger.Debug(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = false }));
+                }
+
+                return result;
+            }
+            catch (Exception e)
+            {
+                if (i == requestLimit - 1)
+                {
+                    throw new Exception($"Failed to execute the request {operationName} after {requestLimit} attempts.", e);
+                }
+
+                _logger.Error(e, $"Failed to execute the request {operationName} (attempt {i + 1}/{requestLimit}).");
+
+                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+            }
+        }
+
+        return null;
     }
 }

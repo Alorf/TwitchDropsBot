@@ -25,7 +25,7 @@ public class KickUser : BotUser
         
         BearerToken = settings.BearerToken;
         
-        KickRepository = new KickHttpRepository(this);
+        KickRepository = new KickHttpRepository(this, Logger);
         
         var managerType = AppSettingsService.Settings.KickSettings.WatchManager;
 

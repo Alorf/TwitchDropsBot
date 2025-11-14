@@ -63,10 +63,29 @@ public class KickBot : BaseBot<KickUser>
             throw new Exception("Reward is null");
         }
 
+        await FakeWatchStreamAsync(broadcaster, campaign);
+
         Logger.Information($"Time based drops : {reward.Name}");
         Logger.Information(
             $"Current drop campaign: {campaign.Name} ({campaign.Category.Name}), watching {broadcaster.slug} | {broadcaster.Id}");
         await WatchStreamAsync(broadcaster, campaign, reward);
+    }
+
+    private async Task FakeWatchStreamAsync(Channel broadcaster, Campaign campaign)
+    {
+        var summary = await BotUser.KickRepository.GetSummary(campaign);
+        if (summary is not null)
+        {
+            return;
+        }
+        while (summary is null)
+        {
+            Logger.Information("Trying to init the drop...");
+            await BotUser.WatchManager.WatchStreamAsync(broadcaster, campaign.Category);  
+            await Task.Delay(TimeSpan.FromSeconds(60));
+            summary = await BotUser.KickRepository.GetSummary(campaign);
+        }
+        BotUser.WatchManager.Close();
     }
 
     private async Task WatchStreamAsync(Channel broadcaster, Campaign campaign, Reward reward, int? minutes = null)
@@ -137,15 +156,11 @@ public class KickBot : BaseBot<KickUser>
             
             var matchingCampaignInventory = inventory.Find(x => x.Id == campaign.Id);
 
-            if (matchingCampaignInventory is null)
+            if (matchingCampaignInventory is not null)
             {
-                Logger.Error("matchingCampaignInventory is null");
-                campaigns.Remove(campaign);
-                continue;
+                var claimedRewards = matchingCampaignInventory.Rewards.FindAll(x => x.Claimed);
+                campaign.Rewards.RemoveAll(r => claimedRewards.Contains(r));
             }
-            
-            var claimedRewards = matchingCampaignInventory.Rewards.FindAll(x => x.Claimed);
-            campaign.Rewards.RemoveAll(r => claimedRewards.Contains(r));
 
             if (campaign.Rewards.Count == 0)
             {

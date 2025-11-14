@@ -405,7 +405,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"operationName\": \"VideoPlayerStreamInfoOverlayChannel\",\r\n    \"variables\": {\r\n        \"channel\" : \"{{channelToWatch}}\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"a5f2e34d626a9f4f5c0204f910bab2194948a9502089be558bb6e779a9e1b3d2\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+					"raw": "{\r\n    \"operationName\": \"VideoPlayerStreamInfoOverlayChannel\",\r\n    \"variables\": {\r\n        \"channel\" : \"{{channelToWatch}}\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"e785b65ff71ad7b363b34878335f27dd9372869ad0c5740a130b9268bcdbe7e7\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"

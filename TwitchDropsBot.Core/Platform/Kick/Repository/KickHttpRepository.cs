@@ -7,6 +7,7 @@ using TwitchDropsBot.Core.Platform.Kick.Device;
 using TwitchDropsBot.Core.Platform.Kick.Models;
 using TwitchDropsBot.Core.Platform.Kick.Models.ResponseType;
 using TwitchDropsBot.Core.Platform.Shared.Repository;
+using TwitchDropsBot.Core.Platform.Shared.Services;
 using TwitchDropsBot.Core.Platform.Twitch.Device;
 
 namespace TwitchDropsBot.Core.Platform.Kick.Repository;
@@ -203,7 +204,6 @@ public class KickHttpRepository : BotRepository<KickUser>
         CancellationToken cancellationToken = default)
     {
         const int requestLimit = 5;
-        var avoidPrint = new List<string> { "GetInventory", "GetSummary", "GetDropsCampaigns" };
 
         operationName ??= $"{method.Method} {url}";
 
@@ -256,7 +256,7 @@ public class KickHttpRepository : BotRepository<KickUser>
                     throw new Exception($"Failed to deserialize response for {operationName}");
                 }
 
-                if (!avoidPrint.Contains(operationName))
+                if (AppSettingsService.Settings.LogLevel > 0)
                 {
                     _logger.Debug($"Request successful: {operationName}");
                     _logger.Debug(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = false }));

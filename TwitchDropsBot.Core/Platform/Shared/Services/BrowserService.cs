@@ -1,4 +1,6 @@
-﻿using PuppeteerSharp;
+﻿using PuppeteerExtraSharp;
+using PuppeteerExtraSharp.Plugins.ExtraStealth;
+using PuppeteerSharp;
 using TwitchDropsBot.Core.Platform.Shared.Bots;
 
 namespace TwitchDropsBot.Core.Platform.Shared.Services;
@@ -29,8 +31,8 @@ public sealed class BrowserService
             await browserFetcher.DownloadAsync();
             SystemLoggerService.Logger.Warning("Downloaded latest headless chrome.");
         }
-
-        _browser = await Puppeteer.LaunchAsync(new LaunchOptions
+        
+        var launchOptions = new LaunchOptions
         {
             Headless = AppSettingsService.Settings.WatchBrowserHeadless,
             Args =
@@ -53,6 +55,9 @@ public sealed class BrowserService
                 "--no-zygote",
                 "--disable-features=HardwareMediaKeyHandling",
                 "--disable-blink-features=AutomationControlled,IdleDetection,CSSDisplayAnimation",
+                "--disable-backgrounding-occluded-windows",
+                "--disable-background-timer-throttling",
+                "--disable-ipc-flooding-protection"
             ],
             IgnoredDefaultArgs =
                 ["--enable-automation", "--hide-scrollbars", "--enable-blink-features=IdleDetection"],
@@ -61,7 +66,13 @@ public sealed class BrowserService
                 Width = 1920,
                 Height = 1080
             },
-        });
+        };
+
+        var extra = new PuppeteerExtra();
+
+        var stealth = new StealthPlugin();
+        
+        _browser = await extra.Use(stealth).LaunchAsync(launchOptions);
         
         _isInitialized = true;
     }
@@ -91,6 +102,7 @@ public sealed class BrowserService
             _userContexts[userKey] = context;
             
             var page = await context.NewPageAsync();
+            
             SystemLoggerService.Logger.Information($"[BROWSER SERVICE] Context created - Total: {_userContexts.Count} active context(s)");
             
             return page;

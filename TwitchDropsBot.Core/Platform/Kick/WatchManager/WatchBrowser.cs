@@ -55,12 +55,6 @@ public class WatchBrowser : WatchBrowser<KickUser, Category, Channel>, IKickWatc
         //Go to slug
         await Page.GoToAsync($"https://www.kick.com/{streamer.slug}");
 
-
         await Task.Delay(TimeSpan.FromSeconds(10));
-    }
-
-    public Task WatchStreamAsync(string broadcaster)
-    {
-        throw new NotImplementedException();
     }
 }

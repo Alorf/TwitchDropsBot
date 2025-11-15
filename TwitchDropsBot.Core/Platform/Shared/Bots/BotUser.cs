@@ -70,8 +70,8 @@ public abstract class BotUser: INotifyPropertyChanged
         var appConfig = AppService.GetConfiguration();
 
         var loggerConfig = new LoggerConfiguration()
-            .WriteTo.File($"logs/{Login}.txt")
-            .ReadFrom.Configuration(appConfig);
+            .ReadFrom.Configuration(appConfig)
+            .WriteTo.File($"logs/{GetType().Name}-{Login}-{Id}.txt");
 
         if (uiSink != null)
         {

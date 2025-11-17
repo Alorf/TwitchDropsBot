@@ -45,7 +45,7 @@ if (args.Length > 0 && args[0] == "--add-account")
         }
         catch (Exception e)
         {
-            logger.Error(e.Message);
+            logger.Error(e, e.Message);
             continue;
         }
         

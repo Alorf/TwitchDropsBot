@@ -16,6 +16,7 @@ public class Kick
     {
         var (guid, code, url) = KickAuthService.CreateLoginUrl();
 
+        logger.Information("Please, open this link with the Kick mobile app");
         logger.Information(url);
         
         var PollService = new KickAuthPollService();

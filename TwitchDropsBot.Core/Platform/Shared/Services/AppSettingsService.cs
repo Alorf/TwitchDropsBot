@@ -11,6 +11,25 @@ public class AppSettingsService
     private static FileSystemWatcher? _watcher;
     private static DateTime _lastRead = DateTime.MinValue;
 
+    private static string ConfigPath
+    {
+        get
+        {
+            var insideDockerEnv = Environment.GetEnvironmentVariable("INSIDE_DOCKER");
+
+            var isInsideDocker = insideDockerEnv != null && insideDockerEnv.ToLower() == "true";
+            
+            if (isInsideDocker)
+            {
+                var configDirectory = Path.Combine(AppContext.BaseDirectory, "Configuration");
+                Directory.CreateDirectory(configDirectory);
+                return configDirectory;    
+            }
+            
+            return Path.Combine(AppContext.BaseDirectory);
+        }
+    }
+
     public static BotSettings Settings
     {
         get
@@ -32,10 +51,9 @@ public class AppSettingsService
 
     private static void SetupWatcher()
     {
-        var configPath = Path.Combine(AppContext.BaseDirectory);
         var configFileName = "config.json";
         
-        _watcher = new FileSystemWatcher(configPath, configFileName);
+        _watcher = new FileSystemWatcher(ConfigPath, configFileName);
         _watcher.NotifyFilter = NotifyFilters.LastWrite;
         _watcher.Changed += OnConfigFileChanged;
         _watcher.EnableRaisingEvents = true;
@@ -66,7 +84,7 @@ public class AppSettingsService
 
     private static BotSettings LoadConfig()
     {
-        var filePath = Path.Combine(AppContext.BaseDirectory, "config.json");
+        var filePath = Path.Combine(ConfigPath, "config.json");
 
         if (!File.Exists(filePath))
         {
@@ -96,7 +114,7 @@ public class AppSettingsService
                 };
 
                 var jsonString = JsonSerializer.Serialize(_settings, options);
-                var filePath = Path.Combine(AppContext.BaseDirectory, "config.json");
+                var filePath = Path.Combine(ConfigPath, "config.json");
 
                 _lastRead = DateTime.Now;
                 File.WriteAllText(filePath, jsonString);

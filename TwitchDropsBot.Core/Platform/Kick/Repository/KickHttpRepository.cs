@@ -193,6 +193,66 @@ public class KickHttpRepository : BotRepository<KickUser>
 
         return result.data.Token;
     }
+    
+    public static async Task<(string? id, string? username)> GetUserInfo(string token, CancellationToken ct = default)
+    {
+        
+        var handler = new SocketsHttpHandler
+        {
+            CookieContainer = new CookieContainer(),
+            AllowAutoRedirect = true
+        };
+        var _client = new HttpClient(handler) { BaseAddress = new Uri("https://kick.com") };
+            
+        _client.DefaultRequestVersion = HttpVersion.Version30;
+        _client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrHigher;
+
+        _client.DefaultRequestHeaders.UserAgent.ParseAdd("okhttp/4.7.2");
+        
+        var requestUri = $"https://kick.com/api/v1/user";
+        
+        using var req = new HttpRequestMessage(HttpMethod.Get, requestUri)
+        {
+            Version = HttpVersion.Version30,
+            VersionPolicy = HttpVersionPolicy.RequestVersionOrHigher
+        };
+
+        // Add bearer token authorization
+        req.Headers.Add("Authorization", $"Bearer {token}");
+
+        // Retrieve {"id":..., "username":...}
+        HttpResponseMessage resp = await _client.SendAsync(req, ct);
+        var body = await resp.Content.ReadAsStringAsync(ct);
+
+        if (resp.IsSuccessStatusCode)
+        {
+            using var doc = JsonDocument.Parse(body);
+            var root = doc.RootElement;
+            
+            string? idStr = null;
+            string? username = null;
+
+            if (root.TryGetProperty("id", out var pId))
+            {
+                if (pId.ValueKind == JsonValueKind.String)
+                    idStr = pId.GetString();
+                else if (pId.ValueKind == JsonValueKind.Number && pId.TryGetInt64(out var idNum))
+                    idStr = idNum.ToString();
+                else
+                    idStr = pId.ToString();
+            }
+
+            if (root.TryGetProperty("username", out var pUser) && pUser.ValueKind == JsonValueKind.String)
+                username = pUser.GetString();
+
+            if (idStr is not null && username is not null)
+            {
+                return (idStr, username);
+            }
+        }
+
+        return (null, null);
+    }
 
     private async Task<ResponseType<T>?> DoHTTPRequest<T>(
         HttpMethod method,

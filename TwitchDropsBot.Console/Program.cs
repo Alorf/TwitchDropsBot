@@ -29,7 +29,10 @@ if (logger is null)
     return;
 }
 
-if (args.Length > 0 && args[0] == "--add-account")
+var addAccountEnv = Environment.GetEnvironmentVariable("ADD_ACCOUNT");
+var mustAddAccount = addAccountEnv is not null && addAccountEnv.ToLower() == "true";
+
+if (mustAddAccount || args.Length > 0 && args[0] == "--add-account")
 {
     do
     {

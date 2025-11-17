@@ -26,4 +26,6 @@ RUN dotnet publish "TwitchDropsBot.Console.csproj" -c $BUILD_CONFIGURATION -o /a
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+VOLUME ["/app/config.json", "/app/logs"]
+
 ENTRYPOINT ["dotnet", "TwitchDropsBot.Console.dll"]

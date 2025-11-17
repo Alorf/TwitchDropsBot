@@ -4,6 +4,7 @@ using TwitchDropsBot.Console.Platform;
 using TwitchDropsBot.Console.Utils;
 using TwitchDropsBot.Core;
 using TwitchDropsBot.Core.Platform.Kick.Bot;
+using TwitchDropsBot.Core.Platform.Kick.Repository;
 using TwitchDropsBot.Core.Platform.Kick.Services;
 using TwitchDropsBot.Core.Platform.Shared.Bots;
 using TwitchDropsBot.Core.Platform.Shared.Services;
@@ -132,6 +133,15 @@ foreach (var kickUserSettings in kickUsers)
     {
         logger.Information($"User {kickUserSettings.Login} is not enabled, skipping...");
         continue;
+    }
+
+    if (string.IsNullOrEmpty(kickUserSettings.Login))
+    {
+        var(id, username) = await KickHttpRepository.GetUserInfo(kickUserSettings.BearerToken);
+        kickUserSettings.Id = id;
+        kickUserSettings.Login = username;
+        
+        AppSettingsService.SaveConfig();
     }
         
     var kickUser = new KickUser(kickUserSettings);

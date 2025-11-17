@@ -1,4 +1,12 @@
 ﻿FROM mcr.microsoft.com/dotnet/runtime:8.0 AS base
+
+RUN apt-get update && apt-get install -y \
+    curl gnupg && \
+    curl https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -o packages-microsoft-prod.deb && \
+    dpkg -i packages-microsoft-prod.deb && \
+    apt-get update && apt-get install -y libmsquic && \
+    rm -f packages-microsoft-prod.deb
+
 USER $APP_UID
 WORKDIR /app
 

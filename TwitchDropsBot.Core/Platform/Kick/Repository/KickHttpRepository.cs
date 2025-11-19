@@ -6,9 +6,11 @@ using TwitchDropsBot.Core.Platform.Kick.Bot;
 using TwitchDropsBot.Core.Platform.Kick.Device;
 using TwitchDropsBot.Core.Platform.Kick.Models;
 using TwitchDropsBot.Core.Platform.Kick.Models.ResponseType;
+using TwitchDropsBot.Core.Platform.Shared.Exceptions;
 using TwitchDropsBot.Core.Platform.Shared.Repository;
 using TwitchDropsBot.Core.Platform.Shared.Services;
 using TwitchDropsBot.Core.Platform.Twitch.Device;
+using System.Net.Quic;
 
 namespace TwitchDropsBot.Core.Platform.Kick.Repository;
 
@@ -16,6 +18,7 @@ public class KickHttpRepository : BotRepository<KickUser>
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger _logger;
+    public List<Category> NoClaimCategories;
 
     public KickHttpRepository(KickUser kickUser, ILogger logger)
     {
@@ -32,6 +35,8 @@ public class KickHttpRepository : BotRepository<KickUser>
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(
             KickDeviceType.WEB.UserAgents.First()
         );
+        
+        NoClaimCategories = new List<Category>();
     }
 
     public async Task<List<Campaign>> GetDropsCampaignsAsync(CancellationToken cancellationToken = default)
@@ -72,14 +77,28 @@ public class KickHttpRepository : BotRepository<KickUser>
             campaign_id = campaign.Id
         };
 
-        await DoHTTPRequest<object>(
-            HttpMethod.Post,
-            "https://web.kick.com/api/v1/drops/claim",
-            body: body,
-            requiresAuth: true,
-            operationName: "ClaimDrop",
-            cancellationToken: cancellationToken
-        );
+        if (NoClaimCategories.Contains(campaign.Category))
+        {
+            throw new CantClaimException();
+        }
+
+        try
+        {
+            await DoHTTPRequest<object>(
+                HttpMethod.Post,
+                "https://web.kick.com/api/v1/drops/claim",
+                body: body,
+                requiresAuth: true,
+                operationName: "ClaimDrop",
+                cancellationToken: cancellationToken
+            );
+        }
+        catch (CantClaimException exception)
+        {
+            NoClaimCategories.Add(campaign.Category);
+            throw new CantClaimException();
+        }
+        
     }
 
     public async Task<ICollection<Livestream>> GetLivestreamCampaignsAsync(Campaign campaign, CancellationToken cancellationToken = default)
@@ -137,7 +156,7 @@ public class KickHttpRepository : BotRepository<KickUser>
         var request = new HttpRequestMessage(HttpMethod.Get, url)
         {
             Version = HttpVersion.Version30,
-            VersionPolicy = HttpVersionPolicy.RequestVersionExact
+            VersionPolicy = HttpVersionPolicy.RequestVersionOrHigher
         };
 
         var response = await _httpClient.SendAsync(request, cancellationToken);
@@ -274,7 +293,7 @@ public class KickHttpRepository : BotRepository<KickUser>
                 var request = new HttpRequestMessage(method, url)
                 {
                     Version = HttpVersion.Version30,
-                    VersionPolicy = HttpVersionPolicy.RequestVersionExact
+                    VersionPolicy = HttpVersionPolicy.RequestVersionOrHigher
                 };
 
                 request.Headers.Add("Accept", "application/json");
@@ -319,19 +338,37 @@ public class KickHttpRepository : BotRepository<KickUser>
                 if (AppSettingsService.Settings.LogLevel > 0)
                 {
                     _logger.Debug($"Request successful: {operationName}");
-                    _logger.Debug(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = false }));
+                    _logger.Debug(JsonSerializer.Serialize(result,
+                        new JsonSerializerOptions { WriteIndented = false }));
                 }
 
                 return result;
             }
-            catch (Exception e)
+            catch (HttpRequestException exception)
+            {
+                // Fail claim send 404, if fail once for a game maybe avoid claim for a specific game
+                if (exception.StatusCode == HttpStatusCode.BadRequest)
+                {
+                    throw new CantClaimException("Can't claim");
+                }
+                
+                if (i == requestLimit - 1)
+                {
+                    throw new Exception($"Failed to execute the request {operationName} after {requestLimit} attempts.", exception);
+                }
+
+                _logger.Error(exception, $"Failed to execute the request {operationName} (attempt {i + 1}/{requestLimit}).");
+
+                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+            }
+            catch (Exception exception)
             {
                 if (i == requestLimit - 1)
                 {
-                    throw new Exception($"Failed to execute the request {operationName} after {requestLimit} attempts.", e);
+                    throw new Exception($"Failed to execute the request {operationName} after {requestLimit} attempts.", exception);
                 }
 
-                _logger.Error(e, $"Failed to execute the request {operationName} (attempt {i + 1}/{requestLimit}).");
+                _logger.Error(exception, $"Failed to execute the request {operationName} (attempt {i + 1}/{requestLimit}).");
 
                 await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
             }

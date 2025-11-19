@@ -1,5 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 using TwitchDropsBot.Core.Platform.Twitch.Bot;
+using TwitchDropsBot.Core.Platform.Twitch.Repository;
 
 namespace TwitchDropsBot.Core.Platform.Twitch.Models.Abstractions;
 
@@ -22,9 +23,33 @@ public abstract class AbstractCampaign
     [JsonPropertyName("allow")]
     public DropCampaignACL Allow { get; set; }
     
-    public abstract bool IsCompleted(Inventory inventory);
+    [JsonPropertyName("startAt")]
+    public DateTime StartAt { get; set; }
+
+    [JsonPropertyName("endAt")]
+    public DateTime? EndAt { get; set; }
+    
+    public abstract bool IsCompleted(Inventory inventory, TwitchGqlRepository _repository);
     public TimeBasedDrop? FindTimeBasedDrop(string dropId)
     {
         return TimeBasedDrops.FirstOrDefault(drop => drop.Id == dropId);
+    }
+
+    protected bool Equals(AbstractCampaign other)
+    {
+        return Id == other.Id;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is null) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        if (obj.GetType() != GetType()) return false;
+        return Equals((AbstractCampaign)obj);
+    }
+
+    public override int GetHashCode()
+    {
+        return Id.GetHashCode();
     }
 }

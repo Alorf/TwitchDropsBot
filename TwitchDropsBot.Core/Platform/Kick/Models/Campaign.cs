@@ -2,7 +2,7 @@
 
 namespace TwitchDropsBot.Core.Platform.Kick.Models;
 
-public class Campaign
+public partial class Campaign
 {
     [JsonPropertyName("category")]
     public Category Category { get; set; }

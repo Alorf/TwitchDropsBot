@@ -52,7 +52,7 @@ public class WatchRequest : IKickWatchManager
             throw new StreamOffline();
         }
 
-        if (channel?.Livestream?.Category?.Contains(category, Category.IdComparer) == false)
+        if (channel?.Livestream?.Category?.Contains(category) == false)
         {
             throw new StreamOffline();
         }

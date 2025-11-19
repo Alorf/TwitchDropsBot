@@ -23,6 +23,12 @@ public class Kick
 
         var token = await PollService.PollAuthenticateAsync(guid, code);
 
+        if (token is null)
+        {
+            logger.Information("Failed to authenticate");
+            return;
+        }
+
         var (id, username) = await PollService.GetUserInfo(token);
 
         //Request to /me to retrieve user information

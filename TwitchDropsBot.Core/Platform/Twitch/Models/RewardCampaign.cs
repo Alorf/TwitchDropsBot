@@ -16,11 +16,11 @@ public partial class RewardCampaign : AbstractCampaign
     [JsonPropertyName("brand")]
     public string? Brand { get; set; }
 
-    [JsonPropertyName("startsAt")]
-    public DateTime? StartsAt { get; set; }
-
-    [JsonPropertyName("endsAt")]
-    public DateTime? EndsAt { get; set; }
+    // [JsonPropertyName("startsAt")]
+    // public DateTime? StartsAt { get; set; }
+    //
+    // [JsonPropertyName("endsAt")]
+    // public DateTime? EndsAt { get; set; }
 
     // [JsonPropertyName("status")]
     // public string? Status { get; set; }

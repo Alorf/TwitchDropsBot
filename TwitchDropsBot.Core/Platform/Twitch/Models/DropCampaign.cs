@@ -22,11 +22,11 @@ public partial class DropCampaign : AbstractCampaign
     // [JsonPropertyName("status")]
     // public string? Status { get; set; }
 
-    [JsonPropertyName("startAt")]
-    public DateTime StartAt { get; set; }
-
-    [JsonPropertyName("endAt")]
-    public DateTime? EndAt { get; set; }
+    // [JsonPropertyName("startAt")]
+    // public DateTime StartAt { get; set; }
+    //
+    // [JsonPropertyName("endAt")]
+    // public DateTime? EndAt { get; set; }
 
     [JsonPropertyName("detailsURL")]
     public string? DetailsURL { get; set; }

@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Serilog;
 using TwitchDropsBot.Core.Platform.Kick.Models;
+using TwitchDropsBot.Core.Platform.Kick.Repository;
 using TwitchDropsBot.Core.Platform.Shared.Bots;
 using TwitchDropsBot.Core.Platform.Shared.Exceptions;
 using TwitchDropsBot.Core.Platform.Shared.Services;
@@ -19,8 +20,9 @@ public class KickBot : BaseBot<KickUser>
         var inventory = await BotUser.KickRepository.GetInventory();
         var thingsToWatch = await BotUser.KickRepository.GetDropsCampaignsAsync();
 
-        var finishedCampaigns = inventory.Where(x => x.Status == "claimed").ToList();
-        thingsToWatch.RemoveAll(tw => finishedCampaigns.Any(fc => fc.Id == tw.Id));
+        var finishedCampaigns = inventory.FindAll(x => x.Status == "claimed");
+        Logger.Information($"Removing {finishedCampaigns.Count} finished campaigns...");
+        thingsToWatch.RemoveAll(campaign => finishedCampaigns.Any(finished => finished.Id == campaign.Id));
         
         if (thingsToWatch.Count == 0)
         {
@@ -158,7 +160,7 @@ public class KickBot : BaseBot<KickUser>
 
             if (matchingCampaignInventory is not null)
             {
-                var claimedRewards = matchingCampaignInventory.Rewards.FindAll(x => x.Claimed);
+                var claimedRewards = matchingCampaignInventory.Rewards.FindAll(x => x.Claimed || x.Progress == 1);
                 campaign.Rewards.RemoveAll(r => claimedRewards.Contains(r));
             }
 
@@ -215,9 +217,23 @@ public class KickBot : BaseBot<KickUser>
         {
             foreach (var reward in campaign.Rewards)
             {
-                if (!reward.Claimed && reward.Progress == 1)
+                //fixme: check if works
+                if (!reward.Claimed && reward.Progress == 1 && !BotUser.KickRepository.NoClaimCategories.Contains(campaign.Category))
                 {
-                    await BotUser.KickRepository.ClaimDrop(campaign, reward);
+                    try
+                    {
+                        await BotUser.KickRepository.ClaimDrop(campaign, reward);
+
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Error("Can't claim {reward.Name} for the campaign {campaign.Name}, account not linked please restart the bot once done...", reward.Name, campaign.Name);
+                        var message = $"Can't claim {reward.Name} for the campaign {campaign.Name}, account not linked please restart the bot once done...";
+                        await NotificationServices.SendErrorNotification(BotUser, "CLAIM ERROR", message,
+                            $"https://ext.cdn.kick.com/{reward.ImageUrl}");
+                        await Task.Delay(TimeSpan.FromSeconds(2));
+                        continue;
+                    }
                     await NotificationServices.SendNotification(BotUser, campaign.Category.Name,
                         reward.Name, $"https://ext.cdn.kick.com/{reward.ImageUrl}");
                 }

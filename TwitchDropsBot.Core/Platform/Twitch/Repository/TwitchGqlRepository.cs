@@ -356,14 +356,63 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
             variables["rewardID"] = rewardId;
         }
         
-        var redeemGraphQLClient =
-            new GraphQLHttpClient("https://gql.twitch.tv/gql", new SystemTextJsonSerializer());
-        
         dynamic? resp = await DoGQLRequestAsync(query);
 
         RewardCampaignCode rewardCampaignCode = resp.Data.CurrentUser.Inventory.RewardValue;
 
         return rewardCampaignCode;
+    }
+    
+    public async Task<bool> HaveEmote(List<string> emoteNames)
+    {
+        var query = CreateQuery("AvailableEmotesForChannelPaginated");
+
+        if (query.Variables is Dictionary<string, object?> variables)
+        {
+            variables["channelID"] = BotUser.Id;
+            variables["withOwner"] = true;
+            variables["pageLimit"] = 350;
+        }
+
+        try
+        {
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, "https://gql.twitch.tv/gql")
+            {
+                Content = new StringContent(
+                    JsonSerializer.Serialize(new
+                    {
+                        operationName = query.OperationName,
+                        variables = query.Variables,
+                        extensions = query.Extensions
+                    }),
+                    System.Text.Encoding.UTF8,
+                    "application/json")
+            };
+
+            var httpResponse = await graphQLClient.HttpClient.SendAsync(httpRequest);
+            httpResponse.EnsureSuccessStatusCode();
+
+            var responseContent = await httpResponse.Content.ReadAsStringAsync();
+
+            foreach (var emoteName in emoteNames)
+            {
+                if (responseContent.Contains(emoteName))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        catch (System.Exception e)
+        {
+            _logger?.Error(e, $"Failed to check emotes");
+            foreach (var emoteName in emoteNames)
+            {
+                _logger.Error($"{emoteName}");
+            }
+            return false;
+        }
     }
 
     private async Task<dynamic?> DoGQLRequestAsync(GraphQLRequest query, GraphQLHttpClient? client = null,

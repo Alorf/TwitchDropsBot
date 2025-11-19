@@ -24,7 +24,7 @@ public class WatchBrowser : WatchBrowser<KickUser, Category, Channel>, IKickWatc
             throw new StreamOffline();
         }
         
-        if (channel?.Livestream?.Category?.Contains(category, Category.IdComparer) == false)
+        if (channel?.Livestream?.Category?.Contains(category) == false)
         {
             throw new StreamOffline();
         }

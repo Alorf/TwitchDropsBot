@@ -2,6 +2,7 @@
 using Discord;
 using TwitchDropsBot.Core.Platform.Twitch.Bot;
 using TwitchDropsBot.Core.Platform.Twitch.Models.Abstractions;
+using TwitchDropsBot.Core.Platform.Twitch.Repository;
 
 namespace TwitchDropsBot.Core.Platform.Twitch.Models;
 
@@ -9,7 +10,7 @@ public partial class RewardCampaign : AbstractCampaign
 {
     public DistributionType DistributionType { get; set; }
     
-    public override bool IsCompleted(Inventory inventory)
+    public override bool IsCompleted(Inventory inventory, TwitchGqlRepository _repository)
     {
         if (inventory.CompletedRewardCampaigns is null)
         {

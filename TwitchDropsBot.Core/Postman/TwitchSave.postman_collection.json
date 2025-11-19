@@ -3,8 +3,7 @@
 		"_postman_id": "22808924-c908-4898-bb0c-2b87614f602d",
 		"name": "Twitch",
 		"description": "Twitch GQL  \n  \nPersistent request used in TwitchDropsBot",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "45966100"
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
@@ -825,7 +824,69 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"operationName\": \"RewardCodeModal\",\r\n    \"variables\": {\r\n        \"rewardCampaignID\": \"{{rewardCampaignId}}\",\r\n        \"rewardID\": \"{{rewardCampaignId}}\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"version\": 1,\r\n            \"sha256Hash\": \"b48d2bd6e80366684092d14c97ced7a86497246c4dab0f3d877c7a308eefdd7f\"\r\n        }\r\n    }\r\n}",
+					"raw": "{\r\n    \"operationName\": \"RewardCodeModal\",\r\n    \"variables\": {\r\n        \"rewardCampaignID\": \"597b8326-bb60-11f0-8672-c689c76c5075\",\r\n        \"rewardID\": \"595393de-bb60-11f0-8672-c689c76c5075\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"version\": 1,\r\n            \"sha256Hash\": \"b48d2bd6e80366684092d14c97ced7a86497246c4dab0f3d877c7a308eefdd7f\"\r\n        }\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://gql.twitch.tv/gql",
+					"protocol": "https",
+					"host": [
+						"gql",
+						"twitch",
+						"tv"
+					],
+					"path": [
+						"gql"
+					]
+				},
+				"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+			},
+			"response": []
+		},
+		{
+			"name": "AvailableEmotesForChannelPaginated",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "client-id",
+						"value": "{{clientId}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"operationName\": \"AvailableEmotesForChannelPaginated\",\r\n  \"variables\": {\r\n    \"channelID\": \"{{channelId}}\",\r\n    \"withOwner\": true,\r\n    \"pageLimit\": 350\r\n  },\r\n  \"extensions\": {\r\n    \"persistedQuery\": {\r\n      \"version\": 1,\r\n      \"sha256Hash\": \"6c45e0ecaa823cc7db3ecdd1502af2223c775bdcfb0f18a3a0ce9a0b7db8ef6c\"\r\n    }\r\n  }\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"

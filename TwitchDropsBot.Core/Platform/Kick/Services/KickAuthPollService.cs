@@ -24,8 +24,7 @@ public class KickAuthPollService
                 AllowAutoRedirect = true
             };
             _client = new HttpClient(handler) { BaseAddress = new Uri("https://kick.com") };
-
-            // Demander HTTP/3 si disponible
+            
             _client.DefaultRequestVersion = HttpVersion.Version30;
             _client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrHigher;
 
@@ -88,7 +87,7 @@ public class KickAuthPollService
         
         using var req = new HttpRequestMessage(HttpMethod.Get, requestUri)
         {
-            Version = new Version(3, 0),
+            Version = HttpVersion.Version30,
             VersionPolicy = HttpVersionPolicy.RequestVersionOrHigher
         };
 
@@ -114,7 +113,7 @@ public class KickAuthPollService
                 else if (pId.ValueKind == JsonValueKind.Number && pId.TryGetInt64(out var idNum))
                     idStr = idNum.ToString();
                 else
-                    idStr = pId.ToString(); // fallback pour autres cas
+                    idStr = pId.ToString();
             }
 
             if (root.TryGetProperty("username", out var pUser) && pUser.ValueKind == JsonValueKind.String)

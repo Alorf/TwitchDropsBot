@@ -1,12 +1,8 @@
-﻿using System.Text.Json.Serialization;
+﻿namespace TwitchDropsBot.Core.Platform.Kick.Models;
 
-namespace TwitchDropsBot.Core.Platform.Kick.Models;
-public partial class Category
+public partial class Campaign
 {
-    [JsonIgnore]
-    public bool IsFavorite { get; set; }
-
-    protected bool Equals(Category other)
+    protected bool Equals(Campaign other)
     {
         return Id == other.Id;
     }
@@ -16,11 +12,11 @@ public partial class Category
         if (obj is null) return false;
         if (ReferenceEquals(this, obj)) return true;
         if (obj.GetType() != GetType()) return false;
-        return Equals((Category)obj);
+        return Equals((Campaign)obj);
     }
 
     public override int GetHashCode()
     {
-        return Id;
+        return Id.GetHashCode();
     }
 }

@@ -56,6 +56,27 @@ public static class NotificationServices
         await SendWebhookAsync(embed, itemImage);
     }
 
+    public static async Task SendErrorNotification(BotUser user, string title, string message, string itemImage)
+    {
+        (Color color, string platformName) = user switch
+        {
+            TwitchUser => (new Color(0xA970FF), "Twitch"),
+            KickUser   => (new Color(0x53FC18), "Kick"),
+            _          => (new Color(0xFFFFFF), "Unknown")
+        };
+
+        Embed embed = new EmbedBuilder()
+            .WithTitle($"{user.Login} {title}")
+            .WithDescription(message)
+            .WithColor(color)
+            .WithThumbnailUrl(itemImage)
+            .WithFooter(platformName)
+            .Build();
+            
+        
+        await SendWebhookAsync(embed, itemImage);
+    }
+
     
     private static async Task SendWebhookAsync(Embed embed, string avatar)
     {

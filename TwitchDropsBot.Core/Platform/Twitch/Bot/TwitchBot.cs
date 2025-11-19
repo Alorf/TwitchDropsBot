@@ -14,32 +14,45 @@ public class TwitchBot : BaseBot<TwitchUser>
 {
     private readonly TwitchSettings twitchSettings;
     private List<CompletedRewardCampaigns> claimedReward;
+    private List<AbstractCampaign> finishedCampaigns;
 
     public TwitchBot(TwitchUser user, ILogger logger) : base(user, logger)
     {
         twitchSettings = AppSettingsService.Settings.TwitchSettings;
         claimedReward = new List<CompletedRewardCampaigns>();
+        finishedCampaigns = new List<AbstractCampaign>();
+
         user.UISink = AppService.GetUISink();
     }
 
     public override async Task StartAsync()
     {
-        // BotUser.FavouriteGames = BotUser.PersonalFavouriteGames.Count > 0
-        //     ? BotUser.PersonalFavouriteGames
-        //     : Config.FavouriteGames;
+        BotUser.FavouriteGames = BotUser.FavouriteGames.Count > 0
+            ? BotUser.FavouriteGames
+            : AppSettingsService.Settings.FavouriteGames;
         BotUser.OnlyFavouriteGames = twitchSettings.OnlyFavouriteGames;
         BotUser.OnlyConnectedAccounts = twitchSettings.OnlyConnectedAccounts;
 
         // Get campaigns
         var thingsToWatch = await BotUser.TwitchRepository.FetchDropsAsync();
         var inventory = await BotUser.TwitchRepository.FetchInventoryDropsAsync();
+        DateTime now = DateTime.Now;
+        
+        finishedCampaigns.RemoveAll( campaign => campaign.EndAt.Value.ToLocalTime().AddHours(1) < now);
+        
+        Logger.Information($"Removing {finishedCampaigns.Count} finished campaigns...");
+        thingsToWatch.RemoveAll(campaign => finishedCampaigns.Any(finished => finished.Id == campaign.Id));
+
 
         BotUser.Inventory = inventory;
         BotUser.Status = BotStatus.Seeking;
 
-        CheckCancellation();
         await CheckForClaim(inventory);
-        CheckCancellation();
+
+        if (thingsToWatch.Count == 0 )
+        {
+            throw new NoBroadcasterOrNoCampaignLeft();
+        }
 
         if (BotUser.OnlyConnectedAccounts)
         {
@@ -57,8 +70,6 @@ public class TwitchBot : BaseBot<TwitchUser>
         var favoriteGameNames = BotUser.FavouriteGames;
 
         // Order things to watch by the order of favorite game names and drop that is ending soon
-        CheckCancellation();
-
         var linqToWatch = from thingToWatch in thingsToWatch
             where thingToWatch.Game is not null
             orderby
@@ -82,7 +93,6 @@ public class TwitchBot : BaseBot<TwitchUser>
                 throw new NoBroadcasterOrNoCampaignLeft();
             }
 
-            CheckCancellation();
             (campaign, broadcaster) = await SelectBroadcasterAsync(thingsToWatch, inventory);
 
             if (campaign is null)
@@ -212,8 +222,6 @@ public class TwitchBot : BaseBot<TwitchUser>
                (minutes ?? requiredMinutesToWatch) ||
                dropCurrentSession.RequiredMinutesWatched == 0) // While all the drops are not claimed
         {
-            CheckCancellation();
-
             try
             {
                 await BotUser.WatchManager
@@ -333,27 +341,42 @@ public class TwitchBot : BaseBot<TwitchUser>
                 continue;
             }
 
-            CheckCancellation();
             Logger.Information($"Checking {campaign.Game.DisplayName} ({campaign.Name})...");
+
+            if (finishedCampaigns.Contains(campaign))
+            {
+                Logger.Information($"Campaign {campaign.Name} already completed from local list, skipping");
+                campaigns.Remove(campaign);
+                continue;
+            }
 
             var tempDropCampaign = await BotUser.TwitchRepository.FetchTimeBasedDropsAsync(campaign.Id);
             campaign.TimeBasedDrops = tempDropCampaign.TimeBasedDrops;
             campaign.Game = tempDropCampaign.Game;
             campaign.Allow = tempDropCampaign.Allow;
 
+            if (campaign.TimeBasedDrops.Count == 0)
+            {
+                Logger.Information($"No time based drops available for this campaign ({campaign.Name}), skipping");
+                finishedCampaigns.Add(campaign);
+                campaigns.Remove(campaign);
+                continue;
+            }
+
             try
             {
-                var isCompleted = campaign.IsCompleted(inventory);
+                var isCompleted = campaign.IsCompleted(inventory, BotUser.TwitchRepository);
                 if (isCompleted)
                 {
                     Logger.Information($"Campaign {campaign.Name} already completed, skipping");
+                    finishedCampaigns.Add(campaign);
                     campaigns.Remove(campaign);
                     continue;
                 }
             }
             catch (System.Exception e)
             {
-                Logger.Error(e.Message);
+                Logger.Error(e, e.Message);
             }
 
             if (campaign is DropCampaign dropCampaign)
@@ -375,7 +398,6 @@ public class TwitchBot : BaseBot<TwitchUser>
 
                 foreach (var channelGroup in channelGroups)
                 {
-                    CheckCancellation();
                     var tempBroadcasters = await BotUser.TwitchRepository.FetchStreamInformationAsync(channelGroup);
 
                     if (tempBroadcasters is null)
@@ -454,7 +476,6 @@ public class TwitchBot : BaseBot<TwitchUser>
         // For every timebased drop, check if it is claimed
         foreach (var dropCampaignInProgress in inventory.DropCampaignsInProgress)
         {
-            CheckCancellation();
             foreach (var timeBasedDrop in dropCampaignInProgress.TimeBasedDrops)
             {
                 if (timeBasedDrop.Self is null)
@@ -497,14 +518,5 @@ public class TwitchBot : BaseBot<TwitchUser>
         }
 
         claimedReward = newClaimedReward;
-    }
-
-    private void CheckCancellation()
-    {
-        if (BotUser.CancellationTokenSource != null &&
-            BotUser.CancellationTokenSource.Token.IsCancellationRequested)
-        {
-            throw new OperationCanceledException();
-        }
     }
 }

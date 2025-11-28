@@ -3,15 +3,18 @@ using System.Runtime.CompilerServices;
 using Discord;
 using Discord.Webhook;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Serilog;
 using TwitchDropsBot.Core.Platform.Shared.Serilog;
 using TwitchDropsBot.Core.Platform.Shared.Services;
 using TwitchDropsBot.Core.Platform.Shared.Settings;
+using TwitchDropsBot.Core.Platform.Twitch.Bot;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace TwitchDropsBot.Core.Platform.Shared.Bots;
 
-public abstract class BotUser: INotifyPropertyChanged
+public abstract class BotUser : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -19,9 +22,8 @@ public abstract class BotUser: INotifyPropertyChanged
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
-    
-    public UISink UISink;
 
+    public UISink UISink { get; set; }
     public string Login { get; set; }
     public string Id { get; set; }
     public List<string> FavouriteGames { get; set; }
@@ -41,63 +43,67 @@ public abstract class BotUser: INotifyPropertyChanged
             }
         }
     }
-    
-    protected ILogger Logger;
 
-    public CancellationTokenSource CancellationTokenSource { get; set; }
-    public Action<string>? OnStatusChanged { get; set; }
+    public ILogger Logger { get; }
     
+    public CancellationTokenSource CancellationTokenSource { get; set; }
     private DiscordWebhookClient? _discordWebhookClient;
 
-    protected BotUser(BaseUserSettings settings, UISink? uiSink = null)
+    protected BotUser(
+        BaseUserSettings settings,
+        IOptionsMonitor<BotSettings> BotSettings,
+        ILogger logger,
+        UISink? uiSink = null
+        )
     {
         Login = settings.Login;
         Id = settings.Id;
-        var config = AppSettingsService.Settings;
-        FavouriteGames = settings.FavouriteGames.Count > 0
-            ? settings.FavouriteGames
-            : config.FavouriteGames;
+        FavouriteGames = settings.FavouriteGames.Count > 0 
+            ? settings.FavouriteGames 
+            : BotSettings.CurrentValue.FavouriteGames;
 
-        if (!string.IsNullOrEmpty(config.WebhookURL))
+        if (!string.IsNullOrEmpty(BotSettings.CurrentValue.WebhookURL))
         {
-            _discordWebhookClient = new DiscordWebhookClient(config.WebhookURL);    
+            _discordWebhookClient = new DiscordWebhookClient(BotSettings.CurrentValue.WebhookURL);
         }
-        
-        Status = BotStatus.Idle;
-        
-        OnlyFavouriteGames = config.TwitchSettings.OnlyFavouriteGames;
-        
-        var appConfig = AppService.GetConfiguration();
 
-        var loggerConfig = new LoggerConfiguration()
-            .ReadFrom.Configuration(appConfig)
-            .WriteTo.File($"logs/{GetType().Name}-{Login}-{Id}.txt");
+        Status = BotStatus.Idle;
+        OnlyFavouriteGames = BotSettings.CurrentValue.TwitchSettings.OnlyFavouriteGames;
+        
+        Logger = logger;
 
         if (uiSink != null)
         {
-            loggerConfig.WriteTo.Sink(uiSink);
+            UISink = uiSink;
+            // loggerConfig.WriteTo.Sink(uiSink);
         }
-
-        Logger = loggerConfig.CreateLogger();
     }
 
     public async Task SendWebhookAsync(List<Embed> embeds, string? avatarUrl = null)
     {
         if (_discordWebhookClient == null)
         {
+            Logger.LogWarning("Discord webhook client not configured");
             return;
         }
 
-        foreach (var embed in embeds)
+        try
         {
-            if (avatarUrl is null)
+            foreach (var embed in embeds)
             {
-                avatarUrl = embed.Thumbnail.ToString();
+                avatarUrl ??= embed.Thumbnail?.Url;
+                await _discordWebhookClient.SendMessageAsync(
+                    embeds: new[] { embed }, 
+                    avatarUrl: avatarUrl);
             }
-
-            await _discordWebhookClient.SendMessageAsync(embeds: new[] { embed }, avatarUrl: avatarUrl);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error sending Discord webhook");
         }
     }
+    
+    public abstract Task StartBot();
 
     public abstract void Close();
 }

@@ -1,23 +1,27 @@
-﻿using PuppeteerExtraSharp;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using PuppeteerExtraSharp;
 using PuppeteerExtraSharp.Plugins.ExtraStealth;
 using PuppeteerSharp;
 using TwitchDropsBot.Core.Platform.Shared.Bots;
+using TwitchDropsBot.Core.Platform.Shared.Settings;
 
 namespace TwitchDropsBot.Core.Platform.Shared.Services;
 
 public sealed class BrowserService
 {
-    private static readonly Lazy<BrowserService> _instance =
-        new(() => new BrowserService(), LazyThreadSafetyMode.ExecutionAndPublication);
-
-    public static BrowserService Instance => _instance.Value;
-
     private readonly Dictionary<string, IBrowserContext> _userContexts = new();
     private readonly SemaphoreSlim _lock = new(1, 1);
     private IBrowser? _browser;
     private bool _isInitialized;
+    private readonly IOptionsMonitor<BotSettings> _botSettings;
+    private ILogger<BotUser> _logger;
 
-    private BrowserService() { }
+    public BrowserService(IOptionsMonitor<BotSettings> botSettings, ILogger<BotUser> logger)
+    {
+        _botSettings = botSettings;
+        _logger = logger;
+    }
     
     private async Task InitializeBrowserAsync()
     {
@@ -27,14 +31,14 @@ public sealed class BrowserService
         var installed = browserFetcher.GetInstalledBrowsers();
         if (!installed.Any())
         {
-            SystemLoggerService.Logger.Warning("Can't find any installed browsers. Downloading latest headless chrome...");
+            _logger.LogWarning("Can't find any installed browsers. Downloading latest headless chrome...");
             await browserFetcher.DownloadAsync();
-            SystemLoggerService.Logger.Warning("Downloaded latest headless chrome.");
+            _logger.LogWarning("Downloaded latest headless chrome.");
         }
         
         var launchOptions = new LaunchOptions
         {
-            Headless = AppSettingsService.Settings.WatchBrowserHeadless,
+            Headless = _botSettings.CurrentValue.WatchBrowserHeadless,
             Args =
             [
                 "--mute-audio",
@@ -84,26 +88,26 @@ public sealed class BrowserService
         {
             if (!_isInitialized)
             {
-                SystemLoggerService.Logger.Information("[BROWSER SERVICE] Creating shared browser...");
+                _logger.LogInformation("[BROWSER SERVICE] Creating shared browser...");
                 await InitializeBrowserAsync();
-                SystemLoggerService.Logger.Information("[BROWSER SERVICE] Shared browser created successfully");
+                _logger.LogInformation("[BROWSER SERVICE] Shared browser created successfully");
             }
 
             var userKey = user.Id;
 
             if (_userContexts.ContainsKey(userKey))
             {
-                SystemLoggerService.Logger.Information($"[BROWSER SERVICE] Reusing existing context for {user.Login}");
+                _logger.LogInformation($"[BROWSER SERVICE] Reusing existing context for {user.Login}");
                 return await _userContexts[userKey].NewPageAsync();
             }
 
-            SystemLoggerService.Logger.Information($"[BROWSER SERVICE] Creating new isolated context for {user.Login}");
+            _logger.LogInformation($"[BROWSER SERVICE] Creating new isolated context for {user.Login}");
             var context = await _browser!.CreateBrowserContextAsync();
             _userContexts[userKey] = context;
             
             var page = await context.NewPageAsync();
             
-            SystemLoggerService.Logger.Information($"[BROWSER SERVICE] Context created - Total: {_userContexts.Count} active context(s)");
+            _logger.LogInformation($"[BROWSER SERVICE] Context created - Total: {_userContexts.Count} active context(s)");
             
             return page;
         }
@@ -122,15 +126,15 @@ public sealed class BrowserService
             
             if (!_userContexts.ContainsKey(userKey))
             {
-                SystemLoggerService.Logger.Information($"[BROWSER SERVICE] No context to remove for {user.Login}");
+                _logger.LogInformation($"[BROWSER SERVICE] No context to remove for {user.Login}");
                 return;
             }
 
-            SystemLoggerService.Logger.Information($"[BROWSER SERVICE] Closing context for {user.Login}");
+            _logger.LogInformation($"[BROWSER SERVICE] Closing context for {user.Login}");
             await _userContexts[userKey].CloseAsync();
             _userContexts.Remove(userKey);
             
-            SystemLoggerService.Logger.Information($"[BROWSER SERVICE] Context closed - Remaining: {_userContexts.Count} active context(s)");
+            _logger.LogInformation($"[BROWSER SERVICE] Context closed - Remaining: {_userContexts.Count} active context(s)");
         }
         finally
         {

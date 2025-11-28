@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using TwitchDropsBot.Core.Platform.Shared.Services;
 
 namespace TwitchDropsBot.Core.Platform.Kick.Services;
@@ -36,7 +37,7 @@ public class KickAuthPollService
         }
     }
 
-    public async Task<string?> PollAuthenticateAsync(string uuid, string code, int pollIntervalSeconds = 5,
+    public async Task<string?> PollAuthenticateAsync(ILogger logger, string uuid, string code, int pollIntervalSeconds = 5,
         int pollDurationSeconds = 30, CancellationToken ct = default)
     {
         var endPoll = DateTime.Now.AddSeconds(pollDurationSeconds);
@@ -75,7 +76,7 @@ public class KickAuthPollService
             }
             
             await Task.Delay(TimeSpan.FromSeconds(pollIntervalSeconds), ct);
-            SystemLoggerService.Logger.Information("Waiting the user to log...");
+            logger.LogInformation("Waiting the user to log...");
         }
         
         return null;

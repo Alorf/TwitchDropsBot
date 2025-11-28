@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using TwitchDropsBot.Core.Platform.Shared.Services;
 using TwitchDropsBot.Core.Platform.Twitch.Settings;
 using Constant = TwitchDropsBot.Core.Platform.Twitch.Utils.Constant;
@@ -29,7 +30,7 @@ public class TwitchAuthService
         return JsonDocument.Parse(responseContent);
     }
     
-    public static async Task<JsonDocument?> CodeConfirmationAsync(string deviceCode, CancellationToken? token = null)
+    public static async Task<JsonDocument?> CodeConfirmationAsync(string deviceCode, ILogger logger, CancellationToken? token = default)
     {
         for (int i = 0; i < 10; i++)
         {
@@ -52,7 +53,7 @@ public class TwitchAuthService
 
             if (response.StatusCode == HttpStatusCode.BadRequest)
             {
-                SystemLoggerService.Logger.Information("Waiting for user to authenticate...");
+                logger.LogInformation("Waiting for user to authenticate...");
                 continue;
             }
 

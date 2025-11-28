@@ -1,4 +1,5 @@
-﻿using PuppeteerSharp;
+﻿using Microsoft.Extensions.Logging;
+using PuppeteerSharp;
 using TwitchDropsBot.Core.Platform.Shared.Exceptions;
 using TwitchDropsBot.Core.Platform.Shared.Services;
 using TwitchDropsBot.Core.Platform.Shared.WatchManager;
@@ -9,7 +10,7 @@ namespace TwitchDropsBot.Core.Platform.Twitch.WatchManager;
 
 public class WatchBrowser : WatchBrowser<TwitchUser, Game, User>, ITwitchWatchManager
 {
-    public WatchBrowser(TwitchUser user) : base (user)
+    public WatchBrowser(TwitchUser user, ILogger logger, BrowserService browserService) : base (user, logger, browserService)
     {
     }
 
@@ -40,7 +41,7 @@ public class WatchBrowser : WatchBrowser<TwitchUser, Game, User>, ITwitchWatchMa
         
         if (Page != null) return;
         
-        Page = await BrowserService.Instance.AddUserAsync(BotUser);
+        Page = await BrowserService.AddUserAsync(BotUser);
         
         await Page.GoToAsync("https://www.twitch.tv/");
 
@@ -69,7 +70,7 @@ public class WatchBrowser : WatchBrowser<TwitchUser, Game, User>, ITwitchWatchMa
         }
         catch (System.Exception ex)
         {
-            Logger.Information("[BROWSER] No classification button found, continuing...");
+            Logger.LogInformation("[BROWSER] No classification button found, continuing...");
         }
 
         await Task.Delay(TimeSpan.FromSeconds(10));

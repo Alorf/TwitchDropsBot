@@ -1,12 +1,12 @@
 ﻿using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
-using Serilog;
-using Serilog.Core;
+using Microsoft.Extensions.Logging;
 using TwitchDropsBot.Core.Platform.Kick.Bot;
 using TwitchDropsBot.Core.Platform.Kick.Device;
 using TwitchDropsBot.Core.Platform.Kick.Models;
 using TwitchDropsBot.Core.Platform.Kick.Repository;
+using TwitchDropsBot.Core.Platform.Shared.Bots;
 using TwitchDropsBot.Core.Platform.Shared.Exceptions;
 
 namespace TwitchDropsBot.Core.Platform.Kick.WatchManager;
@@ -19,7 +19,7 @@ public class WatchRequest : IKickWatchManager
     private CancellationTokenSource _cancellationTokenSource;
     private ClientWebSocket _clientWebSocket;
     private readonly KickHttpRepository _kickHttpRepository;
-    private ILogger _logger;
+    private readonly ILogger _logger;
     private Task? _receivingTask;
     private Task? _sendingTask;
     private readonly SemaphoreSlim _connectionLock = new SemaphoreSlim(1, 1);
@@ -30,23 +30,30 @@ public class WatchRequest : IKickWatchManager
         _kickHttpRepository = kickHttpRepository;
         _clientWebSocket = new ClientWebSocket();
         _cancellationTokenSource = new CancellationTokenSource();
+        
+        _logger.LogInformation("WatchRequest initialized");
     }
 
     public KickUser BotUser { get; }
 
     public async Task WatchStreamAsync(Channel broadcaster, Category category)
     {
+        _logger.LogDebug("Attempting to watch stream for channel {ChannelSlug}, category {CategoryName}", 
+            broadcaster.slug, category.Name);
+
         var channel = await _kickHttpRepository.GetChannelAsync(broadcaster.slug);
 
         if (channel?.Livestream is null)
         {
+            _logger.LogInformation("Stream is offline for channel {ChannelSlug}", broadcaster.slug);
+            
             var disconnectMsg =
                 $"{{\"type\":\"channel_disconnect\",\"data\":{{\"message\":{{\"channelId\":\"{broadcaster.Id}\"}}}}}}";
 
             if (_clientWebSocket.State == WebSocketState.Open)
             {
                 await SendMessageAsync(disconnectMsg, _cancellationTokenSource.Token);
-                _logger.Debug("Sent channel_disconnect message for offline stream.");
+                _logger.LogDebug("Sent channel_disconnect message for offline stream");
             }
 
             throw new StreamOffline();
@@ -54,6 +61,8 @@ public class WatchRequest : IKickWatchManager
 
         if (channel?.Livestream?.Category?.Contains(category) == false)
         {
+            _logger.LogWarning("Stream category mismatch for channel {ChannelSlug}. Expected {ExpectedCategory}", 
+                broadcaster.slug, category.Name);
             throw new StreamOffline();
         }
 
@@ -63,12 +72,15 @@ public class WatchRequest : IKickWatchManager
             // Check if we need to reconnect
             if (_clientWebSocket.State != WebSocketState.Open)
             {
+                _logger.LogInformation("WebSocket not open (state: {State}), establishing new connection", 
+                    _clientWebSocket.State);
+
                 // Clean up old connection
                 await CleanupConnectionAsync();
 
                 // Refresh token for new connection
                 _wssToken = await _kickHttpRepository.GetWssToken();
-                _logger.Debug("Fetched new WSS token");
+                _logger.LogDebug("Fetched new WSS token");
 
                 // Create new WebSocket
                 _clientWebSocket = new ClientWebSocket();
@@ -79,22 +91,27 @@ public class WatchRequest : IKickWatchManager
                 try
                 {
                     await _clientWebSocket.ConnectAsync(uri, _cancellationTokenSource.Token);
-                    _logger.Information("WebSocket connected successfully");
+                    _logger.LogInformation("WebSocket connected successfully to {Url}", WEBSOCKET_CONNECTION_URL);
                 }
                 catch (WebSocketException ex)
                 {
-                    _logger.Error(ex, "Failed to connect WebSocket: {Message}", ex.Message);
+                    _logger.LogError(ex, "Failed to connect WebSocket");
                     await CleanupConnectionAsync();
                     throw;
                 }
 
                 var livestreamId = channel.Livestream.Id;
+                _logger.LogDebug("Starting watch tasks for livestream {LivestreamId}", (object)livestreamId);
 
                 // Start receive loop
                 _receivingTask = Task.Run(() => ReceiveLoopAsync(_cancellationTokenSource.Token));
 
                 // Start periodic message sender
                 _sendingTask = Task.Run(() => SendPeriodicMessages(broadcaster, livestreamId, _cancellationTokenSource.Token));
+            }
+            else
+            {
+                _logger.LogDebug("WebSocket already open, reusing existing connection");
             }
         }
         finally
@@ -107,6 +124,7 @@ public class WatchRequest : IKickWatchManager
         CancellationToken token = default)
     {
         var channelId = broadcaster.Id;
+        _logger.LogDebug("Starting periodic message sender for channel {ChannelId}", channelId);
 
         var pingInterval = TimeSpan.FromSeconds(30);
         var handshakeInterval = TimeSpan.FromSeconds(15);
@@ -125,7 +143,7 @@ public class WatchRequest : IKickWatchManager
                 if (now - lastPing > pingInterval)
                 {
                     await SendMessageAsync("{\"type\":\"ping\"}", token);
-                    _logger.Debug("Sending ping message");
+                    _logger.LogDebug("Sent ping message");
                     lastPing = now;
                 }
 
@@ -134,7 +152,7 @@ public class WatchRequest : IKickWatchManager
                     var handshakeMsg =
                         $"{{\"type\":\"channel_handshake\",\"data\":{{\"message\":{{\"channelId\":\"{channelId}\"}}}}}}";
                     await SendMessageAsync(handshakeMsg, token);
-                    _logger.Debug("Sending handshake message");
+                    _logger.LogDebug("Sent handshake message for channel {ChannelId}", channelId);
                     lastHandshake = now;
                 }
 
@@ -143,20 +161,24 @@ public class WatchRequest : IKickWatchManager
                     var trackingMsg =
                         $"{{\"type\":\"user_event\",\"data\":{{\"message\":{{\"name\":\"tracking.user.watch.livestream\",\"channel_id\":{channelId},\"livestream_id\":{livestreamId}}}}}}}";
                     await SendMessageAsync(trackingMsg, token);
-                    _logger.Debug("Sending tracking message");
+                    _logger.LogDebug("Sent tracking message for channel {ChannelId}, livestream {LivestreamId}", 
+                        channelId, (object)livestreamId);
                     lastTracking = now;
                 }
 
                 await Task.Delay(1000, token);
             }
+            
+            _logger.LogDebug("Periodic message sender stopped (cancelled: {Cancelled}, state: {State})", 
+                token.IsCancellationRequested, _clientWebSocket.State);
         }
         catch (OperationCanceledException)
         {
-            _logger.Debug("Send loop cancelled.");
+            _logger.LogDebug("Send loop cancelled");
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Error in SendPeriodicMessages");
+            _logger.LogError(ex, "Error in SendPeriodicMessages");
         }
     }
 
@@ -170,10 +192,14 @@ public class WatchRequest : IKickWatchManager
                 var buffer = new ArraySegment<byte>(bytes);
                 await _clientWebSocket.SendAsync(buffer, WebSocketMessageType.Text, true, token);
             }
+            else
+            {
+                _logger.LogWarning("Cannot send message, WebSocket state: {State}", _clientWebSocket.State);
+            }
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to send message: {Message}", message);
+            _logger.LogError(ex, "Failed to send WebSocket message");
             throw;
         }
     }
@@ -181,6 +207,7 @@ public class WatchRequest : IKickWatchManager
     private async Task ReceiveLoopAsync(CancellationToken token)
     {
         var buffer = new byte[16 * 1024];
+        _logger.LogDebug("Starting WebSocket receive loop");
 
         try
         {
@@ -195,8 +222,8 @@ public class WatchRequest : IKickWatchManager
 
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
-                        _logger.Information("Received close frame: {Status} - {Desc}", result.CloseStatus,
-                            result.CloseStatusDescription);
+                        _logger.LogInformation("Received close frame - Status: {Status}, Description: {Description}", 
+                            result.CloseStatus, result.CloseStatusDescription);
                         
                         if (_clientWebSocket.State == WebSocketState.Open || 
                             _clientWebSocket.State == WebSocketState.CloseReceived)
@@ -205,10 +232,11 @@ public class WatchRequest : IKickWatchManager
                             {
                                 await _clientWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, 
                                     "Acknowledging close", CancellationToken.None);
+                                _logger.LogDebug("Acknowledged close frame");
                             }
                             catch (Exception ex)
                             {
-                                _logger.Debug(ex, "Error while responding to close frame");
+                                _logger.LogDebug(ex, "Error while responding to close frame");
                             }
                         }
                         
@@ -225,40 +253,45 @@ public class WatchRequest : IKickWatchManager
                     using var sr = new StreamReader(ms, Encoding.UTF8);
                     var messageText = await sr.ReadToEndAsync();
 
-                    _logger.Debug("WebSocket received (text): {Message}", messageText);
+                    _logger.LogDebug("WebSocket received text message: {Message}", messageText);
 
                     try
                     {
                         using var doc = System.Text.Json.JsonDocument.Parse(messageText);
                         if (doc.RootElement.TryGetProperty("type", out var typeEl))
                         {
-                            _logger.Information("WS message type: {Type}", typeEl.GetString());
+                            var messageType = typeEl.GetString();
+                            _logger.LogDebug("Received WebSocket message type: {Type}", messageType);
                         }
                     }
-                    catch (System.Text.Json.JsonException)
+                    catch (System.Text.Json.JsonException ex)
                     {
+                        _logger.LogWarning(ex, "Failed to parse WebSocket message as JSON");
                     }
                 }
                 else if (result.MessageType == WebSocketMessageType.Binary)
                 {
                     var len = ms.Length;
-                    _logger.Debug("WebSocket received (binary) length: {Len} bytes", len);
+                    _logger.LogDebug("WebSocket received binary message, length: {Length} bytes", len);
                 }
             }
+            
+            _logger.LogDebug("Receive loop ended (cancelled: {Cancelled}, state: {State})", 
+                token.IsCancellationRequested, _clientWebSocket.State);
         }
         catch (OperationCanceledException)
         {
-            _logger.Debug("Receive loop cancelled.");
+            _logger.LogDebug("Receive loop cancelled");
         }
         catch (WebSocketException wsex)
         {
-            _logger.Error(wsex, "WebSocket exception in receive loop: {Message}", wsex.Message);
+            _logger.LogError(wsex, "WebSocket exception in receive loop - Code: {ErrorCode}", wsex.WebSocketErrorCode);
             // Trigger cleanup on WebSocket errors
             _ = Task.Run(() => Close());
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Unhandled exception in ReceiveLoopAsync");
+            _logger.LogError(ex, "Unhandled exception in ReceiveLoopAsync");
             // Trigger cleanup on any error
             _ = Task.Run(() => Close());
         }
@@ -266,23 +299,34 @@ public class WatchRequest : IKickWatchManager
 
     private async Task CleanupConnectionAsync()
     {
+        _logger.LogDebug("Starting connection cleanup");
+        
         try
         {
             // Cancel any ongoing operations
             if (_cancellationTokenSource != null && !_cancellationTokenSource.IsCancellationRequested)
             {
                 _cancellationTokenSource.Cancel();
+                _logger.LogDebug("Cancellation requested");
             }
 
             // Wait for tasks to complete
             if (_receivingTask != null && !_receivingTask.IsCompleted)
             {
-                await Task.WhenAny(_receivingTask, Task.Delay(2000));
+                var receiveCompleted = await Task.WhenAny(_receivingTask, Task.Delay(2000));
+                if (receiveCompleted != _receivingTask)
+                {
+                    _logger.LogWarning("Receiving task did not complete within timeout");
+                }
             }
 
             if (_sendingTask != null && !_sendingTask.IsCompleted)
             {
-                await Task.WhenAny(_sendingTask, Task.Delay(2000));
+                var sendCompleted = await Task.WhenAny(_sendingTask, Task.Delay(2000));
+                if (sendCompleted != _sendingTask)
+                {
+                    _logger.LogWarning("Sending task did not complete within timeout");
+                }
             }
 
             // Close WebSocket if needed
@@ -296,24 +340,30 @@ public class WatchRequest : IKickWatchManager
                     {
                         await _clientWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure,
                             "Closing connection", CancellationToken.None);
+                        _logger.LogDebug("WebSocket closed successfully");
                     }
                     catch (Exception ex)
                     {
-                        _logger.Debug(ex, "Error closing WebSocket");
+                        _logger.LogDebug(ex, "Error closing WebSocket");
                     }
                 }
 
                 _clientWebSocket.Dispose();
+                _logger.LogDebug("WebSocket disposed");
             }
+            
+            _logger.LogInformation("Connection cleanup completed");
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Error during cleanup");
+            _logger.LogError(ex, "Error during cleanup");
         }
     }
 
     public void Close()
     {
+        _logger.LogInformation("Closing WatchRequest");
+        
         _connectionLock.Wait();
         try
         {
@@ -325,6 +375,12 @@ public class WatchRequest : IKickWatchManager
             _cancellationTokenSource = new CancellationTokenSource();
             _receivingTask = null;
             _sendingTask = null;
+            
+            _logger.LogInformation("WatchRequest closed successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while closing WatchRequest");
         }
         finally
         {
@@ -334,6 +390,7 @@ public class WatchRequest : IKickWatchManager
 
     public void Dispose()
     {
+        _logger.LogDebug("Disposing WatchRequest");
         Close();
         _connectionLock?.Dispose();
     }

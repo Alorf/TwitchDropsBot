@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Serilog;
+using Microsoft.Extensions.Logging;
 using TwitchDropsBot.Core.Platform.Shared.Exceptions;
 using TwitchDropsBot.Core.Platform.Shared.Services;
 using TwitchDropsBot.Core.Platform.Shared.WatchManager;
@@ -15,7 +15,7 @@ namespace TwitchDropsBot.Core.Platform.Twitch.WatchManager;
 public class WatchRequest : ITwitchWatchManager
 {
     public TwitchUser BotUser { get; }
-    private ILogger logger;
+    private ILogger _logger;
     
     private string? streamUrl;
     private readonly TwitchGqlRepository twitchGraphQlClient;
@@ -26,7 +26,7 @@ public class WatchRequest : ITwitchWatchManager
     private static readonly TimeSpan SpadeUrlRefreshInterval = TimeSpan.FromMinutes(30);
     private static readonly object SpadeUrlLock = new();
     
-    public WatchRequest(TwitchUser user, bool enableOldSystem)
+    public WatchRequest(TwitchUser user, ILogger logger, bool enableOldSystem)
     {
         BotUser = user;
         twitchGraphQlClient = BotUser.TwitchRepository;
@@ -34,9 +34,7 @@ public class WatchRequest : ITwitchWatchManager
         lastRequestTime = DateTime.MinValue;
         streamUrl = null;
 
-        var baseLogger = AppService.GetLogger();
-        logger = baseLogger.ForContext("UserType", user.GetType().Name).ForContext("User", user.Login);
-
+        _logger = logger;
     }
 
     /*
@@ -149,14 +147,14 @@ public class WatchRequest : ITwitchWatchManager
         }
         catch (System.Exception ex)
         {
-            logger.Error(ex.Message);
+            _logger.LogError(ex.Message);
             throw;
         }
     }
 
     public async Task<DropCurrentSession?> FakeWatchAsync(User broadcaster, Game game, int tryCount = 1)
     {
-        logger.Debug("Watching 20 seconds to ensure drops are registered...");
+        _logger.LogDebug("Watching 20 seconds to ensure drops are registered...");
         
         for (int i = 0; i < tryCount; i++)
         {

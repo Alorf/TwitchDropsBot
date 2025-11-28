@@ -1,33 +1,53 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using TwitchDropsBot.Console.Platform;
 using TwitchDropsBot.Console.Utils;
-using TwitchDropsBot.Core;
-using TwitchDropsBot.Core.Platform.Kick.Bot;
-using TwitchDropsBot.Core.Platform.Kick.Repository;
-using TwitchDropsBot.Core.Platform.Kick.Services;
-using TwitchDropsBot.Core.Platform.Shared.Bots;
-using TwitchDropsBot.Core.Platform.Shared.Services;
-using TwitchDropsBot.Core.Platform.Twitch;
-using TwitchDropsBot.Core.Platform.Twitch.Bot;
+using TwitchDropsBot.Core.Platform.Kick.WatchManager;
+using TwitchDropsBot.Core.Platform.Shared.Factories.User;
+using TwitchDropsBot.Core.Platform.Shared.Helpers;
+using TwitchDropsBot.Core.Platform.Shared.Services.Extensions;
+using TwitchDropsBot.Core.Platform.Shared.Settings;
+using WatchRequest = TwitchDropsBot.Core.Platform.Kick.WatchManager.WatchRequest;
 
-var services = AppService.Init();
+var builder = new ConfigurationBuilder()
+    .AddJsonFile("appsettings.json", false, true)
+    .AddJsonFile("appsettings.Development.json", true, true);
 
-var serviceCollection = services.BuildServiceProvider();
+var configuration = builder.Build();
 
-var logger = serviceCollection.GetService<ILogger>();
-var config = AppSettingsService.Settings; 
+var configFilePath = ConfigPathHelper.GetConfigFilePath("config.json"); // bot dynamic config
 
-if (config is null)
-{
-    Console.WriteLine("Config is null");
-    return;
-}
-if (logger is null)
-{
-    Console.WriteLine("Logger is null");
-    return;
-}
+var botBuilder = new ConfigurationBuilder()
+    .AddJsonFile(configFilePath, optional: false, reloadOnChange: true);
+
+var botConfiguration = botBuilder.Build();
+
+var services = new ServiceCollection();
+
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(configuration)
+    .CreateLogger();
+
+services.AddLogging(loggingBuilder =>
+    loggingBuilder.ClearProviders()
+        .AddSerilog(Log.Logger, dispose: true));
+
+services.AddSingleton<IConfiguration>(configuration);
+services.AddBotService();
+services.AddTwitchService();
+services.AddKickService();
+
+var settingsManager = new SettingsManager(configFilePath);
+services.AddSingleton(settingsManager);
+
+await using var provider = services.BuildServiceProvider();
+
+var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+var logger = loggerFactory.CreateLogger("Main");
+
+var settings = settingsManager.Read();
 
 var addAccountEnv = Environment.GetEnvironmentVariable("ADD_ACCOUNT");
 var mustAddAccount = addAccountEnv is not null && addAccountEnv.ToLower() == "true";
@@ -36,7 +56,7 @@ if (mustAddAccount || args.Length > 0 && args[0] == "--add-account")
 {
     do
     {
-        logger.Information("Do you want to add another account? (Y/N)");
+        logger.LogInformation("Do you want to add another account? (Y/N)");
         try
         {
             var answer = UserInput.ReadInput(["y", "n"]);
@@ -48,10 +68,9 @@ if (mustAddAccount || args.Length > 0 && args[0] == "--add-account")
         }
         catch (Exception e)
         {
-            logger.Error(e, e.Message);
+            logger.LogError(e, e.Message);
             continue;
         }
-        
 
         var response = await StartAuth();
 
@@ -59,28 +78,28 @@ if (mustAddAccount || args.Length > 0 && args[0] == "--add-account")
         {
             break;
         }
-        
+
     } while (true);
 }
 
 async Task<int> StartAuth()
 {
-    logger.Information("Which platform");
-    logger.Information("1. Twitch");
-    logger.Information("2. Kick");
-    logger.Information("3. Exit");
+    logger.LogInformation("Which platform");
+    logger.LogInformation("1. Twitch");
+    logger.LogInformation("2. Kick");
+    logger.LogInformation("3. Exit");
     try
     {
         int answer = Int32.Parse(UserInput.ReadInput(["1", "2", "3"]));
-        
+
         switch (answer)
         {
             case 1:
-                await Twitch.AuthTwitchDeviceAsync();
+                await Twitch.AuthTwitchDeviceAsync(settingsManager, logger);
                 break;
             case 2:
-                SystemLoggerService.Logger.Information("Kick auth");
-                await Kick.AuthKickDeviceAsync(logger);
+                // SystemLoggerService.logger.LogInformation("Kick auth");
+                await Kick.AuthKickDeviceAsync(logger, settingsManager);
                 break;
             case 3:
                 return -1;
@@ -94,63 +113,34 @@ async Task<int> StartAuth()
     return 1;
 }
 
-while (config.KickSettings.KickUsers.Count == 0 && config.TwitchSettings.TwitchUsers.Count == 0)
+while (settings.KickSettings.KickUsers.Count == 0 && settings.TwitchSettings.TwitchUsers.Count == 0)
 {
-    logger.Information("No users found in the configuration file.");
-    logger.Information("Login process will start.");
+    logger.LogInformation("No users found in the configuration file.");
+    logger.LogInformation("Login process will start.");
 
     var response = await StartAuth();
-    
+
     if (response == -1)
     {
         break;
     }
 }
 
+var userFactory = provider.GetRequiredService<UserFactory>();
 var botTasks = new List<Task>();
-var twitchUsers = config.TwitchSettings.TwitchUsers;
-var twitchSettings = config.TwitchSettings;
+var twitchUsers = settings.TwitchSettings.TwitchUsers;
+var kickUsers = settings.KickSettings.KickUsers;
 
-if (twitchSettings is not null)
+foreach (var twitchUserSetting in twitchUsers.Where(u => u.Enabled))
 {
-    foreach (var twitchUserSetting in twitchUsers)
-    {
-        if (!twitchUserSetting.Enabled)
-        {
-            logger.Information($"User {twitchUserSetting.Login} is not enabled, skipping...");
-            continue;
-        }
-
-        var botUser = new TwitchUser(twitchUserSetting);
-        var twitchBot = botUser.CreateBot();
-        
-        botTasks.Add(BotRunner.StartBot(twitchBot));
-    }
+    var user = userFactory.CreateTwitchUser(twitchUserSetting);
+    botTasks.Add(user.StartBot());
 }
 
-var kickUsers = config.KickSettings.KickUsers;
-
-foreach (var kickUserSettings in kickUsers)
+foreach (var kickUserSettings in kickUsers.Where(u => u.Enabled))
 {
-    if (!kickUserSettings.Enabled)
-    {
-        logger.Information($"User {kickUserSettings.Login} is not enabled, skipping...");
-        continue;
-    }
-
-    if (string.IsNullOrEmpty(kickUserSettings.Login))
-    {
-        var(id, username) = await KickHttpRepository.GetUserInfo(kickUserSettings.BearerToken);
-        kickUserSettings.Id = id;
-        kickUserSettings.Login = username;
-        
-        AppSettingsService.SaveConfig();
-    }
-        
-    var kickUser = new KickUser(kickUserSettings);
-    var kickBot = kickUser.CreateBot();
-    
-    botTasks.Add(BotRunner.StartBot(kickBot));
+    var user = userFactory.CreateKickUser(kickUserSettings);
+    botTasks.Add(user.StartBot());
 }
 
 await Task.WhenAll(botTasks);

@@ -1,5 +1,5 @@
-﻿using PuppeteerSharp;
-using Serilog;
+﻿using Microsoft.Extensions.Logging;
+using PuppeteerSharp;
 using TwitchDropsBot.Core.Platform.Shared.Bots;
 using TwitchDropsBot.Core.Platform.Shared.Services;
 
@@ -13,14 +13,13 @@ public abstract class WatchBrowser<TUser, TGame, TBroadcaster> : IWatchManager<T
 
     protected bool _disposed = false;
     protected IPage? Page;
+    protected readonly BrowserService BrowserService;
 
-    protected WatchBrowser(TUser botUser)
+    protected WatchBrowser(TUser botUser, ILogger baseLogger, BrowserService browserService)
     {
         BotUser = botUser;
-
-        var appConfig = AppService.GetConfiguration();
-        var baseLogger = AppService.GetLogger();
         Logger = baseLogger;
+        BrowserService = browserService;
     }
 
     public abstract Task WatchStreamAsync(TBroadcaster broadcaster, TGame game);
@@ -36,7 +35,7 @@ public abstract class WatchBrowser<TUser, TGame, TBroadcaster> : IWatchManager<T
 
         if (Page != null)
         {
-            await BrowserService.Instance.RemoveUserAsync(BotUser);
+            await BrowserService.RemoveUserAsync(BotUser);
             Page = null;
         }
 

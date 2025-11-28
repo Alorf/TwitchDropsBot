@@ -2,8 +2,8 @@
 using GraphQL;
 using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.SystemTextJson;
-using Serilog;
-using TwitchDropsBot.Core.Platform.Shared.Bots;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using TwitchDropsBot.Core.Platform.Shared.Repository;
 using TwitchDropsBot.Core.Platform.Shared.Services;
 using TwitchDropsBot.Core.Platform.Shared.Settings;
@@ -26,15 +26,15 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
     private static readonly object _postmanLock = new object();
     private TwitchHttpService twitchHttpServiceGql;
     private readonly int requestLimit = 5;
-    private ILogger? _logger;
+    private ILogger _logger;
 
-    public TwitchGqlRepository(TwitchUser twitchUser, ILogger logger)
+    public TwitchGqlRepository(TwitchUser twitchUser, ILogger logger, IOptionsMonitor<BotSettings> botSettings)
     {
         BotUser = twitchUser;
 
         clientSessionId = GenerateClientSessionId("0123456789abcdef", 16);
 
-        config = AppSettingsService.Settings;
+        config = botSettings.CurrentValue;
         twitchHttpServiceGql = new TwitchHttpService(twitchUser);
 
         _logger = logger; 
@@ -119,7 +119,7 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
 
             if (dropCampaign.Id != dropId)
             {
-                _logger.Error("The drop ID does not match the drop campaign ID.");
+                _logger.LogError("The drop ID does not match the drop campaign ID.");
             }
 
             dropCampaign.TimeBasedDrops.RemoveAll(drop => drop.RequiredSubs != 0);
@@ -406,10 +406,10 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
         }
         catch (System.Exception e)
         {
-            _logger?.Error(e, $"Failed to check emotes");
+            _logger?.LogError(e, $"Failed to check emotes");
             foreach (var emoteName in emoteNames)
             {
-                _logger.Error($"{emoteName}");
+                _logger.LogError($"{emoteName}");
             }
             return false;
         }
@@ -431,10 +431,10 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
 
                 if (graphQLResponse.Errors != null)
                 {
-                    _logger.Debug($"Failed to execute the query {name}");
+                    _logger.LogDebug($"Failed to execute the query {name}");
                     foreach (var error in graphQLResponse.Errors)
                     {
-                        _logger.Debug(error.Message);
+                        _logger.LogDebug(error.Message);
                     }
 
                     throw new System.Exception();
@@ -449,8 +449,8 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
                     var json = JsonSerializer.Serialize(graphQLResponse.Data, options);
                     if (config.LogLevel > 0)
                     {
-                        _logger.Debug(name, "REQ", ConsoleColor.Blue);
-                        _logger.Debug(json, "REQ", ConsoleColor.Blue);
+                        _logger.LogDebug(name, "REQ", ConsoleColor.Blue);
+                        _logger.LogDebug(json, "REQ", ConsoleColor.Blue);
                     }
                 }
 
@@ -464,7 +464,7 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
                     throw new System.Exception($"Failed to execute the query {name} (attempt {i + 1}/{requestLimit}).");
                 }
                 
-                _logger.Error(e, $"Failed to execute the query {name} (attempt {i + 1}/{requestLimit}).");
+                _logger.LogError(e, $"Failed to execute the query {name} (attempt {i + 1}/{requestLimit}).");
                 
                 await Task.Delay(TimeSpan.FromSeconds(5));
             }
@@ -506,8 +506,8 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
 
                 if (config.LogLevel > 0)
                 {
-                    _logger.Debug(name, "REQ", ConsoleColor.Blue);
-                    _logger.Debug(responseContent, "REQ", ConsoleColor.Blue);
+                    _logger.LogDebug(name, "REQ", ConsoleColor.Blue);
+                    _logger.LogDebug(responseContent, "REQ", ConsoleColor.Blue);
                 }
 
                 return responseArray;
@@ -519,9 +519,9 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
                     throw new System.Exception($"Failed to execute the query {name} (attempt {i + 1}/{requestLimit}).");
                 }
 
-                _logger.Error($"Failed to execute the query {name} (attempt {i + 1}/{requestLimit}).");
-                SystemLoggerService.Logger.Error(
-                    $"[{BotUser.Login}] Failed to execute the query {name} (attempt {i + 1}/{requestLimit}).");
+                _logger.LogError($"Failed to execute the query {name} (attempt {i + 1}/{requestLimit}).");
+                // SystemLoggerService.Logger.LogError(
+                //     $"[{BotUser.Login}] Failed to execute the query {name} (attempt {i + 1}/{requestLimit}).");
 
                 await Task.Delay(TimeSpan.FromSeconds(5));
             }

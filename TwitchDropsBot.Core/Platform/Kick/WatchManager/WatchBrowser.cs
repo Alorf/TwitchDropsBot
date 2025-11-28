@@ -1,4 +1,5 @@
-﻿using PuppeteerSharp;
+﻿using Microsoft.Extensions.Logging;
+using PuppeteerSharp;
 using TwitchDropsBot.Core.Platform.Kick.Bot;
 using TwitchDropsBot.Core.Platform.Kick.Models;
 using TwitchDropsBot.Core.Platform.Shared.Exceptions;
@@ -9,7 +10,7 @@ namespace TwitchDropsBot.Core.Platform.Kick.WatchManager;
 
 public class WatchBrowser : WatchBrowser<KickUser, Category, Channel>, IKickWatchManager
 {
-    public WatchBrowser(KickUser user) : base(user)
+    public WatchBrowser(KickUser user, ILogger logger, BrowserService browserService) : base(user, logger, browserService)
     {
     }
 
@@ -31,7 +32,7 @@ public class WatchBrowser : WatchBrowser<KickUser, Category, Channel>, IKickWatc
 
         if (Page != null) return;
 
-        Page = await BrowserService.Instance.AddUserAsync(BotUser);
+        Page = await BrowserService.AddUserAsync(BotUser);
 
         await Page.GoToAsync("https://www.kick.com/");
 

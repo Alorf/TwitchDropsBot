@@ -1,7 +1,9 @@
-﻿using Serilog;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using TwitchDropsBot.Core.Platform.Shared.Bots;
 using TwitchDropsBot.Core.Platform.Shared.Exceptions;
 using TwitchDropsBot.Core.Platform.Shared.Services;
+using TwitchDropsBot.Core.Platform.Shared.Settings;
 using TwitchDropsBot.Core.Platform.Twitch.Models;
 using TwitchDropsBot.Core.Platform.Twitch.Models.Abstractions;
 using TwitchDropsBot.Core.Platform.Twitch.Models.Extensions;
@@ -15,21 +17,27 @@ public class TwitchBot : BaseBot<TwitchUser>
     private readonly TwitchSettings twitchSettings;
     private List<CompletedRewardCampaigns> claimedReward;
     private List<AbstractCampaign> finishedCampaigns;
+    private IOptionsMonitor<BotSettings> _botSettings;
 
-    public TwitchBot(TwitchUser user, ILogger logger) : base(user, logger)
+    public TwitchBot(
+        TwitchUser user,
+        ILogger logger,
+        NotificationService notificationService,
+        IOptionsMonitor<BotSettings> botSettings
+        ) : base(user, logger, notificationService, botSettings)
     {
-        twitchSettings = AppSettingsService.Settings.TwitchSettings;
+        twitchSettings = botSettings.CurrentValue.TwitchSettings;
         claimedReward = new List<CompletedRewardCampaigns>();
         finishedCampaigns = new List<AbstractCampaign>();
 
-        user.UISink = AppService.GetUISink();
+        _botSettings = botSettings;
     }
 
-    public override async Task StartAsync()
+    protected override async Task StartAsync()
     {
         BotUser.FavouriteGames = BotUser.FavouriteGames.Count > 0
             ? BotUser.FavouriteGames
-            : AppSettingsService.Settings.FavouriteGames;
+            : _botSettings.CurrentValue.FavouriteGames;
         BotUser.OnlyFavouriteGames = twitchSettings.OnlyFavouriteGames;
         BotUser.OnlyConnectedAccounts = twitchSettings.OnlyConnectedAccounts;
 
@@ -40,7 +48,7 @@ public class TwitchBot : BaseBot<TwitchUser>
         
         finishedCampaigns.RemoveAll( campaign => campaign.EndAt.Value.ToLocalTime().AddHours(1) < now);
         
-        Logger.Information($"Removing {finishedCampaigns.Count} finished campaigns...");
+        Logger.LogInformation($"Removing {finishedCampaigns.Count} finished campaigns...");
         thingsToWatch.RemoveAll(campaign => finishedCampaigns.Any(finished => finished.Id == campaign.Id));
 
 
@@ -97,7 +105,7 @@ public class TwitchBot : BaseBot<TwitchUser>
 
             if (campaign is null)
             {
-                Logger.Information("No campaign found.");
+                Logger.LogInformation("No campaign found.");
                 if (thingsToWatch.Count == 1)
                 {
                     throw new NoBroadcasterOrNoCampaignLeft();
@@ -108,7 +116,7 @@ public class TwitchBot : BaseBot<TwitchUser>
 
             if (broadcaster is null)
             {
-                Logger.Information("No broadcaster found for this campaign.");
+                Logger.LogInformation("No broadcaster found for this campaign.");
                 thingsToWatch.Remove(campaign);
                 continue;
             }
@@ -123,26 +131,26 @@ public class TwitchBot : BaseBot<TwitchUser>
 
             if (dropCurrentSession.CurrentMinutesWatched > dropCurrentSession.RequiredMinutesWatched)
             {
-                Logger.Information("CurrentMinutesWatched > requiredMinutesWatched, skipping");
+                Logger.LogInformation("CurrentMinutesWatched > requiredMinutesWatched, skipping");
                 thingsToWatch.Remove(campaign);
                 continue;
             }
 
             if (string.IsNullOrEmpty(dropCurrentSession.DropId))
             {
-                Logger.Information("DropId is null or empty, skipping");
+                Logger.LogInformation("DropId is null or empty, skipping");
                 thingsToWatch.Remove(campaign);
                 continue;
             }
 
             if (dropCurrentSession.Channel.Id != broadcaster.Id)
             {
-                Logger.Information(
+                Logger.LogInformation(
                     $"DropCurrentSession found but not the right channel ({dropCurrentSession.Channel.Name} instead of {broadcaster.Login}), changing...");
                 dropCurrentSession = await BotUser.TwitchRepository.FetchCurrentSessionContextAsync(broadcaster);
                 if (dropCurrentSession is null)
                 {
-                    Logger.Information("Can't fetch new current drop session");
+                    Logger.LogInformation("Can't fetch new current drop session");
                     thingsToWatch.Remove(campaign);
                     continue;
                 }
@@ -152,12 +160,12 @@ public class TwitchBot : BaseBot<TwitchUser>
 
             if (timeBasedDrop is null)
             {
-                Logger.Information("Time based drop not found, skipping");
+                Logger.LogInformation("Time based drop not found, skipping");
                 thingsToWatch.Remove(campaign);
                 continue;
             }
 
-            Logger.Information($"Time based drops : {timeBasedDrop.Name}");
+            Logger.LogInformation($"Time based drops : {timeBasedDrop.Name}");
         } while (timeBasedDrop is null || dropCurrentSession is null || broadcaster is null || campaign is null);
 
 
@@ -167,7 +175,7 @@ public class TwitchBot : BaseBot<TwitchUser>
         BotUser.CurrentDropCurrentSession = dropCurrentSession;
 
         BotUser.Status = BotStatus.Watching;
-        Logger.Information(
+        Logger.LogInformation(
             $"Current drop campaign: {campaign.Name} ({campaign.Game?.DisplayName}), watching {broadcaster.Login} | {broadcaster.Id}");
         await WatchStreamAsync(broadcaster, dropCurrentSession, campaign);
 
@@ -180,12 +188,12 @@ public class TwitchBot : BaseBot<TwitchUser>
                 //Search for the first action with the type "click"
                 var action = edge.Node.Actions.FirstOrDefault(x => x.Type == "click");
 
-                await NotificationServices.SendNotification(BotUser, edge.Node.Body, edge.Node.ThumbnailUrl,
+                await NotificationService.SendNotification(BotUser, edge.Node.Body, edge.Node.ThumbnailUrl,
                     new Uri(action.Url));
             }
         }
 
-        Logger.Debug("Loop ended");
+        Logger.LogDebug("Loop ended");
     }
 
     private async Task<DropCurrentSession?> CheckDropCurrentSession(User broadcaster,
@@ -195,7 +203,7 @@ public class TwitchBot : BaseBot<TwitchUser>
 
         if (dropCurrentSession is null)
         {
-            Logger.Information("No drop current session found, skipping");
+            Logger.LogInformation("No drop current session found, skipping");
             return null;
         }
 
@@ -229,7 +237,7 @@ public class TwitchBot : BaseBot<TwitchUser>
             }
             catch (System.Exception ex)
             {
-                Logger.Error(ex, ex.Message);
+                Logger.LogError(ex, ex.Message);
                 BotUser.WatchManager.Close();
                 throw new StreamOffline();
             }
@@ -241,7 +249,7 @@ public class TwitchBot : BaseBot<TwitchUser>
 
                 if (newDropCurrentSession is null)
                 {
-                    Logger.Information("Can't fetch new current drop session");
+                    Logger.LogInformation("Can't fetch new current drop session");
                 }
                 else
                 {
@@ -252,7 +260,7 @@ public class TwitchBot : BaseBot<TwitchUser>
             }
             catch (System.Exception ex)
             {
-                Logger.Error(ex, ex.Message);
+                Logger.LogError(ex, ex.Message);
             }
 
             minuteWatched = dropCurrentSession.CurrentMinutesWatched;
@@ -277,7 +285,7 @@ public class TwitchBot : BaseBot<TwitchUser>
 
                 if (newDropCurrentSession is null)
                 {
-                    Logger.Information("Can't fetch new current drop session after being stuck");
+                    Logger.LogInformation("Can't fetch new current drop session after being stuck");
                 }
                 else
                 {
@@ -292,7 +300,7 @@ public class TwitchBot : BaseBot<TwitchUser>
                     break;
                 }
 
-                Logger.Information("No drop current session found");
+                Logger.LogInformation("No drop current session found");
                 //Check if the stream still alive
 
                 var broadcasterData = BotUser.TwitchRepository.FetchStreamInformationAsync(broadcaster.Login);
@@ -314,7 +322,7 @@ public class TwitchBot : BaseBot<TwitchUser>
 
             previousMinuteWatched = minuteWatched;
 
-            Logger.Information(
+            Logger.LogInformation(
                 $"Waiting 20 seconds... {minuteWatched}/{requiredMinutesToWatch} minutes watched.");
 
             await Task.Delay(TimeSpan.FromSeconds(20));
@@ -337,15 +345,15 @@ public class TwitchBot : BaseBot<TwitchUser>
         {
             if (campaign.Game is null)
             {
-                Logger.Information($"Skipping campaign {campaign.Name} because game is null.");
+                Logger.LogInformation("Skipping campaign {campaign.Name} because game is null.", campaign.Name);
                 continue;
             }
 
-            Logger.Information($"Checking {campaign.Game.DisplayName} ({campaign.Name})...");
+            Logger.LogInformation("Checking {campaignGameDisplayName} ({campaignName})...", campaign.Game.DisplayName, campaign.Name);
 
             if (finishedCampaigns.Contains(campaign))
             {
-                Logger.Information($"Campaign {campaign.Name} already completed from local list, skipping");
+                Logger.LogInformation("Campaign {campaign.Name} already completed from local list, skipping", campaign.Name);
                 campaigns.Remove(campaign);
                 continue;
             }
@@ -357,7 +365,7 @@ public class TwitchBot : BaseBot<TwitchUser>
 
             if (campaign.TimeBasedDrops.Count == 0)
             {
-                Logger.Information($"No time based drops available for this campaign ({campaign.Name}), skipping");
+                Logger.LogInformation("No time based drops available for this campaign ({campaign.Name}), skipping", campaign.Name);
                 finishedCampaigns.Add(campaign);
                 campaigns.Remove(campaign);
                 continue;
@@ -368,7 +376,7 @@ public class TwitchBot : BaseBot<TwitchUser>
                 var isCompleted = campaign.IsCompleted(inventory, BotUser.TwitchRepository);
                 if (isCompleted)
                 {
-                    Logger.Information($"Campaign {campaign.Name} already completed, skipping");
+                    Logger.LogInformation("Campaign {campaign.Name} already completed, skipping", campaign.Name);
                     finishedCampaigns.Add(campaign);
                     campaigns.Remove(campaign);
                     continue;
@@ -376,15 +384,15 @@ public class TwitchBot : BaseBot<TwitchUser>
             }
             catch (System.Exception e)
             {
-                Logger.Error(e, e.Message);
+                Logger.LogError(e, e.Message);
             }
 
             if (campaign is DropCampaign dropCampaign)
             {
                 if (!dropCampaign.TimeBasedDrops.Any())
                 {
-                    Logger.Information(
-                        $"No time based drops found for this campaign ({dropCampaign.Name}), skipping.");
+                    Logger.LogInformation(
+                        "No time based drops found for this campaign ({dropCampaign.Name}), skipping.", dropCampaign.Name);
                     campaigns.Remove(campaign);
                     continue;
                 }
@@ -415,22 +423,22 @@ public class TwitchBot : BaseBot<TwitchUser>
                     {
                         if (channelGroup == channelGroups.Last())
                         {
-                            if (AppSettingsService.Settings.TwitchSettings.ForceTryWithTags)
+                            if (_botSettings.CurrentValue.TwitchSettings.ForceTryWithTags)
                             {
-                                Logger.Information(
+                                Logger.LogInformation(
                                     "No live broadcaster found in this group of channels. Forcing with stream tags");
                             }
                             else
                             {
-                                Logger.Information(
-                                    $"No live broadcaster found in this group of channels. ({channelGroups.IndexOf(channelGroup) + 1}/{channelGroups.Count})");
+                                Logger.LogInformation(
+                                    "No live broadcaster found in this group of channels. ({currentGroup}/{channelGroups.Count})", (channelGroups.IndexOf(channelGroup) + 1), channelGroups.Count);
                                 return (campaign, tempBroadcaster);
                             }
                         }
                         else
                         {
-                            Logger.Information(
-                                $"No live broadcaster found in this group of channels. trying next group... ({channelGroups.IndexOf(channelGroup) + 1}/{channelGroups.Count})");
+                            Logger.LogInformation(
+                                "No live broadcaster found in this group of channels. trying next group... ({currentGroup}/{channelGroups.Count})", (channelGroups.IndexOf(channelGroup) + 1), channelGroups.Count);
                             await Task.Delay(TimeSpan.FromSeconds(2));
                         }
 
@@ -448,7 +456,7 @@ public class TwitchBot : BaseBot<TwitchUser>
 
             if (game is null)
             {
-                Logger.Information($"No game found for slug {campaign.Game.Slug}.");
+                Logger.LogInformation("No game found for slug {campaign.Game.Slug}.", campaign.Game.Slug);
                 continue;
             }
 
@@ -480,7 +488,7 @@ public class TwitchBot : BaseBot<TwitchUser>
             {
                 if (timeBasedDrop.Self is null)
                 {
-                    Logger.Error($"Self in TimeBasedDrop is null for {dropCampaignInProgress.Name}");
+                    Logger.LogError("Self in TimeBasedDrop is null for {dropCampaignInProgress.Name}", dropCampaignInProgress.Name);
                     return;
                 }
 
@@ -489,8 +497,11 @@ public class TwitchBot : BaseBot<TwitchUser>
                     await BotUser.TwitchRepository.ClaimDropAsync(timeBasedDrop.Self.DropInstanceID);
                     if (dropCampaignInProgress.Game?.Name != null && timeBasedDrop.Name is not null)
                     {
-                        await NotificationServices.SendNotification(BotUser, dropCampaignInProgress.Game.Name,
-                            timeBasedDrop.Name, timeBasedDrop.GetImage());
+                        foreach (var benefitEdge in timeBasedDrop.BenefitEdges)
+                        {
+                            await NotificationService.SendNotification(BotUser, dropCampaignInProgress.Game.Name,
+                                benefitEdge.Benefit.Name, timeBasedDrop.GetImage());
+                        }
                     }
 
                     await Task.Delay(TimeSpan.FromSeconds(20));
@@ -512,7 +523,7 @@ public class TwitchBot : BaseBot<TwitchUser>
             {
                 var rewardCampaignCode = await BotUser.TwitchRepository.RewardCodeModal(rewardCampaign.Id, reward.Id);
                 var message = $"```{rewardCampaignCode.Value}``` has been rewarded for {reward.Name}`\n Claim before <t:{((DateTimeOffset) reward.EarnableUntil).ToUnixTimeSeconds()}>";
-                await NotificationServices.SendNotification(BotUser, message, reward.ThumbnailImage.Image1xURL, new Uri(rewardCampaign.ExternalURL));
+                await NotificationService.SendNotification(BotUser, message, reward.ThumbnailImage.Image1xURL, new Uri(rewardCampaign.ExternalURL));
                 await Task.Delay(TimeSpan.FromSeconds(5));   
             }
         }

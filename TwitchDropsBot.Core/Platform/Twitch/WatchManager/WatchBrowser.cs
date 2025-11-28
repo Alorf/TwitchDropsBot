@@ -23,9 +23,17 @@ public class WatchBrowser : WatchBrowser<TwitchUser, Game, User>, ITwitchWatchMa
             
             if (tempBroadcaster != null)
             {
-                if (tempBroadcaster.Stream == null || tempBroadcaster.BroadcastSettings?.Game?.Id != game.Id)
+                if (tempBroadcaster.Stream == null)
                 {
                     throw new StreamOffline();
+                }
+                
+                if (game.DisplayName != "Special Events")
+                {
+                    if (tempBroadcaster?.BroadcastSettings?.Game?.Id != game.Id)
+                    {
+                        throw new StreamOffline("Wrong game");
+                    }   
                 }
             }
         }

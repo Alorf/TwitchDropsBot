@@ -53,18 +53,18 @@ public class UserFactory
         if (addSink)
         {
             UISink sink = new UISink();    
-            var loggersink = CreateLogger("twitch", settings, sink);
+            var loggersink = CreateLogger(typeof(TwitchUser).Name, settings, sink);
             return ActivatorUtilities.CreateInstance<TwitchUser>(_serviceProvider, settings, loggersink, sink);
 
         }
 
-        var logger = CreateLogger("twitch", settings);
+        var logger = CreateLogger(typeof(TwitchUser).Name, settings);
         return ActivatorUtilities.CreateInstance<TwitchUser>(_serviceProvider, settings, logger);
     }
 
     public KickUser CreateKickUser(KickUserSettings settings)
     {
-        var logger = CreateLogger("kick", settings);
+        var logger = CreateLogger(typeof(KickUser).Name, settings);
         return ActivatorUtilities.CreateInstance<KickUser>(_serviceProvider, settings, logger);
     }
 }

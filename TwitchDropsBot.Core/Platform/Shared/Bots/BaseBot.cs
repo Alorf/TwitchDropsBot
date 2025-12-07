@@ -10,17 +10,19 @@ namespace TwitchDropsBot.Core.Platform.Shared.Bots;
 public abstract class BaseBot<TUser> where TUser : BotUser
 {
     public TUser BotUser;
-    public BotSettings BotSettings;
+    public IOptionsMonitor<BotSettings> BotSettings;
     protected ILogger Logger;
     protected readonly NotificationService NotificationService;
 
     public BaseBot(TUser user, ILogger logger, NotificationService notificationService, IOptionsMonitor<BotSettings> botSettings)
     {
         BotUser = user;
-        BotSettings = botSettings.CurrentValue;
+        BotSettings = botSettings;
         Logger = logger;
         NotificationService = notificationService;
     }
+
+    public abstract List<String> GetUserFavoriteGames();
     
     protected Task Notify(string title, string message, string? image = null)
         => NotificationService.SendNotification(BotUser, title, message, image != null ? new Uri(image) : null!);
@@ -30,7 +32,7 @@ public abstract class BaseBot<TUser> where TUser : BotUser
 
     public async Task StartBot()
     {
-        TimeSpan waitingTime = TimeSpan.FromSeconds(BotSettings.waitingSeconds);
+        TimeSpan waitingTime = TimeSpan.FromSeconds(BotSettings.CurrentValue.WaitingSeconds);
         
         while(true)
         {
@@ -42,20 +44,20 @@ public abstract class BaseBot<TUser> where TUser : BotUser
             catch (NoBroadcasterOrNoCampaignLeft ex)
             {
                 Logger.LogDebug(ex.Message);
-                Logger.LogDebug($"Waiting {BotSettings.waitingSeconds} seconds before trying again.");
-                waitingTime = TimeSpan.FromSeconds(BotSettings.waitingSeconds);
+                Logger.LogDebug($"Waiting {BotSettings.CurrentValue.WaitingSeconds} seconds before trying again.");
+                waitingTime = TimeSpan.FromSeconds(BotSettings.CurrentValue.WaitingSeconds);
             }
             catch (StreamOffline ex)
             {
                 Logger.LogDebug(ex.Message);
-                Logger.LogDebug($"Waiting {BotSettings.waitingSeconds} seconds before trying again.");
-                waitingTime = TimeSpan.FromSeconds(BotSettings.waitingSeconds);
+                Logger.LogDebug($"Waiting {BotSettings.CurrentValue.WaitingSeconds} seconds before trying again.");
+                waitingTime = TimeSpan.FromSeconds(BotSettings.CurrentValue.WaitingSeconds);
             }
             catch (CurrentDropSessionChanged ex)
             {
                 Logger.LogDebug(ex.Message);
-                Logger.LogDebug($"Waiting {BotSettings.waitingSeconds} seconds before trying again.");
-                waitingTime = TimeSpan.FromSeconds(BotSettings.waitingSeconds);
+                Logger.LogDebug($"Waiting {BotSettings.CurrentValue.WaitingSeconds} seconds before trying again.");
+                waitingTime = TimeSpan.FromSeconds(BotSettings.CurrentValue.WaitingSeconds);
             }
             catch (OperationCanceledException ex)
             {
@@ -66,7 +68,7 @@ public abstract class BaseBot<TUser> where TUser : BotUser
             {
                 Logger.LogError(ex, ex.Message);
         
-                if (!string.IsNullOrEmpty(BotSettings.WebhookURL))
+                if (!string.IsNullOrEmpty(BotSettings.CurrentValue.WebhookURL))
                 {
                     await BotUser.SendWebhookAsync(new List<Embed>
                     {
@@ -78,7 +80,7 @@ public abstract class BaseBot<TUser> where TUser : BotUser
                     });
                 }
         
-                waitingTime = TimeSpan.FromSeconds(BotSettings.waitingSeconds);
+                waitingTime = TimeSpan.FromSeconds(BotSettings.CurrentValue.WaitingSeconds);
             }
         
             BotUser.Close();

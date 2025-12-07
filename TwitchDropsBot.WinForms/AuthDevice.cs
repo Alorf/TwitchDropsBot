@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using TwitchDropsBot.Core;
 
 using TwitchDropsBot.Core.Platform.Shared.Services;
@@ -12,11 +14,15 @@ namespace TwitchDropsBot.WinForms
     {
         private string? code;
         private CancellationTokenSource? cts;
-        private BotSettings config;
+        private IOptionsMonitor<BotSettings> config;
+        private ILogger _logger;
+        private SettingsManager _settingsManager;
 
-        public AuthDevice()
+        public AuthDevice(IOptionsMonitor<BotSettings> botSettings, ILogger logger, SettingsManager settingsManager)
         {
-            config = AppSettingsService.Settings;
+            config = botSettings;
+            _logger = logger;
+            _settingsManager = settingsManager;
             this.Load += new EventHandler(AuthDevice_Load);
             this.Disposed += new EventHandler(AuthDevice_Disposed);
             InitializeComponent();
@@ -48,7 +54,7 @@ namespace TwitchDropsBot.WinForms
             }
             catch (OperationCanceledException)
             {
-                SystemLoggerService.Logger.Information("Operation Cancelled");
+                _logger.LogInformation("Operation Cancelled");
             }
         }
 
@@ -88,7 +94,7 @@ namespace TwitchDropsBot.WinForms
                 });
 
                 CheckCancellation();
-                jsonResponse = await TwitchAuthService.CodeConfirmationAsync(deviceCode, token);
+                jsonResponse = await TwitchAuthService.CodeConfirmationAsync(deviceCode, _logger, token);
                 CheckCancellation();
 
                 if (jsonResponse == null)
@@ -104,11 +110,12 @@ namespace TwitchDropsBot.WinForms
                 var user = await TwitchAuthService.ClientSecretUserAsync(secret);
                 CheckCancellation();
 
-                // Save the user into config.json
-                config.TwitchSettings.TwitchUsers.RemoveAll(x => x.Id == user.Id);
-                config.TwitchSettings.TwitchUsers.Add(user);
-
-                AppSettingsService.SaveConfig();
+                // Save the user into config.CurrentValue.json
+                var newConfig = _settingsManager.Read();
+                newConfig.TwitchSettings.TwitchUsers.RemoveAll(x => x.Id == user.Id);
+                newConfig.TwitchSettings.TwitchUsers.Add(user);
+                
+                _settingsManager.Save(newConfig);
 
                 this.Invoke((MethodInvoker)delegate
                 {
@@ -120,7 +127,7 @@ namespace TwitchDropsBot.WinForms
             }
             catch (OperationCanceledException ex)
             {
-                SystemLoggerService.Logger.Information(ex.Message);
+                _logger.LogInformation(ex.Message);
             }
             catch (Exception ex)
             {

@@ -37,7 +37,7 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
         config = botSettings.CurrentValue;
         twitchHttpServiceGql = new TwitchHttpService(twitchUser);
 
-        _logger = logger; 
+        _logger = logger;
 
         graphQLClient =
             new GraphQLHttpClient("https://gql.twitch.tv/gql", new SystemTextJsonSerializer(),
@@ -92,7 +92,7 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
             campaigns.AddRange(dropCampaigns);
 
             rewardCampaigns = rewardCampaigns.OrderBy(x => x.UnlockRequirements.MinuteWatchedGoal).ToList();
-            
+
             campaigns.AddRange(rewardCampaigns);
 
             return campaigns;
@@ -241,7 +241,8 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
                     PropertyNameCaseInsensitive = true
                 };
 
-                var user = JsonSerializer.Deserialize<User>(item.GetProperty("data").GetProperty("user").GetRawText(), options);
+                var user = JsonSerializer.Deserialize<User>(item.GetProperty("data").GetProperty("user").GetRawText(),
+                    options);
                 if (user != null)
                 {
                     users.Add(user);
@@ -355,14 +356,14 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
             variables["rewardCampaignID"] = campaignId;
             variables["rewardID"] = rewardId;
         }
-        
+
         dynamic? resp = await DoGQLRequestAsync(query);
 
         RewardCampaignCode rewardCampaignCode = resp.Data.CurrentUser.Inventory.RewardValue;
 
         return rewardCampaignCode;
     }
-    
+
     public async Task<bool> HaveEmote(List<string> emoteNames)
     {
         var query = CreateQuery("AvailableEmotesForChannelPaginated");
@@ -411,6 +412,7 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
             {
                 _logger.LogError($"{emoteName}");
             }
+
             return false;
         }
     }
@@ -440,18 +442,16 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
                     throw new System.Exception();
                 }
 
-                if (!avoidPrint.Contains(name))
+
+                var options = new JsonSerializerOptions
                 {
-                    var options = new JsonSerializerOptions
-                    {
-                        WriteIndented = false
-                    };
-                    var json = JsonSerializer.Serialize(graphQLResponse.Data, options);
-                    if (config.LogLevel > 0)
-                    {
-                        _logger.LogDebug(name, "REQ", ConsoleColor.Blue);
-                        _logger.LogDebug(json, "REQ", ConsoleColor.Blue);
-                    }
+                    WriteIndented = false
+                };
+                var json = JsonSerializer.Serialize(graphQLResponse.Data, options);
+                if (config.LogLevel > 0)
+                {
+                    _logger.LogDebug(name, "REQ", ConsoleColor.Blue);
+                    _logger.LogDebug(json, "REQ", ConsoleColor.Blue);
                 }
 
 
@@ -463,9 +463,9 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
                 {
                     throw new System.Exception($"Failed to execute the query {name} (attempt {i + 1}/{requestLimit}).");
                 }
-                
+
                 _logger.LogError(e, $"Failed to execute the query {name} (attempt {i + 1}/{requestLimit}).");
-                
+
                 await Task.Delay(TimeSpan.FromSeconds(5));
             }
         }

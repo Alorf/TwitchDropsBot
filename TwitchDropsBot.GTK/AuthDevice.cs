@@ -4,6 +4,8 @@ using System;
 using UI = Gtk.Builder.ObjectAttribute;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using TwitchDropsBot.Core;
 using TwitchDropsBot.Core.Platform.Shared.Services;
 using TwitchDropsBot.Core.Platform.Shared.Settings;
@@ -23,10 +25,14 @@ namespace TwitchDropsBot.GTK
         private string? code;
         private CancellationTokenSource? cts;
         private BotSettings config;
+        private SettingsManager _manager;
+        private ILogger _logger;
 
-        public AuthDevice() : this(new Builder("MainWindow.glade"))
+        public AuthDevice(SettingsManager manager, IOptionsMonitor<BotSettings> botSettings, ILogger logger) : this(new Builder("MainWindow.glade"))
         {
-            config = AppSettingsService.Settings;
+            config = botSettings.CurrentValue;
+            _manager = manager;
+            _logger = logger;
         }
 
         private AuthDevice(Builder builder) : base(builder.GetRawOwnedObject("AuthDeviceDialog"))
@@ -60,7 +66,7 @@ namespace TwitchDropsBot.GTK
             }
             catch (OperationCanceledException)
             {
-                SystemLoggerService.Logger.Information("Operation Cancelled");
+                _logger.LogInformation("Operation Cancelled");
             }
         }
 
@@ -92,7 +98,7 @@ namespace TwitchDropsBot.GTK
                 });
 
                 CheckCancellation();
-                jsonResponse = await TwitchAuthService.CodeConfirmationAsync(deviceCode, token);
+                jsonResponse = await TwitchAuthService.CodeConfirmationAsync(deviceCode, _logger, token);
                 CheckCancellation();
 
                 if (jsonResponse == null)
@@ -107,11 +113,13 @@ namespace TwitchDropsBot.GTK
                 TwitchUserSettings user = await TwitchAuthService.ClientSecretUserAsync(secret);
                 CheckCancellation();
 
+                var newConfig = _manager.Read();
+                
                 // Save the user into config.json
-                config.TwitchSettings.TwitchUsers.RemoveAll(x => x.Id == user.Id);
-                config.TwitchSettings.TwitchUsers.Add(user);
-
-                AppSettingsService.SaveConfig();
+                newConfig.TwitchSettings.TwitchUsers.RemoveAll(x => x.Id == user.Id);
+                newConfig.TwitchSettings.TwitchUsers.Add(user);
+                
+                _manager.Save(newConfig);
 
                 Application.Invoke(delegate
                 {
@@ -123,7 +131,7 @@ namespace TwitchDropsBot.GTK
             }
             catch (OperationCanceledException ex)
             {
-                SystemLoggerService.Logger.Information(ex.Message);
+                _logger.LogInformation(ex.Message);
             }
             catch (Exception ex)
             {

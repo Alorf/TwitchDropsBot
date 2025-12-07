@@ -14,10 +14,24 @@ namespace TwitchDropsBot.Core.Platform.Twitch.Bot;
 
 public class TwitchBot : BaseBot<TwitchUser>
 {
-    private readonly TwitchSettings twitchSettings;
+    // Only way for now to get refresh settings for each run
+    private TwitchSettings TwitchSettings
+    {
+        get
+        {
+            if (_botSettings is null)
+            {
+                throw new Exception("BotSettings is null");
+            }
+            
+            return _botSettings.CurrentValue.TwitchSettings;
+        }
+    }
+
     private List<CompletedRewardCampaigns> claimedReward;
     private List<AbstractCampaign> finishedCampaigns;
     private IOptionsMonitor<BotSettings> _botSettings;
+    private List<string> _gamesToCheck;
 
     public TwitchBot(
         TwitchUser user,
@@ -26,20 +40,32 @@ public class TwitchBot : BaseBot<TwitchUser>
         IOptionsMonitor<BotSettings> botSettings
         ) : base(user, logger, notificationService, botSettings)
     {
-        twitchSettings = botSettings.CurrentValue.TwitchSettings;
         claimedReward = new List<CompletedRewardCampaigns>();
         finishedCampaigns = new List<AbstractCampaign>();
-
+        
         _botSettings = botSettings;
+
+        _gamesToCheck = new List<string>();
+    }
+
+    public override List<String> GetUserFavoriteGames()
+    {
+        var user = BotSettings.CurrentValue.TwitchSettings.TwitchUsers.Find(user => user.Id == BotUser.Id);
+
+        return user.FavouriteGames;
     }
 
     protected override async Task StartAsync()
     {
-        BotUser.FavouriteGames = BotUser.FavouriteGames.Count > 0
-            ? BotUser.FavouriteGames
+        // Refresh data
+        var userFavoriteGames = GetUserFavoriteGames();
+        
+        _gamesToCheck = userFavoriteGames.Count > 0
+            ? userFavoriteGames
             : _botSettings.CurrentValue.FavouriteGames;
-        BotUser.OnlyFavouriteGames = twitchSettings.OnlyFavouriteGames;
-        BotUser.OnlyConnectedAccounts = twitchSettings.OnlyConnectedAccounts;
+        
+        BotUser.OnlyFavouriteGames = TwitchSettings.OnlyFavouriteGames;
+        BotUser.OnlyConnectedAccounts = TwitchSettings.OnlyConnectedAccounts;
 
         // Get campaigns
         var thingsToWatch = await BotUser.TwitchRepository.FetchDropsAsync();
@@ -75,7 +101,7 @@ public class TwitchBot : BaseBot<TwitchUser>
         }
 
         // Assuming you have a list of favorite game names
-        var favoriteGameNames = BotUser.FavouriteGames;
+        var favoriteGameNames = _gamesToCheck;
 
         // Order things to watch by the order of favorite game names and drop that is ending soon
         var linqToWatch = from thingToWatch in thingsToWatch
@@ -210,7 +236,7 @@ public class TwitchBot : BaseBot<TwitchUser>
         if (string.IsNullOrEmpty(dropCurrentSession.DropId) ||
             dropCurrentSession.CurrentMinutesWatched == dropCurrentSession.RequiredMinutesWatched)
         {
-            await BotUser.WatchManager.FakeWatchAsync(broadcaster, campaign.Game, BotSettings.AttemptToWatch);
+            await BotUser.WatchManager.FakeWatchAsync(broadcaster, campaign.Game, BotSettings.CurrentValue.AttemptToWatch);
             dropCurrentSession = await BotUser.TwitchRepository.FetchCurrentSessionContextAsync(broadcaster);
         }
 
@@ -336,9 +362,9 @@ public class TwitchBot : BaseBot<TwitchUser>
     {
         User? broadcaster = null;
 
-        if (twitchSettings.AvoidCampaign.Count > 0)
+        if (TwitchSettings.AvoidCampaign.Count > 0)
         {
-            campaigns.RemoveAll(x => twitchSettings.AvoidCampaign.Contains(x.Name, StringComparer.OrdinalIgnoreCase));
+            campaigns.RemoveAll(x => TwitchSettings.AvoidCampaign.Contains(x.Name, StringComparer.OrdinalIgnoreCase));
         }
 
         foreach (var campaign in campaigns.ToList())
@@ -500,7 +526,7 @@ public class TwitchBot : BaseBot<TwitchUser>
                         foreach (var benefitEdge in timeBasedDrop.BenefitEdges)
                         {
                             await NotificationService.SendNotification(BotUser, dropCampaignInProgress.Game.Name,
-                                benefitEdge.Benefit.Name, timeBasedDrop.GetImage());
+                                benefitEdge.Benefit.Name, benefitEdge.Benefit.ImageAssetURL);
                         }
                     }
 

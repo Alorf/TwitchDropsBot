@@ -17,6 +17,13 @@ public class KickBot : BaseBot<KickUser>
     {
     }
 
+    public override List<String> GetUserFavoriteGames()
+    {
+        var user = BotSettings.CurrentValue.KickSettings.KickUsers.Find(user => user.Id == BotUser.Id);
+
+        return user.FavouriteGames;
+    }
+
     protected override async Task StartAsync()
     {
         var inventory = await BotUser.KickRepository.GetInventory();

@@ -1,15 +1,14 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Serilog;
 using TwitchDropsBot.Console.Platform;
 using TwitchDropsBot.Console.Utils;
-using TwitchDropsBot.Core.Platform.Kick.WatchManager;
 using TwitchDropsBot.Core.Platform.Shared.Factories.User;
 using TwitchDropsBot.Core.Platform.Shared.Helpers;
 using TwitchDropsBot.Core.Platform.Shared.Services.Extensions;
 using TwitchDropsBot.Core.Platform.Shared.Settings;
-using WatchRequest = TwitchDropsBot.Core.Platform.Kick.WatchManager.WatchRequest;
 
 var builder = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json", false, true)
@@ -30,11 +29,16 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(configuration)
     .CreateLogger();
 
-services.AddLogging(loggingBuilder =>
-    loggingBuilder.ClearProviders()
-        .AddSerilog(Log.Logger, dispose: true));
+services.AddLogging(
+    loggingBuilder => 
+        loggingBuilder.ClearProviders()
+            .AddSerilog(Log.Logger, dispose: true)
+    );
 
 services.AddSingleton<IConfiguration>(configuration);
+services.Configure<BotSettings>(botConfiguration);
+services.AddSingleton<IOptionsChangeTokenSource<BotSettings>>(
+    new ConfigurationChangeTokenSource<BotSettings>(Options.DefaultName, botConfiguration));
 services.AddBotService();
 services.AddTwitchService();
 services.AddKickService();

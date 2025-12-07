@@ -29,25 +29,6 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Install MSQUIC on Linux
-        if: "${{ startsWith(inputs.os, 'ubuntu') }}"
-        shell: bash
-        run: |
-          # Add Microsoft package repository
-          wget -q https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb
-          sudo dpkg -i packages-microsoft-prod.deb
-          sudo apt-get update
-          
-          # Install libmsquic
-          sudo apt-get install -y libmsquic
-      
-      - name: Install MSQUIC on Windows
-        if: "${{ startsWith(inputs.os, 'windows') }}"
-        shell: pwsh
-        run: |
-          # Install using winget (Windows Package Manager)
-          winget install Microsoft.MsQuic --silent --accept-package-agreements --accept-source-agreements
-
       - name: "Build and Publish ${{ inputs.project_name }}"
         shell: bash
         run: |

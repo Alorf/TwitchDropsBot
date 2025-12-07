@@ -97,7 +97,8 @@ namespace TwitchDropsBot.GTK
             }
             catch (Exception e)
             {
-                SystemLoggerService.Logger.Error(e, e.Message);
+                var logger = provider.GetRequiredService<ILogger<Program>>();
+                logger.LogError(e, e.Message);
                 Environment.Exit(1);
             }
 #else

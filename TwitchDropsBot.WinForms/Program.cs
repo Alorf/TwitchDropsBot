@@ -26,7 +26,7 @@ namespace TwitchDropsBot.WinForms
             var configuration = builder.Build();
 
             var configFilePath = ConfigPathHelper.GetConfigFilePath("config.json"); // bot dynamic config
-
+            
             var botBuilder = new ConfigurationBuilder()
                 .AddJsonFile(configFilePath, optional: false, reloadOnChange: true);
 
@@ -72,7 +72,8 @@ namespace TwitchDropsBot.WinForms
             }
             catch (Exception e)
             {
-                SystemLoggerService.Logger.Error(e, e.Message);
+                var logger = provider.GetRequiredService<ILogger<MainForm>>();
+                logger.LogError(e, e.Message);
                 Environment.Exit(1);
             }
 #else

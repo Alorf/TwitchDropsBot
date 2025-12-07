@@ -13,7 +13,14 @@ public static class ConfigPathHelper
 
         if (!Directory.Exists(directory))
             Directory.CreateDirectory(directory);
+        
+        var path = Path.Combine(directory, fileName);
+        
+        if (!File.Exists(path))
+        {
+            File.WriteAllText(path, "{}");
+        }
 
-        return Path.Combine(directory, fileName);
+        return path;
     }
 }

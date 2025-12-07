@@ -91,11 +91,8 @@ namespace TwitchDropsBot.GTK
             {
                 launchOnStartupCheckbox.Sensitive = false;
             }
-            
-            var settings = _settingsManager.Read();
 
-
-            while (settings.TwitchSettings.TwitchUsers.Count == 0)
+            while (_botSettings.CurrentValue.TwitchSettings.TwitchUsers.Count == 0)
             {
                 _logger.LogInformation("No users found in the configuration file.");
                 _logger.LogInformation("Login process will start.");
@@ -114,7 +111,7 @@ namespace TwitchDropsBot.GTK
             }
 
 
-            foreach (TwitchUserSettings userSettings in settings.TwitchSettings.TwitchUsers.Where(u => u.Enabled))
+            foreach (TwitchUserSettings userSettings in _botSettings.CurrentValue.TwitchSettings.TwitchUsers.Where(u => u.Enabled))
             {
                 if (!userSettings.Enabled)
                 {

@@ -72,7 +72,7 @@ public class TwitchBot : BaseBot<TwitchUser>
         var inventory = await BotUser.TwitchRepository.FetchInventoryDropsAsync();
         DateTime now = DateTime.Now;
         
-        finishedCampaigns.RemoveAll( campaign => campaign.EndAt.Value.ToLocalTime().AddHours(1) < now);
+        finishedCampaigns.RemoveAll( campaign => campaign.EndAt.HasValue && campaign.EndAt.Value.ToLocalTime().AddHours(1) < now);
         
         Logger.LogInformation($"Removing {finishedCampaigns.Count} finished campaigns...");
         thingsToWatch.RemoveAll(campaign => finishedCampaigns.Any(finished => finished.Id == campaign.Id));
@@ -392,7 +392,6 @@ public class TwitchBot : BaseBot<TwitchUser>
             if (campaign.TimeBasedDrops.Count == 0)
             {
                 Logger.LogInformation("No time based drops available for this campaign ({campaign.Name}), skipping", campaign.Name);
-                finishedCampaigns.Add(campaign);
                 campaigns.Remove(campaign);
                 continue;
             }
@@ -536,6 +535,7 @@ public class TwitchBot : BaseBot<TwitchUser>
         }
         
         var newClaimedReward = inventory.CompletedRewardCampaigns;
+        
         
         if (claimedReward.Count == 0)
         {

@@ -27,7 +27,8 @@ public partial class DropCampaign : AbstractCampaign
                     {
                         // Arc raiders emote name is in the time based drops name
                         // BF emote name is in the benefit name
-                        List<string> emotes = new List<string>() {timeBasedDrop.Name, benefitEdge.Benefit.Name};
+                        // Rust = "EmoteName Emote"
+                        List<string> emotes = new List<string>() {timeBasedDrop.Name, benefitEdge.Benefit.Name, benefitEdge.Benefit.Name.Split(" ")[0]};
                         var response = await repository.HaveEmote(emotes);
                         return response;
                     }

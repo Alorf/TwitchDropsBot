@@ -220,7 +220,7 @@ public class WatchRequest : ITwitchWatchManager
 
         var assetUrl = match.Value;
         var jsContent = await client.GetStringAsync(assetUrl);
-        var spadeRegex = new Regex(@"""spade_url""\s*:\s*""([^""]+)""");
+        var spadeRegex = new Regex(@"""beacon_url""\s*:\s*""([^""]+)""");
         var spadeMatch = spadeRegex.Match(jsContent);
 
         if (spadeMatch.Success)

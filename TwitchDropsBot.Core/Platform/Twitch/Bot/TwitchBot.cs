@@ -542,7 +542,7 @@ public class TwitchBot : BaseBot<TwitchUser>
             claimedReward = newClaimedReward;    
         }
         
-        List<CompletedRewardCampaigns> newlyClaimedReward = newClaimedReward.Except(claimedReward, new RewardCampaignComparer()).ToList();
+        List<CompletedRewardCampaigns> newlyClaimedReward = newClaimedReward.Except(claimedReward).ToList();
         foreach (var rewardCampaign in newlyClaimedReward)
         {
             foreach (var reward in rewardCampaign.Rewards)

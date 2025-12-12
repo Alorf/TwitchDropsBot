@@ -10,7 +10,7 @@ public partial class RewardCampaign : AbstractCampaign
 {
     public DistributionType DistributionType { get; set; }
     
-    public override bool IsCompleted(Inventory inventory, TwitchGqlRepository _repository)
+    public override async Task<bool> IsCompleted(Inventory inventory, TwitchGqlRepository _repository)
     {
         if (inventory.CompletedRewardCampaigns is null)
         {

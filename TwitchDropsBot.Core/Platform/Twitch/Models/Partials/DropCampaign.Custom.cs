@@ -10,7 +10,7 @@ namespace TwitchDropsBot.Core.Platform.Twitch.Models;
 public partial class DropCampaign : AbstractCampaign
 {
 
-    public override bool IsCompleted(Inventory inventory, TwitchGqlRepository repository)
+    public override async Task<bool> IsCompleted(Inventory inventory, TwitchGqlRepository repository)
     {
         if (inventory.DropCampaignsInProgress.Any(x => x.Id == Id))
         {
@@ -28,9 +28,8 @@ public partial class DropCampaign : AbstractCampaign
                         // Arc raiders emote name is in the time based drops name
                         // BF emote name is in the benefit name
                         List<string> emotes = new List<string>() {timeBasedDrop.Name, benefitEdge.Benefit.Name};
-                        var response = repository.HaveEmote(emotes);
-                        var result = response.Result;
-                        return result;
+                        var response = await repository.HaveEmote(emotes);
+                        return response;
                     }
                     
                     var correspondingDrop = inventory.GameEventDrops?

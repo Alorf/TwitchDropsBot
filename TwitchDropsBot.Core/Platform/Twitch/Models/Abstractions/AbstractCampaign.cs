@@ -29,7 +29,7 @@ public abstract class AbstractCampaign
     [JsonPropertyName("endAt")]
     public DateTime? EndAt { get; set; }
     
-    public abstract bool IsCompleted(Inventory inventory, TwitchGqlRepository _repository);
+    public abstract Task<bool> IsCompleted(Inventory inventory, TwitchGqlRepository _repository);
     public TimeBasedDrop? FindTimeBasedDrop(string dropId)
     {
         return TimeBasedDrops.FirstOrDefault(drop => drop.Id == dropId);

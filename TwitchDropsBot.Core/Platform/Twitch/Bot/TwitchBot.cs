@@ -398,7 +398,7 @@ public class TwitchBot : BaseBot<TwitchUser>
 
             try
             {
-                var isCompleted = campaign.IsCompleted(inventory, BotUser.TwitchRepository);
+                var isCompleted = await campaign.IsCompleted(inventory, BotUser.TwitchRepository);
                 if (isCompleted)
                 {
                     Logger.LogInformation("Campaign {campaign.Name} already completed, skipping", campaign.Name);

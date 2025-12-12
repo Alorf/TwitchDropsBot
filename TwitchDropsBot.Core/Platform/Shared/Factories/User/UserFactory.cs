@@ -26,9 +26,7 @@ public class UserFactory
     {
         var serilogLogger = new LoggerConfiguration()
             .ReadFrom.Configuration(_serviceProvider.GetRequiredService<IConfiguration>())
-            .WriteTo.File($"logs/logs-{platform}-{settings.Login}.log",
-                rollingInterval: RollingInterval.Day,
-                retainedFileCountLimit: 7)
+            .WriteTo.File($"logs/logs-{platform}-{settings.Login}.log")
             .Enrich.WithProperty("User", settings.Login)
             .Enrich.WithProperty("UserType", platform);
 

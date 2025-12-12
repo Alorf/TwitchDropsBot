@@ -36,9 +36,7 @@ namespace TwitchDropsBot.WinForms
 
             Log.Logger = new LoggerConfiguration()
                 .ReadFrom.Configuration(configuration)
-                .WriteTo.File($"logs/system-log.log",
-                    rollingInterval: RollingInterval.Day,
-                    retainedFileCountLimit: 7)
+                .WriteTo.File($"logs/system-log.log")
                 .CreateLogger();
 
             services.AddLogging(loggingBuilder =>
@@ -49,9 +47,11 @@ namespace TwitchDropsBot.WinForms
             services.Configure<BotSettings>(botConfiguration);
             services.AddSingleton<IOptionsChangeTokenSource<BotSettings>>(
                 new ConfigurationChangeTokenSource<BotSettings>(Options.DefaultName, botConfiguration));
+            
             services.AddBotService();
             services.AddTwitchService();
             services.AddKickService();
+            
             services.AddTransient<MainForm>();
 
 

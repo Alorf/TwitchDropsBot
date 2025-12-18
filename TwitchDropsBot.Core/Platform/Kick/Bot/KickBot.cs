@@ -249,7 +249,7 @@ public class KickBot : BaseBot<KickUser>
                         continue;
                     }
                     
-                    await Notify(campaign.Category.Name, reward.Name, $"https://ext.cdn.kick.com/{reward.ImageUrl}");
+                    await NotificationService.SendNotification(BotUser, campaign.Category.Name, reward.Name, $"https://ext.cdn.kick.com/{reward.ImageUrl}");
                 }
             }
         }

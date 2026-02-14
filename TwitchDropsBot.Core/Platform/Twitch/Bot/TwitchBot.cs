@@ -77,10 +77,9 @@ public class TwitchBot : BaseBot<TwitchUser>
         Logger.LogInformation($"Removing {finishedCampaigns.Count} finished campaigns...");
         thingsToWatch.RemoveAll(campaign => finishedCampaigns.Any(finished => finished.Id == campaign.Id));
 
-
         BotUser.Inventory = inventory;
         BotUser.Status = BotStatus.Seeking;
-
+        
         await CheckForClaim(inventory);
 
         if (thingsToWatch.Count == 0 )
@@ -103,18 +102,30 @@ public class TwitchBot : BaseBot<TwitchUser>
         // Assuming you have a list of favorite game names
         var favoriteGameNames = _gamesToCheck;
 
-        // Order things to watch by the order of favorite game names and drop that is ending soon
-        var linqToWatch = from thingToWatch in thingsToWatch
-            where thingToWatch.Game is not null
-            orderby
-                favoriteGameNames.IndexOf(thingToWatch.Game!.DisplayName) == -1
-                    ? int.MaxValue
-                    : favoriteGameNames.IndexOf(thingToWatch.Game.DisplayName),
-                (thingToWatch as DropCampaign)?.EndAt ?? DateTime.MaxValue
-            select thingToWatch;
+        var favouriteCampaigns = thingsToWatch.Where(x => x.Game.IsFavorite).ToList();
+        thingsToWatch.RemoveAll(x => favouriteCampaigns.Contains(x)); 
+        
+        // Re order favouriteCampaigns to match the config file order
 
-        thingsToWatch = linqToWatch.ToList();
+        favouriteCampaigns = favouriteCampaigns
+            .Where(x => x.Game is not null)
+            .OrderBy(x => x.Game!.IsFavorite
+                ? favoriteGameNames.IndexOf(x.Game.DisplayName) is var idx && idx == -1 ? int.MaxValue : idx
+                : int.MaxValue)
+            .ThenBy(x => x.EndAt.Value).ToList();
 
+        thingsToWatch = thingsToWatch.OrderBy(x => x.EndAt.Value).ToList();
+        
+        // Apply custom sort
+
+        //todo : Add switch here with rules
+        favouriteCampaigns = favouriteCampaigns.OrderBy(x => x.EndAt.Value).ToList();
+        thingsToWatch = thingsToWatch.OrderBy(x => x.EndAt.Value).ToList();
+
+        // End custom sort
+        
+        thingsToWatch = favouriteCampaigns.Concat(thingsToWatch).ToList();
+        
         TimeBasedDrop? timeBasedDrop = null;
         DropCurrentSession? dropCurrentSession = null;
         User? broadcaster = null;
@@ -410,6 +421,20 @@ public class TwitchBot : BaseBot<TwitchUser>
             catch (System.Exception e)
             {
                 Logger.LogError(e, e.Message);
+            }
+            
+            // Todo: check if we got enough time
+            var firstTimeBasedDrops = campaign.TimeBasedDrops.FirstOrDefault();
+            if (firstTimeBasedDrops != null && campaign.EndAt.HasValue)
+            {
+                var minutesLeft = (campaign.EndAt.Value - DateTime.UtcNow).TotalMinutes;
+                if (minutesLeft < firstTimeBasedDrops.RequiredMinutesWatched)
+                {
+                    Logger.LogInformation("Not enough time to watch this campaign ({campaign.Name}), skipping", campaign.Name);
+                    finishedCampaigns.Add(campaign);
+                    campaigns.Remove(campaign);
+                    continue;
+                }
             }
 
             if (campaign is DropCampaign dropCampaign)

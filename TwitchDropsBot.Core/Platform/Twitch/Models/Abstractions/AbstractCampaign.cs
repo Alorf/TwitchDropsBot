@@ -52,4 +52,9 @@ public abstract class AbstractCampaign
     {
         return Id.GetHashCode();
     }
+
+    public override string ToString()
+    {
+        return Game is not null ? Game.DisplayName ?? Game.Name : "Game null" + " " + Name + " " + EndAt;
+    }
 }

@@ -154,7 +154,7 @@ public class WatchRequest : ITwitchWatchManager
 
     public async Task<DropCurrentSession?> FakeWatchAsync(User broadcaster, Game game, int tryCount = 1)
     {
-        _logger.LogDebug("Watching 20 seconds to ensure drops are registered...");
+        _logger.LogDebug("Watching {seconds} seconds to ensure drops are registered...", (20 * tryCount));
         
         for (int i = 0; i < tryCount; i++)
         {

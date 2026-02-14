@@ -11,7 +11,7 @@ public class Data
     public User? User { get; set; }
 
     [JsonPropertyName("channel")]
-    public User? Channel { get; set; }
+    public Channel? Channel { get; set; }
 
     [JsonPropertyName("rewardCampaignsAvailableToUser")]
     public List<RewardCampaign> RewardCampaignsAvailableToUser { get; set; } = new List<RewardCampaign>();

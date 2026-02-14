@@ -47,6 +47,33 @@ public partial class User
     [JsonPropertyName("notifications")]
     public Notifications? Notifications { get; set; }
     
+    [JsonPropertyName("availableBadges")]
+    public ICollection<Badge> AvailableBadges { get; set; } = new List<Badge>();
+    
+}
+
+public class Badge
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; }
+    
+    [JsonPropertyName("setId")]
+    public string SetId { get; set; }
+    
+    [JsonPropertyName("version")]
+    public string Version { get; set; }
+    
+    [JsonPropertyName("title")]
+    public string Title { get; set; }
+    
+    [JsonPropertyName("image1x")]
+    public string Image1x { get; set; }
+    
+    [JsonPropertyName("image2x")]
+    public string Image2x { get; set; }
+    
+    [JsonPropertyName("image4x")]
+    public string Image4x { get; set; }
 }
 
 public class Notifications

@@ -89,7 +89,8 @@
 							"});"
 						],
 						"type": "text/javascript",
-						"packages": {}
+						"packages": {},
+						"requests": {}
 					}
 				}
 			],
@@ -139,7 +140,8 @@
 							"});"
 						],
 						"type": "text/javascript",
-						"packages": {}
+						"packages": {},
+						"requests": {}
 					}
 				}
 			],
@@ -189,7 +191,8 @@
 							"});"
 						],
 						"type": "text/javascript",
-						"packages": {}
+						"packages": {},
+						"requests": {}
 					}
 				}
 			],
@@ -239,7 +242,8 @@
 							"});"
 						],
 						"type": "text/javascript",
-						"packages": {}
+						"packages": {},
+						"requests": {}
 					}
 				}
 			],
@@ -289,7 +293,8 @@
 							"});"
 						],
 						"type": "text/javascript",
-						"packages": {}
+						"packages": {},
+						"requests": {}
 					}
 				}
 			],
@@ -304,7 +309,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"operationName\": \"DirectoryPage_Game\",\r\n    \"variables\": {\r\n        \"imageWidth\": 50,\r\n        \"slug\": \"{{slug}}\",\r\n        \"options\": {\r\n            \"includeRestricted\": [\r\n                \"SUB_ONLY_LIVE\"\r\n            ],\r\n            \"sort\": \"RELEVANCE\",\r\n            \"recommendationsContext\": {\r\n                \"platform\": \"web\"\r\n            },\r\n            \"requestID\": \"JIRA-VXP-2397\",\r\n            \"freeformTags\": null,\r\n            \"tags\": [],\r\n            \"systemFilters\": []\r\n        },\r\n        \"sortTypeIsRecency\": false,\r\n        \"limit\": 30,\r\n        \"includeIsDJ\": false\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"version\": 1,\r\n            \"sha256Hash\": \"c7c9d5aad09155c4161d2382092dc44610367f3536aac39019ec2582ae5065f9\"\r\n        }\r\n    }\r\n}",
+					"raw": "{\r\n    \"operationName\": \"DirectoryPage_Game\",\r\n    \"variables\": {\r\n        \"imageWidth\": 50,\r\n        \"includeCostreaming\": false,\r\n        \"slug\": \"{{slug}}\",\r\n        \"options\": {\r\n            \"broadcasterLanguages\" : [],\r\n            \"includeRestricted\": [\r\n                \"SUB_ONLY_LIVE\"\r\n            ],\r\n            \"sort\": \"RELEVANCE\",\r\n            \"recommendationsContext\": {\r\n                \"platform\": \"web\"\r\n            },\r\n            \"requestID\": \"JIRA-VXP-2397\",\r\n            \"freeformTags\": null,\r\n            \"tags\": [],\r\n            \"systemFilters\": []\r\n        },\r\n        \"sortTypeIsRecency\": false,\r\n        \"limit\": 30\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"version\": 1,\r\n            \"sha256Hash\": \"76cb069d835b8a02914c08dc42c421d0dafda8af5b113a3f19141824b901402f\"\r\n        }\r\n    }\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -339,7 +344,8 @@
 							"});"
 						],
 						"type": "text/javascript",
-						"packages": {}
+						"packages": {},
+						"requests": {}
 					}
 				}
 			],
@@ -416,7 +422,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"operationName\": \"VideoPlayerStreamInfoOverlayChannel\",\r\n    \"variables\": {\r\n        \"channel\" : \"{{channelToWatch}}\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"e785b65ff71ad7b363b34878335f27dd9372869ad0c5740a130b9268bcdbe7e7\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+					"raw": "{\r\n    \"operationName\": \"VideoPlayerStreamInfoOverlayChannel\",\r\n    \"variables\": {\r\n        \"channel\" : \"{{channelToWatch}}\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"198492e0857f6aedead9665c81c5a06d67b25b58034649687124083ff288597d\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -451,7 +457,8 @@
 							"});"
 						],
 						"type": "text/javascript",
-						"packages": {}
+						"packages": {},
+						"requests": {}
 					}
 				}
 			],
@@ -501,7 +508,8 @@
 							"});"
 						],
 						"type": "text/javascript",
-						"packages": {}
+						"packages": {},
+						"requests": {}
 					}
 				}
 			],
@@ -551,7 +559,8 @@
 							"});"
 						],
 						"type": "text/javascript",
-						"packages": {}
+						"packages": {},
+						"requests": {}
 					}
 				}
 			],
@@ -566,7 +575,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"operationName\": \"DropsHighlightService_AvailableDrops\",\r\n    \"variables\": {\r\n        \"channelID\": \"175831187\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"782dad0f032942260171d2d80a654f88bdd0c5a9dddc392e9bc92218a0f42d20\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+					"raw": "{\r\n    \"operationName\": \"DropsHighlightService_AvailableDrops\",\r\n    \"variables\": {\r\n        \"channelID\": \"{{channelId}}\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"782dad0f032942260171d2d80a654f88bdd0c5a9dddc392e9bc92218a0f42d20\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -824,7 +833,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"operationName\": \"RewardCodeModal\",\r\n    \"variables\": {\r\n        \"rewardCampaignID\": \"597b8326-bb60-11f0-8672-c689c76c5075\",\r\n        \"rewardID\": \"595393de-bb60-11f0-8672-c689c76c5075\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"version\": 1,\r\n            \"sha256Hash\": \"b48d2bd6e80366684092d14c97ced7a86497246c4dab0f3d877c7a308eefdd7f\"\r\n        }\r\n    }\r\n}",
+					"raw": "{\r\n    \"operationName\": \"RewardCodeModal\",\r\n    \"variables\": {\r\n        \"rewardCampaignID\": \"{{rewardCampaignID}}\",\r\n        \"rewardID\": \"{{rewardID}}\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"version\": 1,\r\n            \"sha256Hash\": \"b48d2bd6e80366684092d14c97ced7a86497246c4dab0f3d877c7a308eefdd7f\"\r\n        }\r\n    }\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -887,6 +896,68 @@
 				"body": {
 					"mode": "raw",
 					"raw": "{\r\n  \"operationName\": \"AvailableEmotesForChannelPaginated\",\r\n  \"variables\": {\r\n    \"channelID\": \"{{channelId}}\",\r\n    \"withOwner\": true,\r\n    \"pageLimit\": 350\r\n  },\r\n  \"extensions\": {\r\n    \"persistedQuery\": {\r\n      \"version\": 1,\r\n      \"sha256Hash\": \"6c45e0ecaa823cc7db3ecdd1502af2223c775bdcfb0f18a3a0ce9a0b7db8ef6c\"\r\n    }\r\n  }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://gql.twitch.tv/gql",
+					"protocol": "https",
+					"host": [
+						"gql",
+						"twitch",
+						"tv"
+					],
+					"path": [
+						"gql"
+					]
+				},
+				"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+			},
+			"response": []
+		},
+		{
+			"name": "ChatSettings_Badges",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "client-id",
+						"value": "{{clientId}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"operationName\": \"ChatSettings_Badges\",\r\n  \"variables\": {\r\n    \"login\": \"{{channelLoginId}}\"\r\n  },\r\n  \"extensions\": {\r\n    \"persistedQuery\": {\r\n      \"version\": 1,\r\n      \"sha256Hash\": \"f30c0381c916b81bad77302c3cf986094364fa2dfc63a598804cb5ee3743225c\"\r\n    }\r\n  }\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"

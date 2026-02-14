@@ -1,11 +1,11 @@
 ﻿using System.Text.Json;
+using FuzzySharp;
 using GraphQL;
 using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.SystemTextJson;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TwitchDropsBot.Core.Platform.Shared.Repository;
-using TwitchDropsBot.Core.Platform.Shared.Services;
 using TwitchDropsBot.Core.Platform.Shared.Settings;
 using TwitchDropsBot.Core.Platform.Twitch.Bot;
 using TwitchDropsBot.Core.Platform.Twitch.Device;
@@ -46,7 +46,7 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
         lock (_postmanLock)
         {
             var jsonString =
-                File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Postman/TwitchSave.postman_collection.json"));
+                File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Postman/Twitch.postman_collection.json"));
             postmanCollection = JsonDocument.Parse(jsonString).RootElement;
         }
     }
@@ -122,7 +122,11 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
                 _logger.LogError("The drop ID does not match the drop campaign ID.");
             }
 
-            dropCampaign.TimeBasedDrops.RemoveAll(drop => drop.RequiredSubs != 0);
+            if (dropCampaign.TimeBasedDrops.Any(drop => drop.RequiredSubs != 0))
+            {
+                _logger.LogInformation("{dropCampaign.Name} Removing time based drops that require subscription...", dropCampaign.Name);
+                dropCampaign.TimeBasedDrops.RemoveAll(drop => drop.RequiredSubs != 0);
+            }
 
             return dropCampaign;
         }
@@ -364,6 +368,35 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
         return rewardCampaignCode;
     }
 
+    public async Task<bool> HaveBadge(List<string> BadgeNames)
+    {
+        var query = CreateQuery("ChatSettings_Badges");
+
+        if (query.Variables is Dictionary<string, object?> variables)
+        {
+            variables["channelLogin"] = BotUser.Login;
+        }
+        
+        dynamic? resp = await DoGQLRequestAsync(query);
+        
+        List<Badge> badges = resp.Data.CurrentUser.AvailableBadges;
+        
+        foreach (var badge in badges)
+        {
+            foreach (var badgeName in BadgeNames)
+            {
+                var fuzzed = Fuzz.PartialRatio(badgeName.ToLower(), badge.Title.ToLower());
+                _logger.LogInformation($"{badgeName} - {badge.Title} = {fuzzed}");
+                if (fuzzed >= 80)
+                {
+                    return true;
+                }    
+            }
+        }
+
+        return false;
+    }
+    
     public async Task<bool> HaveEmote(List<string> emoteNames)
     {
         var query = CreateQuery("AvailableEmotesForChannelPaginated");
@@ -371,50 +404,31 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
         if (query.Variables is Dictionary<string, object?> variables)
         {
             variables["channelID"] = BotUser.Id;
-            variables["withOwner"] = true;
+            variables["withOwner"] = false;
             variables["pageLimit"] = 350;
         }
-
-        try
+        
+        dynamic? resp = await DoGQLRequestAsync(query);
+        
+        Channel channel = resp.Data.Channel;
+        
+        foreach (var edge in channel.Self.AvailableEmoteSetsPaginated.Edges)
         {
-            var httpRequest = new HttpRequestMessage(HttpMethod.Post, "https://gql.twitch.tv/gql")
+            foreach (var emote in edge.Node.emotes.Where(x => x.Type == EmoteType.LIMITED_TIME))
             {
-                Content = new StringContent(
-                    JsonSerializer.Serialize(new
-                    {
-                        operationName = query.OperationName,
-                        variables = query.Variables,
-                        extensions = query.Extensions
-                    }),
-                    System.Text.Encoding.UTF8,
-                    "application/json")
-            };
-
-            var httpResponse = await graphQLClient.HttpClient.SendAsync(httpRequest);
-            httpResponse.EnsureSuccessStatusCode();
-
-            var responseContent = await httpResponse.Content.ReadAsStringAsync();
-
-            foreach (var emoteName in emoteNames)
-            {
-                if (responseContent.Contains(emoteName))
+                foreach (var emoteName in emoteNames)
                 {
-                    return true;
+                    var fuzzed = Fuzz.PartialRatio(emoteName.ToLower(), emote.Token.ToLower());
+                    _logger.LogInformation($"{emoteName} - {emote.Token} = {fuzzed}");
+                    if (fuzzed >= 80)
+                    {
+                        return true;
+                    }
                 }
             }
-
-            return false;
         }
-        catch (System.Exception e)
-        {
-            _logger?.LogError(e, $"Failed to check emotes");
-            foreach (var emoteName in emoteNames)
-            {
-                _logger.LogError($"{emoteName}");
-            }
 
-            return false;
-        }
+        return false;
     }
 
     private async Task<dynamic?> DoGQLRequestAsync(GraphQLRequest query, GraphQLHttpClient? client = null,

@@ -112,15 +112,15 @@ public class TwitchBot : BaseBot<TwitchUser>
             .OrderBy(x => x.Game!.IsFavorite
                 ? favoriteGameNames.IndexOf(x.Game.DisplayName) is var idx && idx == -1 ? int.MaxValue : idx
                 : int.MaxValue)
-            .ThenBy(x => x.EndAt.Value).ToList();
+            .ThenBy(x => x.EndAt.GetValueOrDefault(DateTime.MaxValue)).ToList();
 
-        thingsToWatch = thingsToWatch.OrderBy(x => x.EndAt.Value).ToList();
+        thingsToWatch = thingsToWatch.OrderBy(x => x.EndAt.GetValueOrDefault(DateTime.MaxValue)).ToList();
         
         // Apply custom sort
 
         //todo : Add switch here with rules
-        favouriteCampaigns = favouriteCampaigns.OrderBy(x => x.EndAt.Value).ToList();
-        thingsToWatch = thingsToWatch.OrderBy(x => x.EndAt.Value).ToList();
+        favouriteCampaigns = favouriteCampaigns.OrderBy(x => x.EndAt.GetValueOrDefault(DateTime.MaxValue)).ToList();
+        thingsToWatch = thingsToWatch.OrderBy(x => x.EndAt.GetValueOrDefault(DateTime.MaxValue)).ToList();
 
         // End custom sort
         

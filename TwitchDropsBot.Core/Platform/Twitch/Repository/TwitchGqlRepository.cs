@@ -70,6 +70,15 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
             rewardCampaigns =
                 rewardCampaigns.FindAll(rewardCampaign => rewardCampaign.UnlockRequirements?.MinuteWatchedGoal != 0);
 
+            var noGames = dropCampaigns.FindAll(x => x.Game is null);
+            _logger.LogInformation("{noGames.Count} campaign with no game bind to it", noGames.Count);
+            foreach (var noGame in noGames)
+            {
+                _logger.LogInformation("Removing {name}", noGame.Name);
+            }
+
+            dropCampaigns.RemoveAll(x => x.Game is null);
+            
             var favGame = (from game in BotUser.FavouriteGames select game.ToLower()).Distinct();
             var favGamesSet = favGame;
 
@@ -124,7 +133,8 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
 
             if (dropCampaign.TimeBasedDrops.Any(drop => drop.RequiredSubs != 0))
             {
-                _logger.LogInformation("{dropCampaign.Name} Removing time based drops that require subscription...", dropCampaign.Name);
+                _logger.LogInformation("{dropCampaign.Name} Removing time based drops that require subscription...",
+                    dropCampaign.Name);
                 dropCampaign.TimeBasedDrops.RemoveAll(drop => drop.RequiredSubs != 0);
             }
 
@@ -376,27 +386,27 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
         {
             variables["channelLogin"] = BotUser.Login;
         }
-        
+
         dynamic? resp = await DoGQLRequestAsync(query);
-        
+
         List<Badge> badges = resp.Data.CurrentUser.AvailableBadges;
-        
+
         foreach (var badge in badges)
         {
             foreach (var badgeName in BadgeNames)
             {
                 var fuzzed = Fuzz.PartialRatio(badgeName.ToLower(), badge.Title.ToLower());
-                _logger.LogInformation($"{badgeName} - {badge.Title} = {fuzzed}");
+                // _logger.LogInformation($"{badgeName} - {badge.Title} = {fuzzed}");
                 if (fuzzed >= 80)
                 {
                     return true;
-                }    
+                }
             }
         }
 
         return false;
     }
-    
+
     public async Task<bool> HaveEmote(List<string> emoteNames)
     {
         var query = CreateQuery("AvailableEmotesForChannelPaginated");
@@ -407,11 +417,11 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
             variables["withOwner"] = false;
             variables["pageLimit"] = 350;
         }
-        
+
         dynamic? resp = await DoGQLRequestAsync(query);
-        
+
         Channel channel = resp.Data.Channel;
-        
+
         foreach (var edge in channel.Self.AvailableEmoteSetsPaginated.Edges)
         {
             foreach (var emote in edge.Node.emotes.Where(x => x.Type == EmoteType.LIMITED_TIME))

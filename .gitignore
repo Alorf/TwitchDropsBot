@@ -364,3 +364,4 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 publish-local-repository.bat
+/publish-local-repository.sh

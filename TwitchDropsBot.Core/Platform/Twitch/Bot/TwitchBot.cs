@@ -382,7 +382,7 @@ public class TwitchBot : BaseBot<TwitchUser>
 
         if (TwitchSettings.AvoidCampaign.Count > 0)
         {
-            campaigns.RemoveAll(x => TwitchSettings.AvoidCampaign.Contains(x.Name, StringComparer.OrdinalIgnoreCase));
+            campaigns.RemoveAll(x => TwitchSettings.AvoidCampaign.Contains(x.Game?.DisplayName ?? x.Game?.Name, StringComparer.OrdinalIgnoreCase));
         }
 
         foreach (var campaign in campaigns.ToList())

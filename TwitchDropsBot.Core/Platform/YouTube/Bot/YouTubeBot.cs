@@ -23,6 +23,8 @@ public class YouTubeBot : BaseBot<YouTubeUser>
     protected override async Task StartAsync()
     {
         var channelIds = GetChannelIds();
+        
+        await BotUser.WatchManager.EnsureAuthenticatedAsync();
 
         if (channelIds.Count == 0)
         {

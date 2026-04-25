@@ -1,0 +1,118 @@
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using PuppeteerSharp;
+using TwitchDropsBot.Core.Platform.Shared.Exceptions;
+using TwitchDropsBot.Core.Platform.Shared.Services;
+using TwitchDropsBot.Core.Platform.YouTube.Bot;
+using TwitchDropsBot.Core.Platform.Shared.Settings;
+using TwitchDropsBot.Core.Platform.Shared.WatchManager;
+
+namespace TwitchDropsBot.Core.Platform.YouTube.WatchManager;
+
+/// <summary>
+/// Uses the shared browser service to navigate to live YouTube streams.
+/// </summary>
+public class WatchBrowser : WatchBrowser<YouTubeUser, string, string>, IYouTubeWatchManager
+{
+    public WatchBrowser(YouTubeUser botUser, ILogger baseLogger, BrowserService browserService) : base(botUser, baseLogger, browserService)
+    {
+    }
+
+    public override async Task WatchStreamAsync(string streamUrl, string channelId)
+    {
+        _disposed = false;
+        
+        if (Page != null)
+        {
+            Logger.LogDebug("Already watching a stream, skipping navigation");
+            return;
+        }
+
+        Page = await BrowserService.AddUserAsync(BotUser);
+        Logger.LogInformation("Navigating to stream {StreamUrl} (channel {ChannelId})", streamUrl, channelId);
+        await Page.GoToAsync(streamUrl);
+
+        await Task.Delay(TimeSpan.FromSeconds(10));
+    }
+
+    public Task EnsureBrowserLaunchedAsync()
+    {
+        throw new NotImplementedException();
+    }
+    
+    private const string YoutubeLoginUrl =
+        "https://accounts.google.com/ServiceLogin?service=youtube&continue=https%3A%2F%2Fwww.youtube.com";
+    
+    private const string YoutubeBaseUrl    = "https://www.youtube.com";
+    private const string GoogleAccountsUrl = "https://accounts.google.com";
+
+    private const int LoginTimeoutSeconds  = 300;
+
+    public async Task EnsureAuthenticatedAsync()
+    {
+        Page = await BrowserService.AddUserAsync(BotUser);
+        
+        using var authPage = await Page.Browser.NewPageAsync();
+
+        Logger.LogInformation("Checking YouTube authentication for user {Login}", BotUser.Login);
+
+        await authPage.GoToAsync(YoutubeLoginUrl, new NavigationOptions
+        {
+            WaitUntil = [WaitUntilNavigation.DOMContentLoaded],
+            Timeout   = 15_000
+        });
+
+        await Task.Delay(TimeSpan.FromSeconds(3));
+
+        var currentUrl = authPage.Url;
+
+        if (currentUrl.StartsWith(YoutubeBaseUrl))
+        {
+            Logger.LogInformation("YouTube authentication check passed for user {Login}", BotUser.Login);
+            await authPage.CloseAsync();
+            return;
+        }
+
+        if (!currentUrl.StartsWith(GoogleAccountsUrl))
+        {
+            await authPage.CloseAsync();
+            return;
+        }
+
+        // User is not logged in
+        /*
+        if (_botSettings.CurrentValue.WatchBrowserHeadless)
+        {
+            await authPage.CloseAsync();
+            throw new InvalidOperationException(
+                $"YouTube user '{BotUser.Login}' is not authenticated. " +
+                "Set WatchBrowserHeadless to false and run the bot once to log in to your Google account.");
+        }
+        */
+
+        Logger.LogWarning(
+            "YouTube user {Login} is not logged in. " +
+            "Please log in to your Google account in the browser window. " +
+            "You have {Timeout} seconds.",
+            BotUser.Login, LoginTimeoutSeconds);
+
+        var deadline = DateTime.UtcNow.AddSeconds(LoginTimeoutSeconds);
+
+        while (DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(3));
+
+            if (authPage.Url.StartsWith(YoutubeBaseUrl))
+            {
+                Logger.LogInformation(
+                    "YouTube authentication successful for user {Login}", BotUser.Login);
+                await authPage.CloseAsync();
+                return;
+            }
+        }
+
+        await authPage.CloseAsync();
+        throw new InvalidOperationException(
+            $"YouTube authentication timed out for user '{BotUser.Login}'. Please try again.");
+    }
+}

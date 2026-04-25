@@ -16,7 +16,7 @@ public class YouTubeUser : BotUser
 {
     private readonly YouTubeBot _baseBot;
 
-    public IYouTubeWatchManager  WatchManager    { get; }
+    public IYouTubeWatchManager WatchManager { get; }
     public YouTubeHttpRepository YouTubeRepository { get; }
 
     public YouTubeUser(
@@ -32,7 +32,7 @@ public class YouTubeUser : BotUser
         Logger.LogTrace("Initializing YouTubeUser for login: {Login}", settings.Login);
 
         YouTubeRepository = repositoryFactory.Create(this, logger);
-        WatchManager       = watchManagerFactory.Create(this);
+        WatchManager = watchManagerFactory.Create(this);
 
         Logger.LogDebug("WatchManager set to: {ManagerType}", WatchManager.GetType().Name);
 

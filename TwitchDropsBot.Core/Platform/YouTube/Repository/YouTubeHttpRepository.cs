@@ -38,7 +38,7 @@ public class YouTubeHttpRepository : BotRepository<YouTubeUser>
 
         try
         {
-            var url = $"https://www.youtube.com/channel/{channelId}";
+            var url = $"https://www.youtube.com/@{channelId}";
             var html = await _httpClient.GetStringAsync(url, cancellationToken);
 
             if (!html.Contains("hqdefault_live.jpg"))

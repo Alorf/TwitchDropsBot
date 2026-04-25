@@ -22,22 +22,42 @@ public sealed class BrowserService
         _botSettings = botSettings;
         _logger = logger;
     }
-    
+
     private async Task InitializeBrowserAsync()
     {
         if (_isInitialized) return;
-        
-        var browserFetcher = new BrowserFetcher();
+
+        // Use a stable path outside build output
+        var browserPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "TwitchDropsBot", "Chrome"
+        );
+
+        var browserFetcher = new BrowserFetcher(new BrowserFetcherOptions
+        {
+            Path = browserPath
+        });
+
         var installed = browserFetcher.GetInstalledBrowsers();
         if (!installed.Any())
         {
-            _logger.LogWarning("Can't find any installed browsers. Downloading latest headless chrome...");
+            _logger.LogWarning("Downloading latest headless Chrome to {Path}...", browserPath);
             await browserFetcher.DownloadAsync();
-            _logger.LogWarning("Downloaded latest headless chrome.");
+            _logger.LogInformation("Chrome downloaded successfully.");
         }
-        
+
+        var executablePath = browserFetcher
+            .GetInstalledBrowsers()
+            .FirstOrDefault()
+            ?.GetExecutablePath();
+
+        if (executablePath is null || !File.Exists(executablePath))
+            throw new FileNotFoundException(
+                $"Chrome executable not found at expected path. Fetcher path: {browserPath}");
+
         var launchOptions = new LaunchOptions
         {
+            ExecutablePath = executablePath, // explicit path — no guessing
             Headless = _botSettings.CurrentValue.WatchBrowserHeadless,
             Args =
             [
@@ -75,12 +95,12 @@ public sealed class BrowserService
         var extra = new PuppeteerExtra();
 
         var stealth = new StealthPlugin();
-        
+
         _browser = await extra.Use(stealth).LaunchAsync(launchOptions);
-        
+
         _isInitialized = true;
     }
-    
+
     public async Task<IPage> AddUserAsync(BotUser user)
     {
         await _lock.WaitAsync();
@@ -104,11 +124,12 @@ public sealed class BrowserService
             _logger.LogInformation($"[BROWSER SERVICE] Creating new isolated context for {user.Login}");
             var context = await _browser!.CreateBrowserContextAsync();
             _userContexts[userKey] = context;
-            
+
             var page = await context.NewPageAsync();
-            
-            _logger.LogInformation($"[BROWSER SERVICE] Context created - Total: {_userContexts.Count} active context(s)");
-            
+
+            _logger.LogInformation(
+                $"[BROWSER SERVICE] Context created - Total: {_userContexts.Count} active context(s)");
+
             return page;
         }
         finally
@@ -116,14 +137,14 @@ public sealed class BrowserService
             _lock.Release();
         }
     }
-    
+
     public async Task RemoveUserAsync(BotUser user)
     {
         await _lock.WaitAsync();
         try
         {
             var userKey = user.Id;
-            
+
             if (!_userContexts.ContainsKey(userKey))
             {
                 _logger.LogInformation($"[BROWSER SERVICE] No context to remove for {user.Login}");
@@ -133,15 +154,16 @@ public sealed class BrowserService
             _logger.LogInformation($"[BROWSER SERVICE] Closing context for {user.Login}");
             await _userContexts[userKey].CloseAsync();
             _userContexts.Remove(userKey);
-            
-            _logger.LogInformation($"[BROWSER SERVICE] Context closed - Remaining: {_userContexts.Count} active context(s)");
+
+            _logger.LogInformation(
+                $"[BROWSER SERVICE] Context closed - Remaining: {_userContexts.Count} active context(s)");
         }
         finally
         {
             _lock.Release();
         }
     }
-    
+
     public async Task DisposeAsync()
     {
         await _lock.WaitAsync();
@@ -153,6 +175,7 @@ public sealed class BrowserService
                 {
                     await context.CloseAsync();
                 }
+
                 _userContexts.Clear();
             }
 

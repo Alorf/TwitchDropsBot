@@ -83,17 +83,21 @@ public class YouTubeWatchBrowser : IYouTubeWatchManager, IAsyncDisposable
 
         _logger.LogInformation("Closing YouTube watch browser for user {Login}", BotUser.Login);
 
-        if (_page != null)
-        {
-            _ = _page.CloseAsync().ContinueWith(_ => { _page = null; });
-        }
-
-        if (_browser != null)
-        {
-            _ = _browser.CloseAsync().ContinueWith(_ => { _browser = null; });
-        }
-
+        var page    = _page;
+        var browser = _browser;
+        _page    = null;
+        _browser = null;
         _disposed = true;
+
+        if (page != null)
+        {
+            try { page.CloseAsync().GetAwaiter().GetResult(); } catch { /* ignored */ }
+        }
+
+        if (browser != null)
+        {
+            try { browser.CloseAsync().GetAwaiter().GetResult(); } catch { /* ignored */ }
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -114,10 +118,9 @@ public class YouTubeWatchBrowser : IYouTubeWatchManager, IAsyncDisposable
             _browser = null;
         }
 
+        _disposed = true;
         GC.SuppressFinalize(this);
     }
-
-    ~YouTubeWatchBrowser() => Close();
 
     // -------------------------------------------------------------------------
     // Private helpers

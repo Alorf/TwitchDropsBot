@@ -137,7 +137,7 @@ public class Start
             {
                 1 => await AuthenticateTwitchAsync(),
                 2 => await AuthenticateKickAsync(),
-                3 => AuthenticateYouTubeAsync(),
+                3 => AuthenticateYouTube(),
                 4 => -1,
                 _ => 1
             };
@@ -165,7 +165,7 @@ public class Start
         return 1;
     }
 
-    private int AuthenticateYouTubeAsync()
+    private int AuthenticateYouTube()
     {
         YouTube.AddYouTubeUserAsync(logger, settingsManager);
         return 1;

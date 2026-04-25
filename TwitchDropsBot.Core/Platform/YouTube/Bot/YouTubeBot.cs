@@ -41,7 +41,7 @@ public class YouTubeBot : BaseBot<YouTubeUser>
         foreach (var channelId in channelIds)
         {
             Logger.LogInformation("Checking channel {ChannelId} for live stream...", channelId);
-            var url = await BotUser.YouTubeRepository.GetActiveLiveStreamAsync(channelId);
+            var url = await BotUser.WatchManager.GetActiveLiveStreamUrlAsync(channelId);
             if (url != null)
             {
                 liveStreamUrl = url;
@@ -79,7 +79,7 @@ public class YouTubeBot : BaseBot<YouTubeUser>
             await Task.Delay(checkInterval);
 
             Logger.LogInformation("Re-checking if stream is still live on channel {ChannelId}...", liveChannelId);
-            var stillLive = await BotUser.YouTubeRepository.GetActiveLiveStreamAsync(liveChannelId!);
+            var stillLive = await BotUser.WatchManager.GetActiveLiveStreamUrlAsync(liveChannelId!);
 
             if (stillLive == null)
             {

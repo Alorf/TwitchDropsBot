@@ -1,8 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using PuppeteerExtraSharp;
-using PuppeteerExtraSharp.Plugins.ExtraStealth;
-using PuppeteerSharp;
+using Microsoft.Playwright;
 using TwitchDropsBot.Core.Platform.Shared.Bots;
 using TwitchDropsBot.Core.Platform.Shared.Settings;
 
@@ -13,9 +11,10 @@ public sealed class BrowserService
     private readonly Dictionary<string, IBrowserContext> _userContexts = new();
     private readonly SemaphoreSlim _lock = new(1, 1);
     private IBrowser? _browser;
+    private IPlaywright? _playwright;
     private bool _isInitialized;
     private readonly IOptionsMonitor<BotSettings> _botSettings;
-    private ILogger<BotUser> _logger;
+    private readonly ILogger<BotUser> _logger;
 
     public BrowserService(IOptionsMonitor<BotSettings> botSettings, ILogger<BotUser> logger)
     {
@@ -27,37 +26,15 @@ public sealed class BrowserService
     {
         if (_isInitialized) return;
 
-        // Use a stable path outside build output
-        var browserPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "TwitchDropsBot", "Chrome"
-        );
+        // Install Playwright browsers if needed (equivalent of BrowserFetcher)
+        var exitCode = Microsoft.Playwright.Program.Main(["install", "chromium"]);
+        if (exitCode != 0)
+            throw new InvalidOperationException($"Playwright browser installation failed with exit code {exitCode}.");
 
-        var browserFetcher = new BrowserFetcher(new BrowserFetcherOptions
+        _playwright = await Playwright.CreateAsync();
+
+        var launchOptions = new BrowserTypeLaunchOptions
         {
-            Path = browserPath
-        });
-
-        var installed = browserFetcher.GetInstalledBrowsers();
-        if (!installed.Any())
-        {
-            _logger.LogWarning("Downloading latest headless Chrome to {Path}...", browserPath);
-            await browserFetcher.DownloadAsync();
-            _logger.LogInformation("Chrome downloaded successfully.");
-        }
-
-        var executablePath = browserFetcher
-            .GetInstalledBrowsers()
-            .FirstOrDefault()
-            ?.GetExecutablePath();
-
-        if (executablePath is null || !File.Exists(executablePath))
-            throw new FileNotFoundException(
-                $"Chrome executable not found at expected path. Fetcher path: {browserPath}");
-
-        var launchOptions = new LaunchOptions
-        {
-            ExecutablePath = executablePath, // explicit path — no guessing
             Headless = _botSettings.CurrentValue.WatchBrowserHeadless,
             Args =
             [
@@ -83,21 +60,9 @@ public sealed class BrowserService
                 "--disable-background-timer-throttling",
                 "--disable-ipc-flooding-protection"
             ],
-            IgnoredDefaultArgs =
-                ["--enable-automation", "--hide-scrollbars", "--enable-blink-features=IdleDetection"],
-            DefaultViewport = new ViewPortOptions
-            {
-                Width = 1920,
-                Height = 1080
-            },
         };
 
-        var extra = new PuppeteerExtra();
-
-        var stealth = new StealthPlugin();
-
-        _browser = await extra.Use(stealth).LaunchAsync(launchOptions);
-
+        _browser = await _playwright.Chromium.LaunchAsync(launchOptions);
         _isInitialized = true;
     }
 
@@ -115,20 +80,25 @@ public sealed class BrowserService
 
             var userKey = user.Id;
 
-            if (_userContexts.ContainsKey(userKey))
+            if (_userContexts.TryGetValue(userKey, out var existingContext))
             {
-                _logger.LogInformation($"[BROWSER SERVICE] Reusing existing context for {user.Login}");
-                return await _userContexts[userKey].NewPageAsync();
+                _logger.LogInformation("[BROWSER SERVICE] Reusing existing context for {Login}", user.Login);
+                return await existingContext.NewPageAsync();
             }
 
-            _logger.LogInformation($"[BROWSER SERVICE] Creating new isolated context for {user.Login}");
-            var context = await _browser!.CreateBrowserContextAsync();
+            _logger.LogInformation("[BROWSER SERVICE] Creating new isolated context for {Login}", user.Login);
+
+            var context = await _browser!.NewContextAsync(new BrowserNewContextOptions
+            {
+                ViewportSize = new ViewportSize { Width = 1920, Height = 1080 },
+            });
+
             _userContexts[userKey] = context;
 
             var page = await context.NewPageAsync();
 
             _logger.LogInformation(
-                $"[BROWSER SERVICE] Context created - Total: {_userContexts.Count} active context(s)");
+                "[BROWSER SERVICE] Context created - Total: {Count} active context(s)", _userContexts.Count);
 
             return page;
         }
@@ -145,18 +115,18 @@ public sealed class BrowserService
         {
             var userKey = user.Id;
 
-            if (!_userContexts.ContainsKey(userKey))
+            if (!_userContexts.TryGetValue(userKey, out var context))
             {
-                _logger.LogInformation($"[BROWSER SERVICE] No context to remove for {user.Login}");
+                _logger.LogInformation("[BROWSER SERVICE] No context to remove for {Login}", user.Login);
                 return;
             }
 
-            _logger.LogInformation($"[BROWSER SERVICE] Closing context for {user.Login}");
-            await _userContexts[userKey].CloseAsync();
+            _logger.LogInformation("[BROWSER SERVICE] Closing context for {Login}", user.Login);
+            await context.CloseAsync();
             _userContexts.Remove(userKey);
 
             _logger.LogInformation(
-                $"[BROWSER SERVICE] Context closed - Remaining: {_userContexts.Count} active context(s)");
+                "[BROWSER SERVICE] Context closed - Remaining: {Count} active context(s)", _userContexts.Count);
         }
         finally
         {
@@ -169,21 +139,19 @@ public sealed class BrowserService
         await _lock.WaitAsync();
         try
         {
-            if (_userContexts.Count > 0)
-            {
-                foreach (var context in _userContexts.Values)
-                {
-                    await context.CloseAsync();
-                }
+            foreach (var context in _userContexts.Values)
+                await context.CloseAsync();
 
-                _userContexts.Clear();
-            }
+            _userContexts.Clear();
 
             if (_browser != null)
             {
                 await _browser.CloseAsync();
                 _browser = null;
             }
+
+            _playwright?.Dispose();
+            _playwright = null;
 
             _isInitialized = false;
         }

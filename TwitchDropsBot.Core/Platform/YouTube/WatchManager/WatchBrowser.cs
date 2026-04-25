@@ -1,27 +1,23 @@
 ﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using PuppeteerSharp;
+using Microsoft.Playwright;
 using TwitchDropsBot.Core.Platform.Shared.Exceptions;
 using TwitchDropsBot.Core.Platform.Shared.Services;
-using TwitchDropsBot.Core.Platform.YouTube.Bot;
-using TwitchDropsBot.Core.Platform.Shared.Settings;
 using TwitchDropsBot.Core.Platform.Shared.WatchManager;
+using TwitchDropsBot.Core.Platform.YouTube.Bot;
 
 namespace TwitchDropsBot.Core.Platform.YouTube.WatchManager;
 
-/// <summary>
-/// Uses the shared browser service to navigate to live YouTube streams.
-/// </summary>
 public class WatchBrowser : WatchBrowser<YouTubeUser, string, string>, IYouTubeWatchManager
 {
-    public WatchBrowser(YouTubeUser botUser, ILogger baseLogger, BrowserService browserService) : base(botUser, baseLogger, browserService)
+    public WatchBrowser(YouTubeUser botUser, ILogger baseLogger, BrowserService browserService)
+        : base(botUser, baseLogger, browserService)
     {
     }
 
     public override async Task WatchStreamAsync(string streamUrl, string channelId)
     {
         _disposed = false;
-        
+
         if (Page != null)
         {
             Logger.LogDebug("Already watching a stream, skipping navigation");
@@ -30,65 +26,50 @@ public class WatchBrowser : WatchBrowser<YouTubeUser, string, string>, IYouTubeW
 
         Page = await BrowserService.AddUserAsync(BotUser);
         Logger.LogInformation("Navigating to stream {StreamUrl} (channel {ChannelId})", streamUrl, channelId);
-        await Page.GoToAsync(streamUrl);
+
+        await Page.GotoAsync(streamUrl);
 
         await Task.Delay(TimeSpan.FromSeconds(10));
     }
 
-    public Task EnsureBrowserLaunchedAsync()
-    {
-        throw new NotImplementedException();
-    }
-    
+    public Task EnsureBrowserLaunchedAsync() => throw new NotImplementedException();
+
     private const string YoutubeLoginUrl =
         "https://accounts.google.com/ServiceLogin?service=youtube&continue=https%3A%2F%2Fwww.youtube.com";
-    
+
     private const string YoutubeBaseUrl    = "https://www.youtube.com";
     private const string GoogleAccountsUrl = "https://accounts.google.com";
-
-    private const int LoginTimeoutSeconds  = 300;
+    private const int    LoginTimeoutSeconds = 300;
 
     public async Task EnsureAuthenticatedAsync()
     {
         Page = await BrowserService.AddUserAsync(BotUser);
-        
-        using var authPage = await Page.Browser.NewPageAsync();
+
+        // Open a temporary page within the same browser context
+        var authPage = await Page.Context.NewPageAsync();
 
         Logger.LogInformation("Checking YouTube authentication for user {Login}", BotUser.Login);
 
-        await authPage.GoToAsync(YoutubeLoginUrl, new NavigationOptions
+        await authPage.GotoAsync(YoutubeLoginUrl, new PageGotoOptions
         {
-            WaitUntil = [WaitUntilNavigation.DOMContentLoaded],
+            WaitUntil = WaitUntilState.DOMContentLoaded,
             Timeout   = 15_000
         });
 
         await Task.Delay(TimeSpan.FromSeconds(3));
 
-        var currentUrl = authPage.Url;
-
-        if (currentUrl.StartsWith(YoutubeBaseUrl))
+        if (authPage.Url.StartsWith(YoutubeBaseUrl))
         {
             Logger.LogInformation("YouTube authentication check passed for user {Login}", BotUser.Login);
             await authPage.CloseAsync();
             return;
         }
 
-        if (!currentUrl.StartsWith(GoogleAccountsUrl))
+        if (!authPage.Url.StartsWith(GoogleAccountsUrl))
         {
             await authPage.CloseAsync();
             return;
         }
-
-        // User is not logged in
-        /*
-        if (_botSettings.CurrentValue.WatchBrowserHeadless)
-        {
-            await authPage.CloseAsync();
-            throw new InvalidOperationException(
-                $"YouTube user '{BotUser.Login}' is not authenticated. " +
-                "Set WatchBrowserHeadless to false and run the bot once to log in to your Google account.");
-        }
-        */
 
         Logger.LogWarning(
             "YouTube user {Login} is not logged in. " +
@@ -104,8 +85,7 @@ public class WatchBrowser : WatchBrowser<YouTubeUser, string, string>, IYouTubeW
 
             if (authPage.Url.StartsWith(YoutubeBaseUrl))
             {
-                Logger.LogInformation(
-                    "YouTube authentication successful for user {Login}", BotUser.Login);
+                Logger.LogInformation("YouTube authentication successful for user {Login}", BotUser.Login);
                 await authPage.CloseAsync();
                 return;
             }

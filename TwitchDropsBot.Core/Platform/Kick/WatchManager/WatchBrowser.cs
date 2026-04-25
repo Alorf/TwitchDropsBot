@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using PuppeteerSharp;
+using Microsoft.Playwright;
 using TwitchDropsBot.Core.Platform.Kick.Bot;
 using TwitchDropsBot.Core.Platform.Kick.Models;
 using TwitchDropsBot.Core.Platform.Shared.Exceptions;
@@ -19,42 +19,38 @@ public class WatchBrowser : WatchBrowser<KickUser, Category, Channel>, IKickWatc
         _disposed = false;
 
         var channel = await BotUser.KickRepository.GetChannelAsync(streamer.slug);
-        
+
         if (channel?.Livestream is null)
-        {
             throw new StreamOffline();
-        }
-        
-        if (channel?.Livestream?.Category?.Contains(category) == false)
-        {
+
+        if (channel.Livestream.Category?.Contains(category) == false)
             throw new StreamOffline();
-        }
 
         if (Page != null) return;
 
         Page = await BrowserService.AddUserAsync(BotUser);
 
-        await Page.GoToAsync("https://www.kick.com/");
+        await Page.GotoAsync("https://www.kick.com/");
 
-        var token = BotUser.BearerToken.Replace("Bearer ", "");
-        token = Uri.EscapeDataString(token);
+        var token = Uri.EscapeDataString(BotUser.BearerToken.Replace("Bearer ", ""));
 
-        await Page.SetCookieAsync(
-            new CookieParam()
+        await Page.Context.AddCookiesAsync(
+        [
+            new Cookie
             {
-                Name = "session_token",
-                Value = token,
-                Domain = "kick.com",
-                Path = "/",
+                Name    = "session_token",
+                Value   = token,
+                Domain  = "kick.com",
+                Path    = "/",
                 Expires = DateTimeOffset.Now.AddDays(7).ToUnixTimeSeconds()
-            });
+            }
+        ]);
 
-        await Page.EvaluateExpressionAsync("sessionStorage.setItem('stream_quality', '160')");
+        await Page.EvaluateAsync("sessionStorage.setItem('stream_quality', '160')");
 
         await Page.ReloadAsync();
 
-        //Go to slug
-        await Page.GoToAsync($"https://www.kick.com/{streamer.slug}");
+        await Page.GotoAsync($"https://www.kick.com/{streamer.slug}");
 
         await Task.Delay(TimeSpan.FromSeconds(10));
     }

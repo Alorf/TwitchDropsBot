@@ -87,6 +87,7 @@ public class WatchBrowser : WatchBrowser<YouTubeUser, string, string>, IYouTubeW
             {
                 Logger.LogInformation("YouTube authentication successful for user {Login}", BotUser.Login);
                 await authPage.CloseAsync();
+                await BrowserService.SaveStorageStateAsync(BotUser);
                 return;
             }
         }

@@ -87,12 +87,20 @@ public sealed class BrowserService
             }
 
             _logger.LogInformation("[BROWSER SERVICE] Creating new isolated context for {Login}", user.Login);
-
-            var context = await _browser!.NewContextAsync(new BrowserNewContextOptions
+            
+            var storageStatePath = GetStorageStatePath(user);
+            var contextOptions = new BrowserNewContextOptions
             {
                 ViewportSize = new ViewportSize { Width = 1920, Height = 1080 },
-            });
+            };
 
+            if (File.Exists(storageStatePath))
+            {
+                _logger.LogInformation("[BROWSER SERVICE] Loading saved session for {Login}", user.Login);
+                contextOptions.StorageStatePath = storageStatePath;
+            }
+
+            var context = await _browser!.NewContextAsync(contextOptions);
             _userContexts[userKey] = context;
 
             var page = await context.NewPageAsync();
@@ -107,7 +115,48 @@ public sealed class BrowserService
             _lock.Release();
         }
     }
+    
+    public async Task<IReadOnlyList<BrowserContextCookiesResult>> GetCookiesAsync(BotUser user, string url)
+    {
+        await _lock.WaitAsync();
+        try
+        {
+            if (!_userContexts.TryGetValue(user.Id, out var context))
+                return [];
 
+            return await context.CookiesAsync([url]);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+    
+    public async Task SaveStorageStateAsync(BotUser user)
+    {
+        await _lock.WaitAsync();
+        try
+        {
+            if (!_userContexts.TryGetValue(user.Id, out var context))
+            {
+                _logger.LogWarning("[BROWSER SERVICE] No context found to save for {Login}", user.Login);
+                return;
+            }
+
+            var path = GetStorageStatePath(user);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            await context.StorageStateAsync(new BrowserContextStorageStateOptions { Path = path });
+            _logger.LogInformation("[BROWSER SERVICE] Session saved for {Login}", user.Login);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    private static string GetStorageStatePath(BotUser user)
+        => Path.Combine("sessions", $"{user.Id}.json");
+    
     public async Task RemoveUserAsync(BotUser user)
     {
         await _lock.WaitAsync();

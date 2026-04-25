@@ -12,7 +12,7 @@ namespace TwitchDropsBot.Core.Platform.YouTube.WatchManager;
 /// </summary>
 public interface IYouTubeWatchManager : IWatchManager<YouTubeUser, string, string>
 {
-    public Task EnsureBrowserLaunchedAsync();
+    public Task GetCookie();
     
     public Task EnsureAuthenticatedAsync();
 }

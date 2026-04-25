@@ -44,6 +44,7 @@ services.AddSingleton<IOptionsChangeTokenSource<BotSettings>>(
 services.AddBotService();
 services.AddTwitchService();
 services.AddKickService();
+services.AddYouTubeService();
 
 var settingsManager = new SettingsManager(configFilePath);
 services.AddSingleton(settingsManager);

@@ -11,6 +11,8 @@ using TwitchDropsBot.Core.Platform.Shared.Factories.User;
 using TwitchDropsBot.Core.Platform.Shared.Settings;
 using TwitchDropsBot.Core.Platform.Twitch.Factories.WatchManager;
 using TwitchDropsBot.Core.Platform.Twitch.Repository.Factory;
+using TwitchDropsBot.Core.Platform.YouTube.Factories.Repositories;
+using TwitchDropsBot.Core.Platform.YouTube.Factories.WatchManager;
 
 namespace TwitchDropsBot.Core.Platform.Shared.Services.Extensions;
 
@@ -38,6 +40,14 @@ public static class ServiceCollectionExtension
     {
         services.AddSingleton<IKickWatchManagerFactory, KickWatchManagerFactory>();
         services.AddSingleton<IKickRepositoryFactory, KickRepositoryFactory>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddYouTubeService(this IServiceCollection services)
+    {
+        services.AddSingleton<IYouTubeWatchManagerFactory, YouTubeWatchManagerFactory>();
+        services.AddSingleton<IYouTubeRepositoryFactory, YouTubeRepositoryFactory>();
 
         return services;
     }

@@ -51,6 +51,7 @@ namespace TwitchDropsBot.WinForms
             services.AddBotService();
             services.AddTwitchService();
             services.AddKickService();
+            services.AddYouTubeService();
             
             services.AddTransient<MainForm>();
 

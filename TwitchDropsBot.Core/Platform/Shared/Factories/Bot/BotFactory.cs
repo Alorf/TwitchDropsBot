@@ -4,6 +4,7 @@ using TwitchDropsBot.Core.Platform.Kick.Bot;
 using TwitchDropsBot.Core.Platform.Shared.Services;
 using TwitchDropsBot.Core.Platform.Shared.Settings;
 using TwitchDropsBot.Core.Platform.Twitch.Bot;
+using TwitchDropsBot.Core.Platform.YouTube.Bot;
 
 namespace TwitchDropsBot.Core.Platform.Shared.Factories.Bot;
 
@@ -27,5 +28,10 @@ public class BotFactory
     public KickBot CreateKickBot(KickUser user, ILogger logger)
     {
         return new KickBot(user, logger, _notificationService, _botSettings); 
+    }
+
+    public YouTubeBot CreateYouTubeBot(YouTubeUser user, ILogger logger)
+    {
+        return new YouTubeBot(user, logger, _notificationService, _botSettings);
     }
 }

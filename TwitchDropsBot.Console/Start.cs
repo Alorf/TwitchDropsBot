@@ -81,8 +81,9 @@ public class Start
     {
         var botTasks = new List<Task>();
 
-        var twitchUsers = _botSettings.CurrentValue.TwitchSettings.TwitchUsers;
-        var kickUsers = _botSettings.CurrentValue.KickSettings.KickUsers;
+        var twitchUsers  = _botSettings.CurrentValue.TwitchSettings.TwitchUsers;
+        var kickUsers    = _botSettings.CurrentValue.KickSettings.KickUsers;
+        var youtubeUsers = _botSettings.CurrentValue.YouTubeSettings.YouTubeUsers;
 
         foreach (var twitchUserSetting in twitchUsers.Where(u => u.Enabled))
         {
@@ -93,6 +94,12 @@ public class Start
         foreach (var kickUserSettings in kickUsers.Where(u => u.Enabled))
         {
             var user = _userFactory.CreateKickUser(kickUserSettings);
+            botTasks.Add(user.StartBot());
+        }
+
+        foreach (var youtubeUserSettings in youtubeUsers.Where(u => u.Enabled))
+        {
+            var user = _userFactory.CreateYouTubeUser(youtubeUserSettings);
             botTasks.Add(user.StartBot());
         }
 
@@ -110,7 +117,8 @@ public class Start
     private static bool HasNoUsers(BotSettings settings)
     {
         return settings.KickSettings.KickUsers.Count == 0 && 
-               settings.TwitchSettings.TwitchUsers.Count == 0;
+               settings.TwitchSettings.TwitchUsers.Count == 0 &&
+               settings.YouTubeSettings.YouTubeUsers.Count == 0;
     }
 
     private async Task<int> StartAuthAsync()
@@ -118,17 +126,19 @@ public class Start
         logger.LogInformation("Which platform");
         logger.LogInformation("1. Twitch");
         logger.LogInformation("2. Kick");
-        logger.LogInformation("3. Exit");
+        logger.LogInformation("3. YouTube");
+        logger.LogInformation("4. Exit");
 
         try
         {
-            int answer = int.Parse(UserInput.ReadInput(["1", "2", "3"]));
+            int answer = int.Parse(UserInput.ReadInput(["1", "2", "3", "4"]));
 
             return answer switch
             {
                 1 => await AuthenticateTwitchAsync(),
                 2 => await AuthenticateKickAsync(),
-                3 => -1,
+                3 => AuthenticateYouTubeAsync(),
+                4 => -1,
                 _ => 1
             };
         }
@@ -152,6 +162,12 @@ public class Start
         await Kick.AuthKickDeviceAsync(logger, settingsManager);
         await Task.Delay(1000);
 
+        return 1;
+    }
+
+    private int AuthenticateYouTubeAsync()
+    {
+        YouTube.AddYouTubeUserAsync(logger, settingsManager);
         return 1;
     }
 }

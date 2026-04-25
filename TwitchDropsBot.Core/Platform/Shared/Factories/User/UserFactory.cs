@@ -9,6 +9,8 @@ using TwitchDropsBot.Core.Platform.Shared.Serilog;
 using TwitchDropsBot.Core.Platform.Shared.Settings;
 using TwitchDropsBot.Core.Platform.Twitch.Bot;
 using TwitchDropsBot.Core.Platform.Twitch.Settings;
+using TwitchDropsBot.Core.Platform.YouTube.Bot;
+using TwitchDropsBot.Core.Platform.YouTube.Settings;
 
 namespace TwitchDropsBot.Core.Platform.Shared.Factories.User;
 
@@ -64,5 +66,11 @@ public class UserFactory
     {
         var logger = CreateLogger(typeof(KickUser).Name, settings);
         return ActivatorUtilities.CreateInstance<KickUser>(_serviceProvider, settings, logger);
+    }
+
+    public YouTubeUser CreateYouTubeUser(YouTubeUserSettings settings)
+    {
+        var logger = CreateLogger(typeof(YouTubeUser).Name, settings);
+        return ActivatorUtilities.CreateInstance<YouTubeUser>(_serviceProvider, settings, logger);
     }
 }

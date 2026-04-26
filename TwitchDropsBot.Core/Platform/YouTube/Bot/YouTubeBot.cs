@@ -84,10 +84,10 @@ public class YouTubeBot : BaseBot<YouTubeUser>
             var videoId = ExtractVideoId(liveStreamUrl);
             if (videoId == null)
             {
+                // URL is malformed — this is a parsing error, not a channel-offline condition.
+                // Abort this cycle so the channel is retried on the next StartAsync call.
                 Logger.LogError("Could not extract video ID from URL {StreamUrl}", liveStreamUrl);
-                channelsToTry.Remove(liveChannelId);
-                _offlineChannels.Add(liveChannelId);
-                continue;
+                throw new NoBroadcasterOrNoCampaignLeft();
             }
 
             Logger.LogInformation("Live stream found: {StreamUrl}", liveStreamUrl);

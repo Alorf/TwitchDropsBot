@@ -22,6 +22,14 @@ public class YouTubeHttpRepository : BotRepository<YouTubeUser>
     /// </summary>
     private const string LiveTabParams = "EgJIAQ==";
 
+    /// <summary>
+    /// InnerTube client version sent in every request.
+    /// This value does not need to match the real YouTube web client version exactly;
+    /// any reasonable recent version string is accepted by the API.
+    /// Update when the API starts rejecting requests.
+    /// </summary>
+    private const string InnerTubeClientVersion = "2.20231121.08.00";
+
     public YouTubeHttpRepository(YouTubeUser user, ILogger logger)
     {
         BotUser = user;
@@ -56,7 +64,7 @@ public class YouTubeHttpRepository : BotRepository<YouTubeUser>
                 client = new
                 {
                     clientName    = "WEB",
-                    clientVersion = "2.20231121.08.00",
+                    clientVersion = InnerTubeClientVersion,
                     hl            = "en",
                     gl            = "US"
                 }

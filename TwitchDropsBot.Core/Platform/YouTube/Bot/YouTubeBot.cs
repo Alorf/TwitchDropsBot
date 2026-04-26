@@ -41,7 +41,7 @@ public class YouTubeBot : BaseBot<YouTubeUser>
         foreach (var channelId in channelIds)
         {
             Logger.LogInformation("Checking channel {ChannelId} for live stream...", channelId);
-            var url = await BotUser.WatchManager.GetActiveLiveStreamUrlAsync(channelId);
+            var url = await GetActiveLiveStreamWithFallbackAsync(channelId);
             if (url != null)
             {
                 liveStreamUrl = url;
@@ -79,7 +79,7 @@ public class YouTubeBot : BaseBot<YouTubeUser>
             await Task.Delay(checkInterval);
 
             Logger.LogInformation("Re-checking if stream is still live on channel {ChannelId}...", liveChannelId);
-            var stillLive = await BotUser.WatchManager.GetActiveLiveStreamUrlAsync(liveChannelId!);
+            var stillLive = await GetActiveLiveStreamWithFallbackAsync(liveChannelId!);
 
             if (stillLive == null)
             {
@@ -95,6 +95,33 @@ public class YouTubeBot : BaseBot<YouTubeUser>
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Attempts to detect a live stream via the lightweight InnerTube HTTP API first.
+    /// Falls back to the authenticated browser check when InnerTube fails or returns
+    /// an unexpected response.
+    /// </summary>
+    private async Task<string?> GetActiveLiveStreamWithFallbackAsync(string channelId)
+    {
+        try
+        {
+            var url = await BotUser.YouTubeRepository.GetActiveLiveStreamAsync(channelId);
+            if (url != null)
+                return url;
+
+            // InnerTube returned null (channel not live) — no need for the browser check.
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex,
+                "InnerTube check failed for channel {ChannelId}, falling back to browser",
+                channelId);
+        }
+
+        // Fallback: use the authenticated Playwright browser.
+        return await BotUser.WatchManager.GetActiveLiveStreamUrlAsync(channelId);
+    }
 
     /// <summary>
     /// Returns the channel IDs for this user: per-user list when non-empty, otherwise

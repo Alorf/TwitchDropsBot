@@ -58,6 +58,14 @@ public class YouTubeBot : BaseBot<YouTubeUser>
 
         Logger.LogInformation("Live stream found: {StreamUrl}", liveStreamUrl);
 
+        // Extract the video ID from the watch URL so we can poll it directly.
+        var videoId = ExtractVideoId(liveStreamUrl);
+        if (videoId == null)
+        {
+            Logger.LogError("Could not extract video ID from URL {StreamUrl}", liveStreamUrl);
+            throw new NoBroadcasterOrNoCampaignLeft();
+        }
+
         // Open the stream in the browser
         try
         {
@@ -78,8 +86,8 @@ public class YouTubeBot : BaseBot<YouTubeUser>
         {
             await Task.Delay(checkInterval);
 
-            Logger.LogInformation("Re-checking if stream is still live on channel {ChannelId}...", liveChannelId);
-            var stillLive = await BotUser.WatchManager.IsCurrentStreamLiveAsync();
+            Logger.LogInformation("Re-checking if video {VideoId} is still live...", videoId);
+            var stillLive = await BotUser.YouTubeRepository.IsVideoLiveAsync(videoId);
 
             if (!stillLive)
             {
@@ -136,5 +144,19 @@ public class YouTubeBot : BaseBot<YouTubeUser>
             return userSettings.ChannelIds;
 
         return BotSettings.CurrentValue.YouTubeSettings.ChannelIds;
+    }
+
+    /// <summary>
+    /// Extracts the YouTube video ID from a watch URL
+    /// (e.g. <c>https://www.youtube.com/watch?v=VIDEOID</c>).
+    /// Returns <c>null</c> when the URL does not contain a recognisable video ID.
+    /// </summary>
+    private static string? ExtractVideoId(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return null;
+
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        return query["v"];
     }
 }

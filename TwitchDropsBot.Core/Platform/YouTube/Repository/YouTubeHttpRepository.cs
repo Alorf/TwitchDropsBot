@@ -3,6 +3,7 @@ using TwitchDropsBot.Core.Platform.YouTube.Bot;
 using TwitchDropsBot.Core.Platform.Shared.Repository;
 using YoutubeExplode;
 using YoutubeExplode.Channels;
+using YoutubeExplode.Videos;
 
 namespace TwitchDropsBot.Core.Platform.YouTube.Repository;
 
@@ -63,5 +64,27 @@ public class YouTubeHttpRepository : BotRepository<YouTubeUser>
 
         _logger.LogTrace("No active live stream found for channel {ChannelId}", channelId);
         return null;
+    }
+
+    /// <summary>
+    /// Returns <c>true</c> when the video with the given ID is currently an active live stream.
+    /// A video is considered live when YoutubeExplode reports its <c>Duration</c> as <c>null</c>,
+    /// which is the documented behaviour for ongoing live streams.
+    /// </summary>
+    public async Task<bool> IsVideoLiveAsync(
+        string videoId,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogTrace("Checking if video {VideoId} is still live", videoId);
+
+        var parsed = VideoId.TryParse(videoId);
+        if (parsed is null)
+        {
+            _logger.LogWarning("Could not parse video ID from {VideoId}", videoId);
+            return false;
+        }
+
+        var video = await _youtube.Videos.GetAsync(parsed.Value, cancellationToken);
+        return video.Duration is null;
     }
 }

@@ -129,30 +129,6 @@ public class WatchBrowser : WatchBrowser<YouTubeUser, string, string>, IYouTubeW
     }
 
     // -------------------------------------------------------------------------
-    // IYouTubeWatchManager – in-browser live check
-    // -------------------------------------------------------------------------
-
-    /// <inheritdoc/>
-    public async Task<bool> IsCurrentStreamLiveAsync()
-    {
-        if (Page is null || _disposed)
-            return false;
-
-        try
-        {
-            // YouTube renders a ".ytp-live-badge" button in the player controls
-            // only while the stream is active. When the stream ends the badge disappears.
-            var badge = await Page.QuerySelectorAsync(".ytp-live-badge");
-            return badge != null;
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "Failed to check live badge in browser page");
-            return false;
-        }
-    }
-
-    // -------------------------------------------------------------------------
     // IWatchManager – watch a stream
     // -------------------------------------------------------------------------
 

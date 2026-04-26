@@ -17,10 +17,13 @@ public class YouTubeHttpRepository : BotRepository<YouTubeUser>
     private const string InnerTubeBrowseUrl = "https://www.youtube.com/youtubei/v1/browse";
 
     /// <summary>
-    /// InnerTube protobuf-encoded parameter that filters the channel browse result
-    /// to the "Live" tab only.
+    /// InnerTube protobuf-encoded parameter for the channel "Streams" tab.
+    /// This is the exact protobuf used by the YouTube web client (it encodes the string
+    /// "streams" plus additional empty sub-message fields required by the API — removing
+    /// them causes YouTube to return the wrong tab).
+    /// Reference: https://github.com/FreeTubeApp/FreeTube/blob/development/src/renderer/helpers/api/local.js
     /// </summary>
-    private const string LiveTabParams = "EgJIAQ==";
+    private const string StreamsTabParams = "EgdzdHJlYW1z8gYECgJ6AA==";
 
     /// <summary>
     /// InnerTube client version sent in every request.
@@ -70,7 +73,7 @@ public class YouTubeHttpRepository : BotRepository<YouTubeUser>
                 }
             },
             browseId,
-            @params = LiveTabParams
+            @params = StreamsTabParams
         };
 
         var json    = JsonSerializer.Serialize(requestBody);
@@ -81,6 +84,16 @@ public class YouTubeHttpRepository : BotRepository<YouTubeUser>
 
         var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
         using var document = JsonDocument.Parse(responseBody);
+
+        // YouTube silently returns the channel home tab when the channel has no Streams
+        // tab. Guard against this by checking that the selected tab URL ends with "/streams".
+        // This mirrors the check performed by the FreeTube client:
+        // https://github.com/FreeTubeApp/FreeTube/blob/development/src/renderer/helpers/api/local.js
+        if (!IsStreamsTabSelected(document.RootElement))
+        {
+            _logger.LogTrace("Channel {ChannelId} has no streams tab; treating as offline", channelId);
+            return null;
+        }
 
         var videoId = FindFirstLiveVideoId(document.RootElement);
         if (videoId == null)
@@ -97,6 +110,51 @@ public class YouTubeHttpRepository : BotRepository<YouTubeUser>
     // -------------------------------------------------------------------------
     // JSON helpers
     // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Returns <c>true</c> when the InnerTube browse response contains a selected tab
+    /// whose canonical URL ends with <c>/streams</c>.
+    /// <para>
+    /// If the channel has no Streams tab, YouTube returns the channel home tab instead.
+    /// This check replicates the guard used by FreeTube to detect that case.
+    /// </para>
+    /// </summary>
+    private static bool IsStreamsTabSelected(JsonElement root)
+    {
+        // Response structure:
+        // contents.twoColumnBrowseResultsRenderer.tabs[]
+        //   .tabRenderer { selected: true, endpoint.browseEndpoint.canonicalBaseUrl: "/@handle/streams" }
+        if (!root.TryGetProperty("contents", out var contents))
+            return false;
+
+        if (!contents.TryGetProperty("twoColumnBrowseResultsRenderer", out var twoCol))
+            return false;
+
+        if (!twoCol.TryGetProperty("tabs", out var tabs))
+            return false;
+
+        foreach (var tab in tabs.EnumerateArray())
+        {
+            if (!tab.TryGetProperty("tabRenderer", out var tabRenderer))
+                continue;
+
+            if (!tabRenderer.TryGetProperty("selected", out var selected) || !selected.GetBoolean())
+                continue;
+
+            // Selected tab found — check its canonical URL.
+            if (tabRenderer.TryGetProperty("endpoint", out var endpoint) &&
+                endpoint.TryGetProperty("browseEndpoint", out var browseEndpoint) &&
+                browseEndpoint.TryGetProperty("canonicalBaseUrl", out var canonicalUrl))
+            {
+                var url = canonicalUrl.GetString();
+                return url != null && url.EndsWith("/streams", StringComparison.OrdinalIgnoreCase);
+            }
+
+            return false;
+        }
+
+        return false;
+    }
 
     /// <summary>
     /// Recursively traverses the InnerTube JSON response and returns the

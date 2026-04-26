@@ -9,6 +9,13 @@ namespace TwitchDropsBot.Core.Platform.YouTube.Bot;
 
 public class YouTubeBot : BaseBot<YouTubeUser>
 {
+    /// <summary>
+    /// Channels confirmed offline in the current cycle.
+    /// Reset when all configured channels have been exhausted (mirrors
+    /// <c>finishedCampaigns</c> in <see cref="TwitchBot"/>).
+    /// </summary>
+    private readonly List<string> _offlineChannels = new();
+
     public YouTubeBot(
         YouTubeUser user,
         ILogger logger,
@@ -23,7 +30,7 @@ public class YouTubeBot : BaseBot<YouTubeUser>
     protected override async Task StartAsync()
     {
         var channelIds = GetChannelIds();
-        
+
         await BotUser.WatchManager.EnsureAuthenticatedAsync();
 
         if (channelIds.Count == 0)
@@ -34,42 +41,96 @@ public class YouTubeBot : BaseBot<YouTubeUser>
             throw new NoBroadcasterOrNoCampaignLeft();
         }
 
-        // Find first live channel
-        string? liveStreamUrl = null;
-        string? liveChannelId = null;
+        BotUser.Status = BotStatus.Seeking;
 
-        foreach (var channelId in channelIds)
+        // If all channels were marked offline in the previous cycle, reset so we retry them all.
+        var channelsToTry = channelIds.Except(_offlineChannels).ToList();
+        if (channelsToTry.Count == 0)
         {
-            Logger.LogInformation("Checking channel {ChannelId} for live stream...", channelId);
-            var url = await GetActiveLiveStreamWithFallbackAsync(channelId);
-            if (url != null)
+            Logger.LogInformation("All channels were offline last cycle, resetting channel list.");
+            _offlineChannels.Clear();
+            channelsToTry = new List<string>(channelIds);
+        }
+
+        // Mirrors the do-while broadcaster-selection loop in TwitchBot.
+        while (channelsToTry.Count > 0)
+        {
+            // Find first live channel from the remaining list.
+            string? liveStreamUrl = null;
+            string? liveChannelId = null;
+
+            foreach (var channelId in channelsToTry.ToList())
             {
-                liveStreamUrl = url;
-                liveChannelId = channelId;
-                break;
+                Logger.LogInformation("Checking channel {ChannelId} for live stream...", channelId);
+                var url = await GetActiveLiveStreamWithFallbackAsync(channelId);
+                if (url != null)
+                {
+                    liveStreamUrl = url;
+                    liveChannelId = channelId;
+                    break;
+                }
+
+                Logger.LogInformation("Channel {ChannelId} is not live, skipping.", channelId);
+                channelsToTry.Remove(channelId);
+                _offlineChannels.Add(channelId);
+            }
+
+            if (liveStreamUrl == null || liveChannelId == null)
+            {
+                Logger.LogInformation("No live streams found on any configured channel.");
+                throw new NoBroadcasterOrNoCampaignLeft();
+            }
+
+            var videoId = ExtractVideoId(liveStreamUrl);
+            if (videoId == null)
+            {
+                Logger.LogError("Could not extract video ID from URL {StreamUrl}", liveStreamUrl);
+                channelsToTry.Remove(liveChannelId);
+                _offlineChannels.Add(liveChannelId);
+                continue;
+            }
+
+            Logger.LogInformation("Live stream found: {StreamUrl}", liveStreamUrl);
+            BotUser.Status = BotStatus.Watching;
+            Logger.LogInformation("Watching channel {ChannelId} | {StreamUrl}", liveChannelId, liveStreamUrl);
+
+            try
+            {
+                await WatchStreamAsync(liveStreamUrl, liveChannelId, videoId);
+            }
+            catch (StreamOffline)
+            {
+                Logger.LogInformation(
+                    "Stream on channel {ChannelId} has ended, looking for another channel.", liveChannelId);
+                channelsToTry.Remove(liveChannelId);
+                _offlineChannels.Add(liveChannelId);
+                BotUser.Status = BotStatus.Seeking;
             }
         }
 
-        if (liveStreamUrl == null)
-        {
-            Logger.LogInformation("No live streams found on any configured channel.");
-            throw new NoBroadcasterOrNoCampaignLeft();
-        }
+        Logger.LogInformation("No more channels to watch.");
+        throw new NoBroadcasterOrNoCampaignLeft();
+    }
 
-        Logger.LogInformation("Live stream found: {StreamUrl}", liveStreamUrl);
+    // -------------------------------------------------------------------------
+    // Watching loop (mirrors TwitchBot.WatchStreamAsync)
+    // -------------------------------------------------------------------------
 
-        // Extract the video ID from the watch URL so we can poll it directly.
-        var videoId = ExtractVideoId(liveStreamUrl);
-        if (videoId == null)
-        {
-            Logger.LogError("Could not extract video ID from URL {StreamUrl}", liveStreamUrl);
-            throw new NoBroadcasterOrNoCampaignLeft();
-        }
+    /// <summary>
+    /// Opens the stream in the browser and polls liveness until the stream ends.
+    /// Includes a periodic browser health refresh that mirrors the stuck-counter
+    /// browser reset in <see cref="TwitchBot"/>.
+    /// </summary>
+    private async Task WatchStreamAsync(string streamUrl, string channelId, string videoId)
+    {
+        var apiFailureCounter   = 0;
+        var periodicRefreshCounter = 0;
+        var checkInterval = TimeSpan.FromSeconds(
+            BotSettings.CurrentValue.YouTubeSettings.StreamCheckIntervalSeconds);
 
-        // Open the stream in the browser
         try
         {
-            await BotUser.WatchManager.WatchStreamAsync(liveStreamUrl, liveChannelId!);
+            await BotUser.WatchManager.WatchStreamAsync(streamUrl, channelId);
         }
         catch (Exception ex)
         {
@@ -78,25 +139,67 @@ public class YouTubeBot : BaseBot<YouTubeUser>
             throw new StreamOffline();
         }
 
-        // Poll until the stream ends
-        var checkInterval = TimeSpan.FromSeconds(
-            BotSettings.CurrentValue.YouTubeSettings.StreamCheckIntervalSeconds);
-
         while (true)
         {
             await Task.Delay(checkInterval);
 
             Logger.LogInformation("Re-checking if video {VideoId} is still live...", videoId);
-            var stillLive = await BotUser.YouTubeRepository.IsVideoLiveAsync(videoId);
+
+            bool stillLive;
+            try
+            {
+                stillLive = await BotUser.YouTubeRepository.IsVideoLiveAsync(videoId);
+                apiFailureCounter = 0;
+            }
+            catch (Exception ex)
+            {
+                apiFailureCounter++;
+                Logger.LogWarning(ex,
+                    "Failed to check stream status for {VideoId} ({Count}/5), will retry.",
+                    videoId, apiFailureCounter);
+
+                if (apiFailureCounter >= 5)
+                {
+                    Logger.LogError(
+                        "Too many consecutive failures checking stream status for {VideoId}. Restarting.",
+                        videoId);
+                    BotUser.WatchManager.Close();
+                    throw new StreamOffline();
+                }
+
+                continue;
+            }
 
             if (!stillLive)
             {
-                Logger.LogInformation("Stream on channel {ChannelId} has ended.", liveChannelId);
+                Logger.LogInformation("Stream on channel {ChannelId} has ended.", channelId);
                 BotUser.WatchManager.Close();
                 throw new StreamOffline();
             }
 
-            Logger.LogInformation("Stream still live. Continuing to watch...");
+            // Periodic browser health refresh — mirrors the stuck-counter browser reset in TwitchBot
+            // (30 consecutive checks without issue triggers a clean reopen).
+            periodicRefreshCounter++;
+            if (periodicRefreshCounter >= 30)
+            {
+                Logger.LogInformation(
+                    "Performing periodic browser refresh for channel {ChannelId}.", channelId);
+                BotUser.WatchManager.Close();
+                periodicRefreshCounter = 0;
+                try
+                {
+                    await BotUser.WatchManager.WatchStreamAsync(streamUrl, channelId);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Failed to re-open stream during periodic refresh");
+                    throw new StreamOffline();
+                }
+            }
+            else
+            {
+                Logger.LogInformation("Stream still live. Continuing to watch...");
+            }
         }
     }
 

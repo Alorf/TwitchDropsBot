@@ -79,9 +79,9 @@ public class YouTubeBot : BaseBot<YouTubeUser>
             await Task.Delay(checkInterval);
 
             Logger.LogInformation("Re-checking if stream is still live on channel {ChannelId}...", liveChannelId);
-            var stillLive = await GetActiveLiveStreamWithFallbackAsync(liveChannelId!);
+            var stillLive = await BotUser.WatchManager.IsCurrentStreamLiveAsync();
 
-            if (stillLive == null)
+            if (!stillLive)
             {
                 Logger.LogInformation("Stream on channel {ChannelId} has ended.", liveChannelId);
                 BotUser.WatchManager.Close();

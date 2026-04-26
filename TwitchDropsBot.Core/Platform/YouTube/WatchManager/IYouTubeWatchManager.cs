@@ -25,4 +25,12 @@ public interface IYouTubeWatchManager : IWatchManager<YouTubeUser, string, strin
     /// the channel is currently live, or <c>null</c> when it is not.
     /// </summary>
     Task<string?> GetActiveLiveStreamUrlAsync(string channelId);
+
+    /// <summary>
+    /// Checks whether the stream currently open in the watching browser is still live,
+    /// by looking for the <c>.ytp-live-badge</c> element that YouTube displays in the
+    /// player controls only during an active live stream.
+    /// Returns <c>false</c> when the page is not open or the badge is gone.
+    /// </summary>
+    Task<bool> IsCurrentStreamLiveAsync();
 }

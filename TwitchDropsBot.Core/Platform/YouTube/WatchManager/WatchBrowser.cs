@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Playwright;
+using TwitchDropsBot.Core.Platform.Shared.Exceptions;
 using TwitchDropsBot.Core.Platform.Shared.Services;
 using TwitchDropsBot.Core.Platform.Shared.WatchManager;
 using TwitchDropsBot.Core.Platform.YouTube.Bot;
@@ -136,6 +137,16 @@ public class WatchBrowser : WatchBrowser<YouTubeUser, string, string>, IYouTubeW
     {
         _disposed = false;
 
+        // Verify the stream is still live before (re)opening the browser page.
+        // Mirrors the FetchStreamInformationAsync check in Twitch's WatchStreamAsync.
+        var videoId = ExtractVideoId(streamUrl);
+        if (videoId != null)
+        {
+            var isLive = await BotUser.YouTubeRepository.IsVideoLiveAsync(videoId);
+            if (!isLive)
+                throw new StreamOffline();
+        }
+
         if (Page != null)
         {
             Logger.LogDebug("Already watching a stream, skipping navigation");
@@ -148,5 +159,23 @@ public class WatchBrowser : WatchBrowser<YouTubeUser, string, string>, IYouTubeW
         await Page.GotoAsync(streamUrl);
 
         await Task.Delay(TimeSpan.FromSeconds(10));
+    }
+
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Extracts the YouTube video ID from a watch URL
+    /// (e.g. <c>https://www.youtube.com/watch?v=VIDEOID</c>).
+    /// Returns <c>null</c> when the URL does not contain a recognisable video ID.
+    /// </summary>
+    private static string? ExtractVideoId(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return null;
+
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        return query["v"];
     }
 }

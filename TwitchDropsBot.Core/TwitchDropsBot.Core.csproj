@@ -27,6 +27,7 @@
       <!-- Configuration packages required by AppSettings.cs -->
       <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
       <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0" />
+      <PackageReference Include="YoutubeExplode" Version="6.6.0" />
     </ItemGroup>
 
     <ItemGroup>

@@ -157,6 +157,10 @@ public class WatchBrowser : WatchBrowser<YouTubeUser, string, string>, IYouTubeW
         Logger.LogInformation("Navigating to stream {StreamUrl} (channel {ChannelId})", streamUrl, channelId);
 
         await Page.GotoAsync(streamUrl);
+        
+        await Task.Delay(TimeSpan.FromSeconds(10));
+
+        await Page.Keyboard.PressAsync("Space");
 
         await Task.Delay(TimeSpan.FromSeconds(10));
     }

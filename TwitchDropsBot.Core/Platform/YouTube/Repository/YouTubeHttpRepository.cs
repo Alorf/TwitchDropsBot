@@ -85,6 +85,6 @@ public class YouTubeHttpRepository : BotRepository<YouTubeUser>
         }
 
         var video = await _youtube.Videos.GetAsync(parsed.Value, cancellationToken);
-        return video.Duration is null;
+        return video.Duration is null || (video.Duration == new TimeSpan(0,0,0));
     }
 }

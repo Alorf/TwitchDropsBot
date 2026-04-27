@@ -1,0 +1,92 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 1 – Build
+# ─────────────────────────────────────────────────────────────────────────────
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+ARG BUILD_CONFIGURATION=Release
+WORKDIR /src
+COPY ["TwitchDropsBot.Console/TwitchDropsBot.Console.csproj", "TwitchDropsBot.Console/"]
+RUN dotnet restore "TwitchDropsBot.Console/TwitchDropsBot.Console.csproj"
+COPY . .
+WORKDIR "/src/TwitchDropsBot.Console"
+RUN dotnet build "TwitchDropsBot.Console.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 2 – Publish
+# ─────────────────────────────────────────────────────────────────────────────
+FROM build AS publish
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "TwitchDropsBot.Console.csproj" \
+    -c $BUILD_CONFIGURATION \
+    -o /app/publish \
+    /p:UseAppHost=false
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 3 – Runtime + GUI
+#
+# jlesage/baseimage-gui provides:
+#   • Virtual X display (Xvfb) + Openbox window manager
+#   • noVNC web interface  → http://<host>:5800
+#   • VNC direct access    → <host>:5900
+#
+# The Playwright Chromium window opened by the bot is fully visible and
+# interactive through the noVNC web interface, which makes it easy to:
+#   - Monitor streams being watched
+#   - Complete YouTube / Google authentication on first run
+#   - Manage any other browser-based interaction
+# ─────────────────────────────────────────────────────────────────────────────
+FROM jlesage/baseimage-gui:debian-12-v4
+
+# ── .NET 8 runtime + libmsquic ────────────────────────────────────────────────
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl gnupg \
+    && curl -sSL https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb \
+       -o /tmp/msprod.deb \
+    && dpkg -i /tmp/msprod.deb \
+    && rm /tmp/msprod.deb \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+           dotnet-runtime-8.0 \
+           libmsquic \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Playwright / Chromium system dependencies ─────────────────────────────────
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+           libnss3 libnspr4 \
+           libatk1.0-0 libatk-bridge2.0-0 \
+           libcups2 libdrm2 \
+           libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
+           libgbm1 libasound2 \
+           libpango-1.0-0 libcairo2 \
+           fonts-liberation \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Application ───────────────────────────────────────────────────────────────
+WORKDIR /app
+COPY --from=publish /app/publish .
+
+ENV INSIDE_DOCKER=true
+
+# Store Playwright browsers in a dedicated directory that can be persisted
+# via a volume mount so re-downloads are avoided on container restart.
+ENV PLAYWRIGHT_BROWSERS_PATH=/app/ms-playwright
+
+# Open Chromium in visible (non-headless) mode so the browser window appears
+# in the noVNC display. Can be overridden at runtime with -e WatchBrowserHeadless=true.
+ENV WatchBrowserHeadless=false
+
+VOLUME ["/app/Configuration"]
+VOLUME ["/app/sessions"]
+VOLUME ["/app/ms-playwright"]
+
+# noVNC web interface and VNC ports exposed by jlesage/baseimage-gui.
+EXPOSE 5800
+EXPOSE 5900
+
+# Application name shown in the noVNC title bar.
+ENV APP_NAME="TwitchDropsBot"
+
+# /startapp.sh is the entrypoint called by jlesage/baseimage-gui after the
+# virtual display and window manager are ready.
+RUN printf '#!/bin/sh\nexec dotnet /app/TwitchDropsBot.Console.dll\n' \
+    > /startapp.sh && chmod +x /startapp.sh

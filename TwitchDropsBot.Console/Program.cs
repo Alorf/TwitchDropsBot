@@ -20,7 +20,8 @@ var configuration = builder.Build();
 var configFilePath = ConfigPathHelper.GetConfigFilePath("config.json"); // bot dynamic config
 
 var botBuilder = new ConfigurationBuilder()
-    .AddJsonFile(configFilePath, optional: false, reloadOnChange: true);
+    .AddJsonFile(configFilePath, optional: false, reloadOnChange: true)
+    .AddEnvironmentVariables();
 
 var botConfiguration = botBuilder.Build();
 

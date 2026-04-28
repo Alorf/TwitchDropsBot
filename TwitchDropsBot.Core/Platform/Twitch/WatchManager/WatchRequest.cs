@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.IO.Compression;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
@@ -16,16 +17,12 @@ public class WatchRequest : ITwitchWatchManager
 {
     public TwitchUser BotUser { get; }
     private ILogger _logger;
-    
+
     private string? streamUrl;
     private readonly TwitchGqlRepository twitchGraphQlClient;
     private DateTime lastRequestTime;
     private readonly bool enableOldSystem;
-    private static string? _spadeUrl = null;
-    private static DateTime _lastSpadeUrlFetch = DateTime.MinValue;
-    private static readonly TimeSpan SpadeUrlRefreshInterval = TimeSpan.FromMinutes(30);
-    private static readonly object SpadeUrlLock = new();
-    
+
     public WatchRequest(TwitchUser user, ILogger logger, bool enableOldSystem)
     {
         BotUser = user;
@@ -96,19 +93,13 @@ public class WatchRequest : ITwitchWatchManager
                 string[] lines2 = responseBody2.Split("\n");
                 string lastLine2 = lines2[lines2.Length - 2];
 
-                HttpResponseMessage response3 = await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, lastLine2));
+                HttpResponseMessage response3 =
+                    await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, lastLine2));
                 response3.EnsureSuccessStatusCode();
             }
-            
+
             if ((requestTime - lastRequestTime).TotalSeconds >= 59)
             {
-                var checkurl = await GetSpadeUrl();
-
-                if (checkurl is null)
-                {
-                    throw new System.Exception("Failed to fetch Spade URL.");
-                }
-
                 var tempBroadcaster = await twitchGraphQlClient.FetchStreamInformationAsync(broadcaster.Login);
 
                 if (tempBroadcaster is not null)
@@ -123,27 +114,20 @@ public class WatchRequest : ITwitchWatchManager
                         if (tempBroadcaster?.BroadcastSettings?.Game?.Id != game.Id)
                         {
                             throw new StreamOffline("Wrong game");
-                        }   
+                        }
                     }
                 }
-            
+
                 if (tempBroadcaster?.Stream is not null)
                 {
                     var stream = tempBroadcaster.Stream;
-                    var payload = GetPayload(tempBroadcaster, stream);
+                    var payload = GetPayload(tempBroadcaster, stream, game);
 
-                    // Do post request to checkUrl, passing the payload
-                    var request = new HttpRequestMessage(HttpMethod.Post, checkurl)
-                    {
-                        Content = new StringContent($"data={payload}", Encoding.UTF8, "application/x-www-form-urlencoded")
-                    };
-                
-                    var payloadRequest = await client.SendAsync(request);
-                    payloadRequest.EnsureSuccessStatusCode();
+                    await twitchGraphQlClient.SimulateWatchAsync(payload);
                 }
+
                 lastRequestTime = DateTime.Now;
             }
-            
         }
         catch (System.Exception ex)
         {
@@ -155,7 +139,7 @@ public class WatchRequest : ITwitchWatchManager
     public async Task<DropCurrentSession?> FakeWatchAsync(User broadcaster, Game game, int tryCount = 1)
     {
         _logger.LogDebug("Watching {seconds} seconds to ensure drops are registered...", (20 * tryCount));
-        
+
         for (int i = 0; i < tryCount; i++)
         {
             await WatchStreamAsync(broadcaster, game);
@@ -172,9 +156,8 @@ public class WatchRequest : ITwitchWatchManager
         lastRequestTime = DateTime.MinValue;
     }
 
-    private string GetPayload(User broadcaster, Stream stream)
+    private string GetPayload(User broadcaster, Stream stream, Game game)
     {
-        
         var payload = new[]
         {
             new Dictionary<string, object>
@@ -185,54 +168,29 @@ public class WatchRequest : ITwitchWatchManager
                     ["broadcast_id"] = stream.Id,
                     ["channel_id"] = broadcaster.Id,
                     ["channel"] = broadcaster.Login,
+                    ["client_time"] = DateTime.UtcNow.ToString("o").Replace("+00:00", "Z"),
+                    ["game"] = game.Name ?? game.DisplayName ?? "",
+                    ["game_id"] = game.Id ?? "",
                     ["hidden"] = false,
+                    ["is_live"] = true,
                     ["live"] = true,
-                    ["location"] = "channel",
                     ["logged_in"] = true,
+                    ["minutes_logged"] = 1,
                     ["muted"] = false,
-                    ["player"] = "site",
                     ["user_id"] = int.Parse(BotUser.Id),
-                    ["device_id"] = BotUser.UniqueId,
                 }
             }
         };
-
         var json = JsonSerializer.Serialize(payload);
-        var b64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
+        var jsonBytes = Encoding.UTF8.GetBytes(json);
+        using var output = new MemoryStream();
+        using (var gzip = new GZipStream(output, CompressionLevel.Optimal, leaveOpen: true))
+        {
+            gzip.Write(jsonBytes, 0, jsonBytes.Length);
+        }
 
+        var compressedBytes = output.ToArray();
+        var b64 = Convert.ToBase64String(compressedBytes);
         return b64;
-    }
-
-    private async Task<string?> GetSpadeUrl()
-    {
-        lock (SpadeUrlLock)
-        {
-            if (_spadeUrl != null && (DateTime.Now - _lastSpadeUrlFetch) < SpadeUrlRefreshInterval)
-                return _spadeUrl;
-        }
-
-        using var client = new HttpClient();
-        var html = await client.GetStringAsync("https://www.twitch.tv");
-        var regex = new Regex(@"https://assets\.twitch\.tv/config/settings\.[a-zA-Z0-9]+\.js");
-        var match = regex.Match(html);
-        if (!match.Success)
-            return null;
-
-        var assetUrl = match.Value;
-        var jsContent = await client.GetStringAsync(assetUrl);
-        var spadeRegex = new Regex(@"""beacon_url""\s*:\s*""([^""]+)""");
-        var spadeMatch = spadeRegex.Match(jsContent);
-
-        if (spadeMatch.Success)
-        {
-            lock (SpadeUrlLock)
-            {
-                _spadeUrl = spadeMatch.Groups[1].Value;
-                _lastSpadeUrlFetch = DateTime.Now;
-            }
-            return _spadeUrl;
-        }
-
-        return null;
     }
 }

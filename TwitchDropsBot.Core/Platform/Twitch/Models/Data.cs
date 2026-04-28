@@ -7,6 +7,9 @@ public class Data
     [JsonPropertyName("currentUser")]
     public User? CurrentUser { get; set; }
 
+    [JsonPropertyName("sendSpadeEvents")]
+    public SendSpadeEvents? SendSpadeEvents { get; set; }
+
     [JsonPropertyName("user")]
     public User? User { get; set; }
 
@@ -24,6 +27,12 @@ public class Data
 
     [JsonPropertyName("token")]
     public string? Token { get; set; }
+}
+
+public class SendSpadeEvents
+{
+    [JsonPropertyName("statusCode")] 
+    public int statusCode { get; set; }
 }
 
 

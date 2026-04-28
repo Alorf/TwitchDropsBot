@@ -332,6 +332,34 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
 
         return new List<DropCampaign?>();
     }
+    
+    public async Task<dynamic?> SimulateWatchAsync(string compressedData)
+    {
+        var query = new GraphQLRequest
+        {
+            OperationName = "SendEvents",
+            Query = @"
+            mutation SendEvents($input: SendSpadeEventsInput!) {
+                sendSpadeEvents(input: $input) {
+                    statusCode
+                }
+            }
+        ",
+            Variables = new
+            {
+                input = new
+                {
+                    data = compressedData,
+                    repository = "twilight",
+                    encoding = "GZIP_B64",
+                }
+            }
+        };
+
+        var response = await DoGQLRequestAsync(query);
+
+        return response;
+    }
 
     public async Task<bool> ClaimDropAsync(string dropInstanceID)
     {

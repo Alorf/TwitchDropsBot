@@ -32,18 +32,29 @@ public class YouTubeHttpRepository : BotRepository<YouTubeUser>
     {
         _logger.LogTrace("Checking for active live stream on channel {ChannelId}", channelId);
 
-        // Resolve handles (@name or plain name) to a canonical UC… channel ID.
-        var resolvedId = channelId;
-        if (!channelId.StartsWith("UC", StringComparison.Ordinal))
-            resolvedId = await ResolveChannelIdAsync(channelId, cancellationToken) ?? channelId;
-
-        // The uploads playlist ID is the channel ID with the prefix "UC" replaced by "UU".
-        if (resolvedId.Length < 2)
+        // Resolve handles (@name, @handle, or any non-UC… input) to a canonical UC… channel ID.
+        string resolvedId;
+        if (channelId.StartsWith("UC", StringComparison.Ordinal) && channelId.Length > 2)
         {
-            _logger.LogWarning("Resolved channel ID '{Id}' is too short to derive uploads playlist", resolvedId);
-            return null;
+            resolvedId = channelId;
+        }
+        else
+        {
+            _logger.LogDebug("'{ChannelId}' is not a UC… ID, resolving via InnerTube", channelId);
+            resolvedId = await ResolveChannelIdAsync(channelId, cancellationToken) ?? string.Empty;
+
+            if (string.IsNullOrEmpty(resolvedId) ||
+                !resolvedId.StartsWith("UC", StringComparison.Ordinal))
+            {
+                _logger.LogWarning(
+                    "Could not resolve '{ChannelId}' to a valid UC… channel ID (got '{Resolved}'). " +
+                    "Check that the handle or name is correct.",
+                    channelId, resolvedId);
+                return null;
+            }
         }
 
+        // The uploads playlist ID is the channel ID with the prefix "UC" replaced by "UU".
         var uploadsId = "UU" + resolvedId.Substring(2);
 
         using var doc  = await _innerTube.BrowseAsync(uploadsId, null, cancellationToken);

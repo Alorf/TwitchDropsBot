@@ -121,19 +121,20 @@ internal static class YoutubeNodeBridge
                 $"Node worker output is not valid JSON: {ex.Message}. Output: {stdout}");
         }
 
-        // The worker writes { "error": "..." } on failure instead of exiting non-zero,
-        // so that the error message is always captured as structured JSON.
-        if (doc.RootElement.TryGetProperty("error", out var errorProp))
+        using (doc)
         {
-            throw new InvalidOperationException(
-                $"Node worker reported error: {errorProp.GetString()}");
-        }
+            // The worker writes { "error": "..." } on failure instead of exiting non-zero,
+            // so that the error message is always captured as structured JSON.
+            if (doc.RootElement.TryGetProperty("error", out var errorProp))
+            {
+                throw new InvalidOperationException(
+                    $"Node worker reported error: {errorProp.GetString()}");
+            }
 
-        // Return root element - note: the JsonDocument is intentionally not
-        // disposed here because the caller accesses the element after the call.
-        // We transfer ownership via GC; if this becomes hot-path, consider
-        // cloning into a struct and disposing immediately.
-        return doc.RootElement.Clone();
+            // Clone produces a self-owned JsonElement independent of the JsonDocument,
+            // so the document can be disposed here while the returned element remains valid.
+            return doc.RootElement.Clone();
+        }
     }
 
     /// <summary>

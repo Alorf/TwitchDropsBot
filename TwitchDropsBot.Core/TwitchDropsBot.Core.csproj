@@ -45,4 +45,36 @@
       <Folder Include="Platform\Shared\Interfaces\" />
     </ItemGroup>
 
+    <!--
+      Node.js worker (youtubei.js).
+      1. Run 'npm install' inside the NodeWorker folder before each build so
+         node_modules are always present and up-to-date.
+      2. Copy the entire NodeWorker folder (worker.mjs + node_modules) to the
+         output directory under NodeWorker/ so the C# bridge can locate it.
+    -->
+    <Target Name="NpmInstallNodeWorker" BeforeTargets="Build">
+      <Exec
+        Command="npm install --prefer-offline"
+        WorkingDirectory="$(MSBuildThisFileDirectory)Platform\YouTube\NodeWorker"
+        ConsoleToMsBuild="true" />
+    </Target>
+
+    <ItemGroup>
+      <!-- worker.mjs entry point -->
+      <Content Include="Platform\YouTube\NodeWorker\worker.mjs">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <Link>NodeWorker\worker.mjs</Link>
+      </Content>
+      <!-- package.json (needed by Node.js to resolve the ESM package type) -->
+      <Content Include="Platform\YouTube\NodeWorker\package.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <Link>NodeWorker\package.json</Link>
+      </Content>
+      <!-- node_modules tree -->
+      <Content Include="Platform\YouTube\NodeWorker\node_modules\**\*">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <Link>NodeWorker\node_modules\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      </Content>
+    </ItemGroup>
+
 </Project>

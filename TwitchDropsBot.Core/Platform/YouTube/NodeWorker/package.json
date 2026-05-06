@@ -1,0 +1,9 @@
+{
+  "name": "youtube-node-worker",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "youtubei.js": "17.0.1"
+  }
+}

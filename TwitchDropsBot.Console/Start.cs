@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using TwitchDropsBot.Console.Platform;
 using TwitchDropsBot.Console.Utils;
 using TwitchDropsBot.Core.Platform.Shared.Factories.User;
+using TwitchDropsBot.Core.Platform.Shared.Services;
 using TwitchDropsBot.Core.Platform.Shared.Settings;
 
 namespace TwitchDropsBot.Console;
@@ -14,18 +15,21 @@ public class Start
     private readonly ILogger<Start> logger;
     private readonly SettingsManager settingsManager;
     private readonly UserFactory _userFactory;
+    private readonly BrowserService _browserService;
     private readonly string[] args;
 
     public Start(IOptionsMonitor<BotSettings> botSettings,
         ILogger<Start> logger,
         SettingsManager settingsManager,
         UserFactory userFactory,
+        BrowserService browserService,
         string[] args)
     {
         _botSettings = botSettings;
         this.logger = logger;
         this.settingsManager = settingsManager;
         _userFactory = userFactory;
+        _browserService = browserService;
         this.args = args;
     }
 
@@ -125,17 +129,19 @@ public class Start
         logger.LogInformation("Which platform");
         logger.LogInformation("1. Twitch");
         logger.LogInformation("2. Kick");
-        logger.LogInformation("3. Exit");
+        logger.LogInformation("3. Youtube");
+        logger.LogInformation("4. Exit");
 
         try
         {
-            int answer = int.Parse(UserInput.ReadInput(["1", "2", "3"]));
+            int answer = int.Parse(UserInput.ReadInput(["1", "2", "3", "4"]));
 
             return answer switch
             {
                 1 => await AuthenticateTwitchAsync(),
                 2 => await AuthenticateKickAsync(),
-                3 => -1,
+                3 => await AuthenticateYoutubeAsync(),
+                4 => -1,
                 _ => 1
             };
         }
@@ -157,6 +163,14 @@ public class Start
     private async Task<int> AuthenticateKickAsync()
     {
         await Kick.AuthKickDeviceAsync(logger, settingsManager);
+        await Task.Delay(1000);
+
+        return 1;
+    }
+    
+    private async Task<int> AuthenticateYoutubeAsync()
+    {
+        await Youtube.AuthYoutubeDeviceAsync(logger, settingsManager);
         await Task.Delay(1000);
 
         return 1;

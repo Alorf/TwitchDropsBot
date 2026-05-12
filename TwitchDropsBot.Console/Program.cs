@@ -8,6 +8,7 @@ using TwitchDropsBot.Console.Platform;
 using TwitchDropsBot.Console.Utils;
 using TwitchDropsBot.Core.Platform.Shared.Factories.User;
 using TwitchDropsBot.Core.Platform.Shared.Helpers;
+using TwitchDropsBot.Core.Platform.Shared.Services;
 using TwitchDropsBot.Core.Platform.Shared.Services.Extensions;
 using TwitchDropsBot.Core.Platform.Shared.Settings;
 
@@ -44,6 +45,7 @@ services.AddSingleton<IOptionsChangeTokenSource<BotSettings>>(
 services.AddBotService();
 services.AddTwitchService();
 services.AddKickService();
+services.AddYoutubeService();
 
 var settingsManager = new SettingsManager(configFilePath);
 services.AddSingleton(settingsManager);
@@ -55,6 +57,7 @@ var start = new Start(
     provider.GetRequiredService<ILogger<Start>>(),
     provider.GetRequiredService<SettingsManager>(),
     provider.GetRequiredService<UserFactory>(),
+    provider.GetRequiredService<BrowserService>(),
     args
 );
 

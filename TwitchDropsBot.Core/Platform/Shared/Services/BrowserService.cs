@@ -87,7 +87,7 @@ public sealed class BrowserService
             }
 
             _logger.LogInformation("[BROWSER SERVICE] Creating new isolated context for {Login}", user.Login);
-            
+
             var storageStatePath = GetStorageStatePath(user);
             var contextOptions = new BrowserNewContextOptions
             {

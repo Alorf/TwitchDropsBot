@@ -36,7 +36,19 @@ public class YoutubeUser : BotUser
         )
     {
         Logger.LogTrace("Initializing YoutubeUser for login: {Login}", settings.Login);
-        Cookies = settings.Cookies;
+
+        var cookieFilePath = Path.Combine(AppContext.BaseDirectory, $"cookie-{settings.Login}.txt");
+        if (File.Exists(cookieFilePath))
+        {
+            Cookies = File.ReadAllText(cookieFilePath);
+            Logger.LogInformation("[YOUTUBE] Loaded cookies from {Path}", cookieFilePath);
+        }
+        else
+        {
+            Logger.LogWarning("[YOUTUBE] No cookie file found at {Path}", cookieFilePath);
+            Cookies = null;
+        }
+
         YoutubeRepository = repositoryFactory.Create(this, logger);
         WatchManager = factory.Create(this);
         Logger.LogDebug("WatchManager set to: {ManagerType}", WatchManager.GetType().Name);

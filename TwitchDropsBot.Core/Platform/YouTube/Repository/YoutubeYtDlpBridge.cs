@@ -74,6 +74,8 @@ internal static class YoutubeYtDlpBridge
             CreateNoWindow         = true
         };
 
+        // Required by user request: enable npm-hosted JS components used by yt-dlp
+        // YouTube extractor updates (`--remote-components ejs:npm`).
         process.StartInfo.ArgumentList.Add("--remote-components");
         process.StartInfo.ArgumentList.Add("ejs:npm");
         process.StartInfo.ArgumentList.Add("--skip-download");

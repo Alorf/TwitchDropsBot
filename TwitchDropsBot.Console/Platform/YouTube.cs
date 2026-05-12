@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
+using TwitchDropsBot.Console.Utils;
 using TwitchDropsBot.Core.Platform.Shared.Services;
 using TwitchDropsBot.Core.Platform.YouTube.Settings;
 
@@ -24,6 +25,31 @@ public static class YouTube
 
         var settings = manager.Read();
 
+        logger.LogInformation("Use cookie login for this YouTube account? (Y/N)");
+        bool cookieLogin;
+        try
+        {
+            cookieLogin = UserInput.ReadInput(["y", "n"]) == "y";
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Invalid input for CookieLogin.");
+            return;
+        }
+
+        string? cookiesFilePath = null;
+        if (cookieLogin)
+        {
+            logger.LogInformation("Enter the absolute path to your YouTube cookies file (Netscape format):");
+            cookiesFilePath = System.Console.ReadLine()?.Trim();
+
+            if (string.IsNullOrWhiteSpace(cookiesFilePath))
+            {
+                logger.LogError("Cookies file path cannot be empty when CookieLogin is enabled.");
+                return;
+            }
+        }
+
         // Avoid duplicates by login name
         settings.YouTubeSettings.YouTubeUsers.RemoveAll(u =>
             string.Equals(u.Login, login, StringComparison.OrdinalIgnoreCase));
@@ -33,14 +59,25 @@ public static class YouTube
             Login   = login,
             Id      = login,   // YouTube has no simple numeric ID; use the login as ID
             Enabled = true,
+            CookieLogin = cookieLogin,
+            CookiesFilePath = cookiesFilePath
         };
 
         settings.YouTubeSettings.YouTubeUsers.Add(userSettings);
         manager.Save(settings);
 
         logger.LogInformation("YouTube account '{Login}' added.", login);
-        logger.LogInformation(
-            "On the first run the bot will open a browser window for you to log in to Google. " +
-            "Your session will be saved so you only need to do this once.");
+
+        if (!cookieLogin)
+        {
+            logger.LogInformation(
+                "On the first run the bot will open a browser window for you to log in to Google. " +
+                "Your session will be saved so you only need to do this once.");
+        }
+        else
+        {
+            logger.LogInformation(
+                "CookieLogin enabled. The bot will use your cookies file for YouTube authentication.");
+        }
     }
 }

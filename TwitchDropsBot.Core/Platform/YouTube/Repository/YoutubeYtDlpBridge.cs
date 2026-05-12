@@ -1,10 +1,10 @@
-using System.ComponentModel;
-using System.Diagnostics;
+using YoutubeDLSharp;
+using YoutubeDLSharp.Options;
 
 namespace TwitchDropsBot.Core.Platform.YouTube.Repository;
 
 /// <summary>
-/// Bridge for invoking <c>yt-dlp</c> in a subprocess to query YouTube live status.
+/// Bridge for invoking <c>yt-dlp</c> via YoutubeDLSharp to query YouTube live status.
 ///
 /// Prerequisite: <c>yt-dlp</c> must be installed and available in PATH on host.
 /// </summary>
@@ -17,10 +17,11 @@ internal static class YoutubeYtDlpBridge
     /// </summary>
     public static async Task<string?> GetActiveLiveStreamAsync(
         string handle,
+        string? cookiesFilePath,
         CancellationToken ct = default)
     {
         var probeUrl = BuildChannelLiveUrl(handle);
-        var probe = await ProbeAsync(probeUrl, ct);
+        var probe = await ProbeAsync(probeUrl, cookiesFilePath, ct);
 
         if (!probe.Success)
         {
@@ -45,10 +46,11 @@ internal static class YoutubeYtDlpBridge
     /// </summary>
     public static async Task<bool> IsVideoLiveAsync(
         string videoId,
+        string? cookiesFilePath,
         CancellationToken ct = default)
     {
         var url = $"https://www.youtube.com/watch?v={videoId}";
-        var probe = await ProbeAsync(url, ct);
+        var probe = await ProbeAsync(url, cookiesFilePath, ct);
 
         if (!probe.Success)
         {
@@ -62,57 +64,44 @@ internal static class YoutubeYtDlpBridge
         return string.Equals(probe.LiveStatus, "is_live", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static async Task<YtDlpProbeResult> ProbeAsync(string url, CancellationToken ct)
+    private static async Task<YtDlpProbeResult> ProbeAsync(
+        string url,
+        string? cookiesFilePath,
+        CancellationToken ct)
     {
-        using var process = new Process();
-        process.StartInfo = new ProcessStartInfo
+        var options = new OptionSet
         {
-            FileName               = "yt-dlp",
-            RedirectStandardOutput = true,
-            RedirectStandardError  = true,
-            UseShellExecute        = false,
-            CreateNoWindow         = true
+            SkipDownload = true,
+            NoWarnings = true,
+            NoPlaylist = true
         };
 
-        // yt-dlp can load extractor patches/components from npm via the `ejs`
-        // provider; this keeps YouTube extractor behavior aligned with current site changes.
-        process.StartInfo.ArgumentList.Add("--remote-components");
-        process.StartInfo.ArgumentList.Add("ejs:npm");
-        process.StartInfo.ArgumentList.Add("--skip-download");
-        process.StartInfo.ArgumentList.Add("--no-warnings");
-        process.StartInfo.ArgumentList.Add("--no-playlist");
-        process.StartInfo.ArgumentList.Add("--print");
-        process.StartInfo.ArgumentList.Add(LiveStatusPrintTemplate);
-        process.StartInfo.ArgumentList.Add(url);
+        // Keep extractor behavior aligned with current site changes.
+        options.AddCustomOption<string>("--remote-components", "ejs:npm");
+        options.AddCustomOption<string>("--print", LiveStatusPrintTemplate);
 
+        if (!string.IsNullOrWhiteSpace(cookiesFilePath))
+            options.Cookies = cookiesFilePath;
+
+        RunResult<string[]> result;
         try
         {
-            process.Start();
+            var ytDlp = new YoutubeDL { YoutubeDLPath = "yt-dlp" };
+            result = await ytDlp.RunWithOptions(new[] { url }, options, ct);
         }
-        catch (Win32Exception ex)
+        catch (Exception ex)
         {
             throw new InvalidOperationException(
                 "Failed to start 'yt-dlp'. Ensure yt-dlp is installed and available in PATH.", ex);
         }
 
-        var stdoutTask = process.StandardOutput.ReadToEndAsync(ct);
-        var stderrTask = process.StandardError.ReadToEndAsync(ct);
-
-        await process.WaitForExitAsync(ct);
-
-        var stdout = await stdoutTask;
-        var stderr = await stderrTask;
-
-        if (process.ExitCode != 0)
+        if (!result.Success)
         {
-            var diagnostics = string.IsNullOrWhiteSpace(stderr) ? stdout : stderr;
-            return new YtDlpProbeResult(false, null, null, diagnostics.Trim());
+            var diagnostics = string.Join(Environment.NewLine, result.ErrorOutput ?? Array.Empty<string>()).Trim();
+            return new YtDlpProbeResult(false, null, null, diagnostics);
         }
 
-        var line = stdout
-            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-            .FirstOrDefault();
-
+        var line = result.Data.FirstOrDefault(l => !string.IsNullOrWhiteSpace(l));
         if (string.IsNullOrWhiteSpace(line))
             return new YtDlpProbeResult(false, null, null, "yt-dlp returned no output.");
 

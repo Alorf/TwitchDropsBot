@@ -18,6 +18,8 @@ public class YouTubeUser : BotUser
 
     public IYouTubeWatchManager WatchManager { get; }
     public YouTubeHttpRepository YouTubeRepository { get; }
+    public bool CookieLogin { get; }
+    public string? CookiesFilePath { get; }
 
     public YouTubeUser(
         YouTubeUserSettings settings,
@@ -30,6 +32,9 @@ public class YouTubeUser : BotUser
         : base(settings, botSettings, logger, uiSink)
     {
         Logger.LogTrace("Initializing YouTubeUser for login: {Login}", settings.Login);
+
+        CookieLogin = settings.CookieLogin;
+        CookiesFilePath = settings.CookiesFilePath;
 
         YouTubeRepository = repositoryFactory.Create(this, logger);
         WatchManager = watchManagerFactory.Create(this);

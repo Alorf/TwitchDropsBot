@@ -27,7 +27,8 @@ public class YouTubeHttpRepository : BotRepository<YouTubeUser>
     {
         _logger.LogTrace("Checking channel '{Handle}' for active live stream via yt-dlp", handle);
 
-        var url = await YoutubeYtDlpBridge.GetActiveLiveStreamAsync(handle, cancellationToken);
+        var cookiesFilePath = BotUser.CookieLogin ? BotUser.CookiesFilePath : null;
+        var url = await YoutubeYtDlpBridge.GetActiveLiveStreamAsync(handle, cookiesFilePath, cancellationToken);
         if (url is null)
         {
             _logger.LogTrace("No active live stream found for handle '{Handle}'", handle);
@@ -49,6 +50,7 @@ public class YouTubeHttpRepository : BotRepository<YouTubeUser>
         CancellationToken cancellationToken = default)
     {
         _logger.LogTrace("Checking if video {VideoId} is still live via yt-dlp", videoId);
-        return await YoutubeYtDlpBridge.IsVideoLiveAsync(videoId, cancellationToken);
+        var cookiesFilePath = BotUser.CookieLogin ? BotUser.CookiesFilePath : null;
+        return await YoutubeYtDlpBridge.IsVideoLiveAsync(videoId, cookiesFilePath, cancellationToken);
     }
 }

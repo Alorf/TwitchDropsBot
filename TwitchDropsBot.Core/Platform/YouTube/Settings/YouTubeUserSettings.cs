@@ -9,4 +9,15 @@ public class YouTubeUserSettings : BaseUserSettings
     /// global <see cref="YouTubeSettings.ChannelIds"/> list.
     /// </summary>
     public List<string> ChannelIds { get; set; } = new List<string>();
+
+    /// <summary>
+    /// Enables yt-dlp cookie based authentication for this user.
+    /// When enabled, <see cref="CookiesFilePath"/> must point to a valid Netscape cookie file.
+    /// </summary>
+    public bool CookieLogin { get; set; } = false;
+
+    /// <summary>
+    /// Path to a Netscape-format cookies file (used with yt-dlp <c>--cookies</c>).
+    /// </summary>
+    public string? CookiesFilePath { get; set; }
 }

@@ -28,6 +28,26 @@ public class WatchBrowser : WatchBrowser<YouTubeUser, string, string>, IYouTubeW
     /// <inheritdoc/>
     public async Task EnsureAuthenticatedAsync()
     {
+        if (BotUser.CookieLogin)
+        {
+            if (string.IsNullOrWhiteSpace(BotUser.CookiesFilePath))
+            {
+                throw new InvalidOperationException(
+                    $"CookieLogin is enabled for '{BotUser.Login}' but CookiesFilePath is empty.");
+            }
+
+            if (!File.Exists(BotUser.CookiesFilePath))
+            {
+                throw new InvalidOperationException(
+                    $"YouTube cookies file not found for '{BotUser.Login}': {BotUser.CookiesFilePath}");
+            }
+
+            Logger.LogInformation(
+                "CookieLogin enabled for user {Login}, skipping interactive Google authentication.",
+                BotUser.Login);
+            return;
+        }
+
         // Open a temporary page to verify / perform login.
         // Do NOT assign to Page so that WatchStreamAsync can set it later.
         var tempPage = await BrowserService.AddUserAsync(BotUser);

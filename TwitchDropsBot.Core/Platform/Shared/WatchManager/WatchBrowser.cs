@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using PuppeteerSharp;
+using Microsoft.Playwright;
 using TwitchDropsBot.Core.Platform.Shared.Bots;
 using TwitchDropsBot.Core.Platform.Shared.Services;
 

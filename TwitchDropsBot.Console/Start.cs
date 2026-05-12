@@ -83,6 +83,7 @@ public class Start
 
         var twitchUsers = _botSettings.CurrentValue.TwitchSettings.TwitchUsers;
         var kickUsers = _botSettings.CurrentValue.KickSettings.KickUsers;
+        var youtubeUsers = _botSettings.CurrentValue.YoutubeSettings.YoutubeUsers;
 
         foreach (var twitchUserSetting in twitchUsers.Where(u => u.Enabled))
         {
@@ -93,6 +94,12 @@ public class Start
         foreach (var kickUserSettings in kickUsers.Where(u => u.Enabled))
         {
             var user = _userFactory.CreateKickUser(kickUserSettings);
+            botTasks.Add(user.StartBot());
+        }
+
+        foreach (var youtubeUserSettings in youtubeUsers.Where(u => u.Enabled))
+        {
+            var user = _userFactory.CreateYoutubeUser(youtubeUserSettings);
             botTasks.Add(user.StartBot());
         }
 

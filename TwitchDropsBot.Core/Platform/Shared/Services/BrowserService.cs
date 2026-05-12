@@ -1,8 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using PuppeteerExtraSharp;
-using PuppeteerExtraSharp.Plugins.ExtraStealth;
-using PuppeteerSharp;
+using Microsoft.Playwright;
 using TwitchDropsBot.Core.Platform.Shared.Bots;
 using TwitchDropsBot.Core.Platform.Shared.Settings;
 
@@ -13,30 +11,29 @@ public sealed class BrowserService
     private readonly Dictionary<string, IBrowserContext> _userContexts = new();
     private readonly SemaphoreSlim _lock = new(1, 1);
     private IBrowser? _browser;
+    private IPlaywright? _playwright;
     private bool _isInitialized;
     private readonly IOptionsMonitor<BotSettings> _botSettings;
-    private ILogger<BotUser> _logger;
+    private readonly ILogger<BotUser> _logger;
 
     public BrowserService(IOptionsMonitor<BotSettings> botSettings, ILogger<BotUser> logger)
     {
         _botSettings = botSettings;
         _logger = logger;
     }
-    
+
     private async Task InitializeBrowserAsync()
     {
         if (_isInitialized) return;
-        
-        var browserFetcher = new BrowserFetcher();
-        var installed = browserFetcher.GetInstalledBrowsers();
-        if (!installed.Any())
-        {
-            _logger.LogWarning("Can't find any installed browsers. Downloading latest headless chrome...");
-            await browserFetcher.DownloadAsync();
-            _logger.LogWarning("Downloaded latest headless chrome.");
-        }
-        
-        var launchOptions = new LaunchOptions
+
+        // Install Playwright browsers if needed (equivalent of BrowserFetcher)
+        var exitCode = Microsoft.Playwright.Program.Main(["install", "chromium"]);
+        if (exitCode != 0)
+            throw new InvalidOperationException($"Playwright browser installation failed with exit code {exitCode}.");
+
+        _playwright = await Playwright.CreateAsync();
+
+        var launchOptions = new BrowserTypeLaunchOptions
         {
             Headless = _botSettings.CurrentValue.WatchBrowserHeadless,
             Args =
@@ -63,24 +60,12 @@ public sealed class BrowserService
                 "--disable-background-timer-throttling",
                 "--disable-ipc-flooding-protection"
             ],
-            IgnoredDefaultArgs =
-                ["--enable-automation", "--hide-scrollbars", "--enable-blink-features=IdleDetection"],
-            DefaultViewport = new ViewPortOptions
-            {
-                Width = 1920,
-                Height = 1080
-            },
         };
 
-        var extra = new PuppeteerExtra();
-
-        var stealth = new StealthPlugin();
-        
-        _browser = await extra.Use(stealth).LaunchAsync(launchOptions);
-        
+        _browser = await _playwright.Chromium.LaunchAsync(launchOptions);
         _isInitialized = true;
     }
-    
+
     public async Task<IPage> AddUserAsync(BotUser user)
     {
         await _lock.WaitAsync();
@@ -95,20 +80,34 @@ public sealed class BrowserService
 
             var userKey = user.Id;
 
-            if (_userContexts.ContainsKey(userKey))
+            if (_userContexts.TryGetValue(userKey, out var existingContext))
             {
-                _logger.LogInformation($"[BROWSER SERVICE] Reusing existing context for {user.Login}");
-                return await _userContexts[userKey].NewPageAsync();
+                _logger.LogInformation("[BROWSER SERVICE] Reusing existing context for {Login}", user.Login);
+                return await existingContext.NewPageAsync();
             }
 
-            _logger.LogInformation($"[BROWSER SERVICE] Creating new isolated context for {user.Login}");
-            var context = await _browser!.CreateBrowserContextAsync();
+            _logger.LogInformation("[BROWSER SERVICE] Creating new isolated context for {Login}", user.Login);
+            
+            var storageStatePath = GetStorageStatePath(user);
+            var contextOptions = new BrowserNewContextOptions
+            {
+                ViewportSize = new ViewportSize { Width = 1920, Height = 1080 },
+            };
+
+            if (File.Exists(storageStatePath))
+            {
+                _logger.LogInformation("[BROWSER SERVICE] Loading saved session for {Login}", user.Login);
+                contextOptions.StorageStatePath = storageStatePath;
+            }
+
+            var context = await _browser!.NewContextAsync(contextOptions);
             _userContexts[userKey] = context;
-            
+
             var page = await context.NewPageAsync();
-            
-            _logger.LogInformation($"[BROWSER SERVICE] Context created - Total: {_userContexts.Count} active context(s)");
-            
+
+            _logger.LogInformation(
+                "[BROWSER SERVICE] Context created - Total: {Count} active context(s)", _userContexts.Count);
+
             return page;
         }
         finally
@@ -117,24 +116,15 @@ public sealed class BrowserService
         }
     }
     
-    public async Task RemoveUserAsync(BotUser user)
+    public async Task<IReadOnlyList<BrowserContextCookiesResult>> GetCookiesAsync(BotUser user, string url)
     {
         await _lock.WaitAsync();
         try
         {
-            var userKey = user.Id;
-            
-            if (!_userContexts.ContainsKey(userKey))
-            {
-                _logger.LogInformation($"[BROWSER SERVICE] No context to remove for {user.Login}");
-                return;
-            }
+            if (!_userContexts.TryGetValue(user.Id, out var context))
+                return [];
 
-            _logger.LogInformation($"[BROWSER SERVICE] Closing context for {user.Login}");
-            await _userContexts[userKey].CloseAsync();
-            _userContexts.Remove(userKey);
-            
-            _logger.LogInformation($"[BROWSER SERVICE] Context closed - Remaining: {_userContexts.Count} active context(s)");
+            return await context.CookiesAsync([url]);
         }
         finally
         {
@@ -142,25 +132,75 @@ public sealed class BrowserService
         }
     }
     
+    public async Task SaveStorageStateAsync(BotUser user)
+    {
+        await _lock.WaitAsync();
+        try
+        {
+            if (!_userContexts.TryGetValue(user.Id, out var context))
+            {
+                _logger.LogWarning("[BROWSER SERVICE] No context found to save for {Login}", user.Login);
+                return;
+            }
+
+            var path = GetStorageStatePath(user);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            await context.StorageStateAsync(new BrowserContextStorageStateOptions { Path = path });
+            _logger.LogInformation("[BROWSER SERVICE] Session saved for {Login}", user.Login);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    private static string GetStorageStatePath(BotUser user)
+        => Path.Combine("sessions", $"{user.Id}.json");
+    
+    public async Task RemoveUserAsync(BotUser user)
+    {
+        await _lock.WaitAsync();
+        try
+        {
+            var userKey = user.Id;
+
+            if (!_userContexts.TryGetValue(userKey, out var context))
+            {
+                _logger.LogInformation("[BROWSER SERVICE] No context to remove for {Login}", user.Login);
+                return;
+            }
+
+            _logger.LogInformation("[BROWSER SERVICE] Closing context for {Login}", user.Login);
+            await context.CloseAsync();
+            _userContexts.Remove(userKey);
+
+            _logger.LogInformation(
+                "[BROWSER SERVICE] Context closed - Remaining: {Count} active context(s)", _userContexts.Count);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
     public async Task DisposeAsync()
     {
         await _lock.WaitAsync();
         try
         {
-            if (_userContexts.Count > 0)
-            {
-                foreach (var context in _userContexts.Values)
-                {
-                    await context.CloseAsync();
-                }
-                _userContexts.Clear();
-            }
+            foreach (var context in _userContexts.Values)
+                await context.CloseAsync();
+
+            _userContexts.Clear();
 
             if (_browser != null)
             {
                 await _browser.CloseAsync();
                 _browser = null;
             }
+
+            _playwright?.Dispose();
+            _playwright = null;
 
             _isInitialized = false;
         }

@@ -208,8 +208,8 @@ public class YouTubeBot : BaseBot<YouTubeUser>
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Attempts to detect a live stream via the lightweight InnerTube HTTP API first.
-    /// Falls back to the authenticated browser check when InnerTube fails or returns
+    /// Attempts to detect a live stream via the lightweight yt-dlp probe first.
+    /// Falls back to the authenticated browser check when yt-dlp fails or returns
     /// an unexpected response.
     /// </summary>
     private async Task<string?> GetActiveLiveStreamWithFallbackAsync(string channelId)
@@ -220,13 +220,13 @@ public class YouTubeBot : BaseBot<YouTubeUser>
             if (url != null)
                 return url;
 
-            // InnerTube returned null (channel not live) — no need for the browser check.
+            // yt-dlp returned null (channel not live) — no need for the browser check.
             return null;
         }
         catch (Exception ex)
         {
             Logger.LogWarning(ex,
-                "InnerTube check failed for channel {ChannelId}, falling back to browser",
+                "yt-dlp check failed for channel {ChannelId}, falling back to browser",
                 channelId);
         }
 

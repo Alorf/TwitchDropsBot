@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Diagnostics;
+using Microsoft.Extensions.Logging;
+using TwitchDropsBot.Core.Platform.Youtube.Utils;
 using TwitchDropsBot.Core.Platform.Shared.Services;
 using TwitchDropsBot.Core.Platform.Youtube.Settings;
 
@@ -6,9 +8,7 @@ namespace TwitchDropsBot.Console.Platform;
 
 public static class Youtube
 {
-    private const int TimeoutSeconds = 100;
-
-    public static async Task AuthYoutubeDeviceAsync(ILogger logger, SettingsManager manager)
+    public static Task AuthYoutubeDeviceAsync(ILogger logger, SettingsManager manager)
     {
         logger.LogInformation("Enter a display name / login for this YouTube account:");
         var login = System.Console.ReadLine()?.Trim();
@@ -16,39 +16,39 @@ public static class Youtube
         if (string.IsNullOrWhiteSpace(login))
         {
             logger.LogError("Login cannot be empty.");
-            return;
+            return Task.CompletedTask;
         }
 
-        var cookieFilePath = Path.Combine(AppContext.BaseDirectory, $"cookie-{login}.txt");
-        logger.LogInformation("Cookie file path: {Path}", cookieFilePath);
+        logger.LogInformation("Select YouTube authentication mode:");
+        logger.LogInformation("1. Open browser and authenticate, then paste cookies");
+        logger.LogInformation("2. Paste cookies directly");
+        logger.LogInformation("3. Cancel");
 
-        if (!File.Exists(cookieFilePath))
+        var mode = ReadMode();
+        if (mode == "3")
         {
-            File.WriteAllText(cookieFilePath, "");
-            logger.LogInformation("Created cookie file at: {Path}", cookieFilePath);
-            logger.LogInformation("Please paste your cookies (Netscape format) into the file within {Timeout} seconds...", TimeoutSeconds);
+            logger.LogInformation("YouTube authentication cancelled.");
+            return Task.CompletedTask;
+        }
 
-            await Task.Delay(TimeSpan.FromSeconds(5));
+        if (mode == "1")
+        {
+            OpenYoutubeLoginPage(logger);
+            logger.LogInformation("Authenticate in your browser, then press ENTER to continue.");
+            System.Console.ReadLine();
+        }
 
-            var deadline = DateTime.UtcNow.AddSeconds(TimeoutSeconds);
-            while (DateTime.UtcNow < deadline)
+        var rawCookieInput = ReadCookieInput(logger);
+        var normalizedCookies = YoutubeCookieParser.NormalizeForStorage(rawCookieInput);
+        if (string.IsNullOrWhiteSpace(normalizedCookies))
+        {
+            if (mode == "2")
             {
-                await Task.Delay(TimeSpan.FromSeconds(3));
-
-                var content = File.ReadAllText(cookieFilePath);
-                logger.LogInformation("File length: {Length}", content.Length);
-
-                if (!string.IsNullOrWhiteSpace(content))
-                {
-                    logger.LogInformation("Cookie file has content, continuing...");
-                    break;
-                }
+                logger.LogError("No valid cookies detected. Account not added.");
+                return Task.CompletedTask;
             }
 
-            if (File.ReadAllText(cookieFilePath).Length == 0)
-            {
-                logger.LogWarning("No cookies added within {Timeout} seconds. Proceeding anyway.", TimeoutSeconds);
-            }
+            logger.LogWarning("No valid cookies detected. The account will be added without cookies.");
         }
 
         var settings = manager.Read();
@@ -60,12 +60,66 @@ public static class Youtube
         {
             Login = login,
             Id = login,
-            Enabled = true
+            Enabled = true,
+            Cookies = normalizedCookies
         };
 
         settings.YoutubeSettings.YoutubeUsers.Add(userSettings);
         manager.Save(settings);
 
-        logger.LogInformation("YouTube account '{Login}' added.", login);
+        logger.LogInformation("YouTube account '{Login}' added with inline cookie storage in config.json.", login);
+        return Task.CompletedTask;
+    }
+
+    private static string ReadMode()
+    {
+        while (true)
+        {
+            var value = System.Console.ReadLine()?.Trim();
+            if (value is "1" or "2" or "3")
+                return value;
+
+            System.Console.WriteLine("Please enter 1, 2 or 3:");
+        }
+    }
+
+    private static string ReadCookieInput(ILogger logger)
+    {
+        logger.LogInformation("Paste your extracted cookies, then type END on a new line:");
+        var lines = new List<string>();
+
+        while (true)
+        {
+            var line = System.Console.ReadLine();
+
+            if (line is null)
+                break;
+
+            if (string.Equals(line.Trim(), "END", StringComparison.OrdinalIgnoreCase))
+                break;
+
+            lines.Add(line);
+        }
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private static void OpenYoutubeLoginPage(ILogger logger)
+    {
+        const string loginUrl = "https://accounts.google.com/ServiceLogin?service=youtube&continue=https://www.youtube.com/";
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = loginUrl,
+                UseShellExecute = true
+            });
+            logger.LogInformation("Opened browser for YouTube authentication.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Unable to automatically open browser. Open this URL manually: {Url}", loginUrl);
+        }
     }
 }

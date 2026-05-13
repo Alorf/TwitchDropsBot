@@ -4,6 +4,12 @@ namespace TwitchDropsBot.Core.Platform.Youtube.Utils;
 
 public static class YoutubeCookieParser
 {
+    private const int NetscapeFieldCount = 7;
+    private const int NetscapeDomainIndex = 0;
+    private const int NetscapePathIndex = 2;
+    private const int NetscapeNameIndex = 5;
+    private const int NetscapeValueIndex = 6;
+
     public static string NormalizeForStorage(string? input)
     {
         var cookies = ParseCookies(input);
@@ -100,14 +106,14 @@ public static class YoutubeCookieParser
                 continue;
 
             var parts = line.Split('\t', StringSplitOptions.None);
-            if (parts.Length < 7)
+            if (parts.Length < NetscapeFieldCount)
                 continue;
 
             seenNetscapeLine = true;
-            var domain = string.IsNullOrWhiteSpace(parts[0]) ? ".youtube.com" : parts[0].Trim();
-            var path = string.IsNullOrWhiteSpace(parts[2]) ? "/" : parts[2].Trim();
-            var name = parts[5].Trim();
-            var value = parts[6].Trim();
+            var domain = string.IsNullOrWhiteSpace(parts[NetscapeDomainIndex]) ? ".youtube.com" : parts[NetscapeDomainIndex].Trim();
+            var path = string.IsNullOrWhiteSpace(parts[NetscapePathIndex]) ? "/" : parts[NetscapePathIndex].Trim();
+            var name = parts[NetscapeNameIndex].Trim();
+            var value = parts[NetscapeValueIndex].Trim();
 
             if (string.IsNullOrWhiteSpace(name))
                 continue;
@@ -200,7 +206,15 @@ public static class YoutubeCookieParser
             return;
 
         var name = nameEl.GetString()?.Trim();
-        var value = valueEl.ValueKind == JsonValueKind.String ? valueEl.GetString() : valueEl.GetRawText();
+        var value = valueEl.ValueKind switch
+        {
+            JsonValueKind.String => valueEl.GetString(),
+            JsonValueKind.Number => valueEl.GetRawText(),
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            JsonValueKind.Null => string.Empty,
+            _ => valueEl.GetRawText()
+        };
         if (string.IsNullOrWhiteSpace(name))
             return;
 

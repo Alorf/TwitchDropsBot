@@ -8,6 +8,8 @@ namespace TwitchDropsBot.Console.Platform;
 
 public static class Youtube
 {
+    private const string YoutubeLoginUrl = "https://accounts.google.com/ServiceLogin?service=youtube&continue=https://www.youtube.com/";
+
     public static Task AuthYoutubeDeviceAsync(ILogger logger, SettingsManager manager)
     {
         logger.LogInformation("Enter a display name / login for this YouTube account:");
@@ -76,10 +78,13 @@ public static class Youtube
         while (true)
         {
             var value = System.Console.ReadLine()?.Trim();
+            if (value is null)
+                return "3";
+
             if (value is "1" or "2" or "3")
                 return value;
 
-            System.Console.WriteLine("Please enter 1, 2 or 3:");
+            System.Console.WriteLine("Please enter 1, 2, or 3:");
         }
     }
 
@@ -93,7 +98,10 @@ public static class Youtube
             var line = System.Console.ReadLine();
 
             if (line is null)
+            {
+                logger.LogWarning("Input stream closed while reading cookies.");
                 break;
+            }
 
             if (string.Equals(line.Trim(), "END", StringComparison.OrdinalIgnoreCase))
                 break;
@@ -106,20 +114,18 @@ public static class Youtube
 
     private static void OpenYoutubeLoginPage(ILogger logger)
     {
-        const string loginUrl = "https://accounts.google.com/ServiceLogin?service=youtube&continue=https://www.youtube.com/";
-
         try
         {
             Process.Start(new ProcessStartInfo
             {
-                FileName = loginUrl,
+                FileName = YoutubeLoginUrl,
                 UseShellExecute = true
             });
             logger.LogInformation("Opened browser for YouTube authentication.");
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Unable to automatically open browser. Open this URL manually: {Url}", loginUrl);
+            logger.LogWarning(ex, "Unable to automatically open browser. Open this URL manually: {Url}", YoutubeLoginUrl);
         }
     }
 }

@@ -15,7 +15,7 @@ public class YoutubeHttpRepository : BotRepository<YoutubeUser>
     private readonly HttpClient _httpClient;
     private readonly ILogger _logger;
     private readonly IOptionsMonitor<BotSettings> _botSettings;
-
+    private YoutubeDL _ytdl;
 
     public YoutubeHttpRepository(YoutubeUser YoutubeUser, ILogger logger, IOptionsMonitor<BotSettings> botSettings)
     {
@@ -24,18 +24,16 @@ public class YoutubeHttpRepository : BotRepository<YoutubeUser>
         _botSettings = botSettings;
 
         _logger.LogTrace("YoutubeHttpRepository initialized for user {Login}", YoutubeUser.Login);
-    }
-
-    public async Task InitializeYtDlSharpAsync()
-    {
-        await YoutubeDLSharp.Utils.DownloadYtDlp();
+        YoutubeDLSharp.Utils.DownloadYtDlp().Wait();
+        _ytdl = new YoutubeDL();
     }
 
     public async Task<bool> IsLive(string handle)
     {
-        var ytdl = new YoutubeDL();
+        // L'URL du live d'une chaîne via son handle
+        var channelLiveUrl = $"https://www.youtube.com/@{handle}/live";
 
-        var res = await ytdl.RunVideoDataFetch(channelLiveUrl);
+        var res = await _ytdl.RunVideoDataFetch(channelLiveUrl);
 
         if (!res.Success)
         {
@@ -46,6 +44,8 @@ public class YoutubeHttpRepository : BotRepository<YoutubeUser>
 
         VideoData video = res.Data;
 
+        // Si la chaîne n'est pas en live, yt-dlp redirige vers une VOD ou échoue
+        bool isLive = video.IsLive ?? false;
 
         _logger.LogInformation("Channel {Handle} live status: {IsLive} | Title: {Title}", 
             handle, isLive, video.Title);

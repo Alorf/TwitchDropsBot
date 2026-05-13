@@ -28,8 +28,6 @@ public class YoutubeBot : BaseBot<YoutubeUser>
     protected override async Task StartAsync()
     {
         var favouriteHandles = GetUserFavoriteGames();
-        await BotUser.YoutubeRepository.InitializeYtDlSharpAsync();
-
 
         var liveChannel = await PickLiveChannel(favouriteHandles);
 
@@ -37,6 +35,9 @@ public class YoutubeBot : BaseBot<YoutubeUser>
         {
             throw new NoBroadcasterOrNoCampaignLeft();
         }
+
+
+        await WatchStreamAsync(liveChannel);
     }
 
     private async Task<string?> PickLiveChannel(List<string> handles)
@@ -53,5 +54,18 @@ public class YoutubeBot : BaseBot<YoutubeUser>
         }
 
         return null;
+    }
+
+    private async Task WatchStreamAsync(string handle)
+    {
+        while (await BotUser.YoutubeRepository.IsLive(handle))
+        {
+            var streamUrl = $"https://www.youtube.com/@{handle}/live";
+            await BotUser.WatchManager.WatchStreamAsync(streamUrl, handle);
+
+            Logger.LogInformation("Finished watching stream for {Handle}, checking if still live...", handle);
+            await Task.Delay(TimeSpan.FromSeconds(20));
+
+        }
     }
 }

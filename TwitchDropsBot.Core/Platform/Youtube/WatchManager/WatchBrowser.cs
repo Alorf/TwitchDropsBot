@@ -12,8 +12,25 @@ public class WatchBrowser : WatchBrowser<YoutubeUser, string, string>, IYoutubeW
     {
     }
 
-    public override Task WatchStreamAsync(string broadcaster, string game)
+    public override async Task WatchStreamAsync(string streamUrl, string channelId)
     {
-        throw new NotImplementedException();
+        _disposed = false;
+
+        if (Page != null)
+        {
+            Logger.LogDebug("Already watching a stream, skipping navigation");
+            return;
+        }
+
+        Page = await BrowserService.AddUserAsync(BotUser);
+        Logger.LogInformation("Navigating to stream {StreamUrl} (channel {ChannelId})", streamUrl, channelId);
+
+        await Page.GotoAsync(streamUrl);
+        
+        await Task.Delay(TimeSpan.FromSeconds(10));
+
+        await Page.Keyboard.PressAsync("Space");
+
+        await Task.Delay(TimeSpan.FromSeconds(10));
     }
 }

@@ -119,8 +119,8 @@ public class KickHttpRepository : BotRepository<KickUser>
     public async Task<ICollection<Livestream>> GetLivestreamCampaignsAsync(Campaign campaign, CancellationToken cancellationToken = default)
     {
         _logger.LogTrace("Fetching livestreams for campaign {CampaignId}", campaign.Id);
-        
-        var url = $"https://web.kick.com/api/v1/drops/campaigns/{campaign.Id}/livestreams";
+
+        var url = $"https://web.kick.com/api/v1/drops/campaigns/{campaign.Id}/livestreams?lang_code=en";
 
         var result = await DoHTTPRequest<List<Livestream>>(
             HttpMethod.Get,
@@ -131,7 +131,7 @@ public class KickHttpRepository : BotRepository<KickUser>
 
         var livestreams = result?.data ?? new List<Livestream>();
         _logger.LogTrace("Found {Count} livestreams for campaign {CampaignId}", livestreams.Count, campaign.Id);
-        
+
         return livestreams;
     }
 

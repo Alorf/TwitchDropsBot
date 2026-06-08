@@ -444,7 +444,7 @@ public class TwitchBot : BaseBot<TwitchUser>
         var minuteWatched = dropCurrentRewardGroup.Self.CurrentMinutesWatched;
         var requiredMinutesToWatch = dropCurrentRewardGroup.ProgressCriteria.Requirements.MinutesWatched;
 
-        while (minuteWatched < requiredMinutesToWatch)
+        while (minuteWatched <= requiredMinutesToWatch)
         {
             try
             {
@@ -539,9 +539,9 @@ public class TwitchBot : BaseBot<TwitchUser>
             previousMinuteWatched = minuteWatched;
 
             Logger.LogInformation(
-                $"Waiting 20 seconds... {minuteWatched}/{requiredMinutesToWatch} minutes watched.");
+                $"Waiting 60 seconds... {minuteWatched}/{requiredMinutesToWatch} minutes watched.");
 
-            await Task.Delay(TimeSpan.FromSeconds(20));
+            await Task.Delay(TimeSpan.FromSeconds(60));
         }
 
         BotUser.WatchManager.Close();

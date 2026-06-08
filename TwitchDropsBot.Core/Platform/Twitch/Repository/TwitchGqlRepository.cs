@@ -437,7 +437,7 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
             foreach (var badgeName in BadgeNames)
             {
                 var fuzzed = Fuzz.PartialRatio(badgeName.ToLower(), badge.Title.ToLower());
-                // _logger.LogInformation($"{badgeName} - {badge.Title} = {fuzzed}");
+                // _logger.LogDebug($"{badgeName} - {badge.Title} = {fuzzed}");
                 if (fuzzed >= 80)
                 {
                     return true;
@@ -470,7 +470,7 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
                 foreach (var emoteName in emoteNames)
                 {
                     var fuzzed = Fuzz.PartialRatio(emoteName.ToLower(), emote.Token.ToLower());
-                    _logger.LogInformation($"{emoteName} - {emote.Token} = {fuzzed}");
+                    // _logger.LogDebug($"{emoteName} - {emote.Token} = {fuzzed}");
                     if (fuzzed >= 80)
                     {
                         return true;

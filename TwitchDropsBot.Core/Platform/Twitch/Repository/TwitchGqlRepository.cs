@@ -303,6 +303,19 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
         return resp?.Data.CurrentUser.DropCurrentSession;
     }
 
+    public async Task<List<DropsCampaign>> FetchDropCampaignsProgressAsync(User channel)
+    {
+        var query = CreateQuery("DropChannelCampaignsProgress");
+        
+        if (query.Variables is Dictionary<string, object?> variables)
+        {
+            variables["channelID"] = channel.Id;
+        }
+        
+        dynamic? resp = await DoGQLRequestAsync(query);
+        return resp?.Data.ChannelDropCampaignsProgress ?? new List<DropsCampaign>();
+    }
+
     // The channel must be live to get the drops
     public async Task<List<DropCampaign>> FetchAvailableDropsAsync(string? channel)
     {

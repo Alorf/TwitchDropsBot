@@ -168,8 +168,7 @@ public class TwitchBot : BaseBot<TwitchUser>
             }
 
 
-            if (false)
-            {
+            /*
                 dropCurrentSession = await CheckDropCurrentSession(broadcaster, campaign);
 
                 if (dropCurrentSession is null)
@@ -206,7 +205,7 @@ public class TwitchBot : BaseBot<TwitchUser>
                 }
 
                 timeBasedDrop = campaign.FindTimeBasedDrop(dropCurrentSession.DropId);
-            }
+            */
 
             dropCurrentRewardGroup = await CheckDropProgress(broadcaster, campaign);
 
@@ -460,12 +459,12 @@ public class TwitchBot : BaseBot<TwitchUser>
 
             try
             {
-                var newDropCurrentSession =
-                    await CheckDropProgress(broadcaster, campaign);
+                var newDropCurrentSession = await CheckDropProgress(broadcaster, campaign);
 
                 if (newDropCurrentSession is null)
                 {
-                    Logger.LogInformation("Can't fetch new current drop session");
+                    Logger.LogInformation("No more campaign progress found");
+                    break;
                 }
                 else
                 {
@@ -490,18 +489,17 @@ public class TwitchBot : BaseBot<TwitchUser>
                 stuckCounter = 0;
             }
 
-            if (stuckCounter >= 30)
+            if (stuckCounter >= 10)
             {
                 BotUser.WatchManager.Close();
                 await BotUser.WatchManager.WatchStreamAsync(broadcaster, campaign.Game);
                 await Task.Delay(TimeSpan.FromSeconds(20));
 
-                var newDropCurrentSession =
-                    await CheckDropProgress(broadcaster, campaign);
+                var newDropCurrentSession = await CheckDropProgress(broadcaster, campaign);
 
                 if (newDropCurrentSession is null)
                 {
-                    Logger.LogInformation("Can't fetch new current drop session after being stuck");
+                    Logger.LogInformation("No more campaign progress found after being stuck");
                 }
                 else
                 {
@@ -536,7 +534,14 @@ public class TwitchBot : BaseBot<TwitchUser>
                 throw new CurrentDropSessionChanged();
             }
 
-            previousMinuteWatched = minuteWatched;
+            if (minuteWatched is null)
+            {
+                Logger.LogError("Minute watched is null");
+                BotUser.WatchManager.Close();
+                throw new System.Exception("Minute watched is null");
+            }
+
+            previousMinuteWatched = minuteWatched.Value;
 
             Logger.LogInformation(
                 $"Waiting 60 seconds... {minuteWatched}/{requiredMinutesToWatch} minutes watched.");
@@ -569,7 +574,7 @@ public class TwitchBot : BaseBot<TwitchUser>
 
             Logger.LogInformation("Checking {campaignGameDisplayName} ({campaignName})...", campaign.Game.DisplayName,
                 campaign.Name);
-
+            
             if (finishedCampaigns.Contains(campaign))
             {
                 Logger.LogInformation("Campaign {campaign.Name} already completed from local list, skipping",
@@ -590,7 +595,7 @@ public class TwitchBot : BaseBot<TwitchUser>
                 campaigns.Remove(campaign);
                 continue;
             }
-
+            
             try
             {
                 var isCompleted = await campaign.IsCompleted(inventory, BotUser.TwitchRepository);

@@ -313,7 +313,19 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
         }
         
         dynamic? resp = await DoGQLRequestAsync(query);
-        return resp?.Data.ChannelDropCampaignsProgress ?? new List<DropsCampaign>();
+
+        List<DropsCampaign> channelDropCampaignsProgress = resp?.Data.ChannelDropCampaignsProgress;
+        
+        foreach (var dropsCampaign in channelDropCampaignsProgress)
+        {
+            foreach (var dropsCampaignRewardGroup in dropsCampaign.RewardGroups)
+            {
+                dropsCampaignRewardGroup.Self.CurrentMinutesWatched ??= 0;
+                dropsCampaignRewardGroup.Self.CurrentSubs ??= 0;
+            }
+        }
+        
+        return channelDropCampaignsProgress;
     }
 
     // The channel must be live to get the drops

@@ -116,9 +116,9 @@ public class DropsRewardGroupSelfEdge
     public string Status { get; set; }
 
     [JsonPropertyName("currentMinutesWatched")]
-    public int CurrentMinutesWatched { get; set; }
+    public int? CurrentMinutesWatched { get; set; }
 
     [JsonPropertyName("currentSubs")]
-    public int CurrentSubs { get; set; }
+    public int? CurrentSubs { get; set; }
 
 }

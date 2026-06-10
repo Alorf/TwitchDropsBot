@@ -231,6 +231,57 @@
 			"response": []
 		},
 		{
+			"name": "DropChannelCampaignsProgress",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "client-id",
+						"value": "{{clientId}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"operationName\":\"DropChannelCampaignsProgress\",\"variables\":{\"channelID\":\"{{channelId}}\"},\"extensions\":{\"persistedQuery\":{\"version\":1,\"sha256Hash\":\"ec6d1267667ef9e0bfbe11eef9e04e344b0a5384c4300dc685e75c27ac7b5a0b\"}}}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://gql.twitch.tv/gql",
+					"protocol": "https",
+					"host": [
+						"gql",
+						"twitch",
+						"tv"
+					],
+					"path": [
+						"gql"
+					]
+				},
+				"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+			},
+			"response": []
+		},
+		{
 			"name": "OnsiteNotifications_ListNotifications",
 			"event": [
 				{
@@ -610,7 +661,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"operationName\": \"DropsHighlightService_AvailableDrops\",\r\n    \"variables\": {\r\n        \"channelID\": \"556769569\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"eff13f4a43157238e40b4cd74b0dac3a41b5f8fb31de1a3b19347fae84e60b92\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+							"raw": "{\r\n    \"operationName\": \"DropsHighlightService_AvailableDrops\",\r\n    \"variables\": {\r\n        \"channelID\": \"{{channelId}}\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"eff13f4a43157238e40b4cd74b0dac3a41b5f8fb31de1a3b19347fae84e60b92\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -675,7 +726,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"operationName\": \"DropsHighlightService_AvailableDrops\",\r\n    \"variables\": {\r\n        \"channelID\": \"175831187\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"eff13f4a43157238e40b4cd74b0dac3a41b5f8fb31de1a3b19347fae84e60b92\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+							"raw": "{\r\n    \"operationName\": \"DropsHighlightService_AvailableDrops\",\r\n    \"variables\": {\r\n        \"channelID\": \"{{channelId}}\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"eff13f4a43157238e40b4cd74b0dac3a41b5f8fb31de1a3b19347fae84e60b92\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -740,7 +791,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"operationName\": \"DropsHighlightService_AvailableDrops\",\r\n    \"variables\": {\r\n        \"channelID\": \"507845042\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"eff13f4a43157238e40b4cd74b0dac3a41b5f8fb31de1a3b19347fae84e60b92\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+							"raw": "{\r\n    \"operationName\": \"DropsHighlightService_AvailableDrops\",\r\n    \"variables\": {\r\n        \"channelID\": \"{{channelId}}\"\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"eff13f4a43157238e40b4cd74b0dac3a41b5f8fb31de1a3b19347fae84e60b92\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1084,6 +1135,11 @@
 		{
 			"key": "dropClaimId",
 			"value": ""
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "default"
 		}
 	]
 }

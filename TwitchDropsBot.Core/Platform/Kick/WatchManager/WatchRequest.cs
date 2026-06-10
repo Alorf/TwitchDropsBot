@@ -59,7 +59,7 @@ public class WatchRequest : IKickWatchManager
             throw new StreamOffline();
         }
 
-        if (channel?.Livestream?.Category?.Contains(category) == false)
+        if (category.Name != "KICK" && channel?.Livestream?.Category?.Contains(category) == false)                                                                                                                                        
         {
             _logger.LogWarning("Stream category mismatch for channel {ChannelSlug}. Expected {ExpectedCategory}", 
                 broadcaster.slug, category.Name);

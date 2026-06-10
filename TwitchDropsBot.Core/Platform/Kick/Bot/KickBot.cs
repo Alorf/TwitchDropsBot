@@ -187,23 +187,25 @@ public class KickBot : BaseBot<KickUser>
 
             if (channels.Count > 0)
             {
-                var channelsResult = await BotUser.KickRepository.GetLivestreamCampaignsAsync(campaign);
+                Channel? channelToWatch = null;
+                foreach (var channel in channels)
+                {
+                    var channelInfo = await BotUser.KickRepository.GetChannelAsync(channel.slug);
 
-                if (!channelsResult.Any())
+                    if (channelInfo.Livestream is not null)
+                    {
+                        channelToWatch = channelInfo;
+                        break;
+                    }
+                }
+
+                if (channelToWatch is null)
                 {
                     campaigns.Remove(campaign);
                     continue;
                 }
-
-                var mostViewers = channelsResult.OrderBy(x => x.ViewerCount).FirstOrDefault();
-
-                if (mostViewers is null)
-                {
-                    campaigns.Remove(campaign);
-                    continue;
-                }
-
-                return (campaign, mostViewers.Channel);
+                
+                return (campaign, channelToWatch);
             }
 
             // var livestreams = await BotUser.KickHttpClient.FindStreams(campaign);

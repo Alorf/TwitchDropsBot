@@ -37,16 +37,16 @@ public class KickHttpRepository : BotRepository<KickUser>
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(
             KickDeviceType.WEB.UserAgents.First()
         );
-        
+
         NoClaimCategories = new List<Category>();
-        
+
         _logger.LogTrace("KickHttpRepository initialized for user {Login}", kickUser.Login);
     }
 
     public async Task<List<Campaign>> GetDropsCampaignsAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogTrace("Fetching drops campaigns");
-        
+
         var result = await DoHTTPRequest<List<Campaign>>(
             HttpMethod.Get,
             "https://web.kick.com/api/v1/drops/campaigns",
@@ -67,6 +67,15 @@ public class KickHttpRepository : BotRepository<KickUser>
 
         foreach (var campaign in campaigns)
         {
+            if (campaign.Category is null)
+            {
+                campaign.Category = new Category()
+                {
+                    Name = "KICK",
+                    IsFavorite = false
+                };
+            }
+            
             if (favGamesSet.Contains(campaign.Category.Name.ToLower()))
             {
                 campaign.Category.IsFavorite = true;
@@ -79,9 +88,9 @@ public class KickHttpRepository : BotRepository<KickUser>
 
     public async Task ClaimDrop(Campaign campaign, Reward reward, CancellationToken cancellationToken = default)
     {
-        _logger.LogTrace("Attempting to claim drop for campaign {CampaignName}, reward {RewardName}", 
+        _logger.LogTrace("Attempting to claim drop for campaign {CampaignName}, reward {RewardName}",
             campaign.Category.Name, reward.Name);
-        
+
         var body = new
         {
             reward_id = reward.Id,
@@ -104,21 +113,24 @@ public class KickHttpRepository : BotRepository<KickUser>
                 operationName: "ClaimDrop",
                 cancellationToken: cancellationToken
             );
-            
+
             _logger.LogTrace("Successfully claimed drop for {CampaignName}", campaign.Category.Name);
         }
         catch (CantClaimException)
         {
-            _logger.LogTrace("Cannot claim for category {CategoryName}, adding to no-claim list", 
+            _logger.LogTrace("Cannot claim for category {CategoryName}, adding to no-claim list",
                 campaign.Category.Name);
             NoClaimCategories.Add(campaign.Category);
             throw;
         }
     }
 
-    public async Task<ICollection<Livestream>> GetLivestreamCampaignsAsync(Campaign campaign, CancellationToken cancellationToken = default)
+    public async Task<ICollection<Livestream>> GetLivestreamCampaignsAsync(Campaign campaign,
+        CancellationToken cancellationToken = default)
     {
         _logger.LogTrace("Fetching livestreams for campaign {CampaignId}", campaign.Id);
+        
+        //First check that he's live
 
         var url = $"https://web.kick.com/api/v1/drops/campaigns/{campaign.Id}/livestreams?lang_code=en";
 
@@ -138,7 +150,7 @@ public class KickHttpRepository : BotRepository<KickUser>
     public async Task<List<Campaign>> GetInventory(CancellationToken cancellationToken = default)
     {
         _logger.LogTrace("Fetching inventory");
-        
+
         var result = await DoHTTPRequest<List<Campaign>>(
             HttpMethod.Get,
             "https://web.kick.com/api/v1/drops/progress",
@@ -149,14 +161,14 @@ public class KickHttpRepository : BotRepository<KickUser>
 
         var inventory = result?.data ?? new List<Campaign>();
         _logger.LogTrace("Retrieved {Count} items in inventory", inventory.Count);
-        
+
         return inventory;
     }
 
     public async Task<CampaignSummary?> GetSummary(Campaign campaign, CancellationToken cancellationToken = default)
     {
         _logger.LogTrace("Fetching summary for campaign {CampaignId}", campaign.Id);
-        
+
         var url = $"https://web.kick.com/api/v1/drops/progress/summary?campaign_id={campaign.Id}";
 
         var result = await DoHTTPRequest<List<CampaignSummary>>(
@@ -179,7 +191,7 @@ public class KickHttpRepository : BotRepository<KickUser>
     public async Task<Channel?> GetChannelAsync(string slug, CancellationToken cancellationToken = default)
     {
         _logger.LogTrace("Fetching channel info for {Slug}", slug);
-        
+
         var url = $"https://kick.com/api/v2/channels/{slug}/info";
 
         var request = new HttpRequestMessage(HttpMethod.Get, url)
@@ -195,7 +207,7 @@ public class KickHttpRepository : BotRepository<KickUser>
 
             var channel = await response.Content.ReadFromJsonAsync<Channel>(cancellationToken);
             _logger.LogTrace("Retrieved channel info for {Slug}", slug);
-            
+
             return channel;
         }
         catch (Exception ex)
@@ -208,7 +220,7 @@ public class KickHttpRepository : BotRepository<KickUser>
     public async Task<List<Livestream>> FindStreams(Campaign campaign, CancellationToken cancellationToken = default)
     {
         _logger.LogTrace("Finding streams for campaign {CampaignName}", campaign.Category.Name);
-        
+
         var url = $"https://mobile.kick.com/api/v1/livestreams";
         var categoryId = campaign.Category.Id;
         var limit = 24;
@@ -228,16 +240,16 @@ public class KickHttpRepository : BotRepository<KickUser>
         );
 
         var streams = result?.data?.livestreams ?? new List<Livestream>();
-        _logger.LogTrace("Found {Count} streams for campaign {CampaignName}", 
+        _logger.LogTrace("Found {Count} streams for campaign {CampaignName}",
             streams.Count, campaign.Category.Name);
-        
+
         return streams;
     }
 
     public async Task<string> GetWssToken(CancellationToken cancellationToken = default)
     {
         _logger.LogTrace("Fetching WSS token");
-        
+
         var headers = new Dictionary<string, string>
         {
             { "User-Agent", KickDeviceType.MOBILE.UserAgents.First() },
@@ -262,7 +274,7 @@ public class KickHttpRepository : BotRepository<KickUser>
         _logger.LogTrace("WSS token retrieved successfully");
         return result.data.Token;
     }
-    
+
     public static async Task<(string? id, string? username)> GetUserInfo(string token, CancellationToken ct = default)
     {
         var handler = new SocketsHttpHandler
@@ -271,13 +283,13 @@ public class KickHttpRepository : BotRepository<KickUser>
             AllowAutoRedirect = true
         };
         var _client = new HttpClient(handler) { BaseAddress = new Uri("https://kick.com") };
-            
+
         _client.DefaultRequestVersion = HttpVersion.Version30;
         _client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrHigher;
         _client.DefaultRequestHeaders.UserAgent.ParseAdd("okhttp/4.7.2");
-        
+
         var requestUri = $"https://kick.com/api/v1/user";
-        
+
         using var req = new HttpRequestMessage(HttpMethod.Get, requestUri)
         {
             Version = HttpVersion.Version30,
@@ -293,7 +305,7 @@ public class KickHttpRepository : BotRepository<KickUser>
         {
             using var doc = JsonDocument.Parse(body);
             var root = doc.RootElement;
-            
+
             string? idStr = null;
             string? username = null;
 
@@ -384,7 +396,7 @@ public class KickHttpRepository : BotRepository<KickUser>
                 if (_botSettings.CurrentValue.LogLevel > 0)
                 {
                     _logger.LogDebug("Request successful: {Operation}", operationName);
-                    _logger.LogTrace("{ResponseData}", 
+                    _logger.LogTrace("{ResponseData}",
                         JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = false }));
                 }
 
@@ -397,17 +409,18 @@ public class KickHttpRepository : BotRepository<KickUser>
                     _logger.LogTrace("Cannot claim - BadRequest returned for {Operation}", operationName);
                     throw new CantClaimException("Can't claim");
                 }
-                
+
                 if (i == requestLimit - 1)
                 {
-                    _logger.LogError(exception, 
-                        "Failed to execute request {Operation} after {Attempts} attempts", 
+                    _logger.LogError(exception,
+                        "Failed to execute request {Operation} after {Attempts} attempts",
                         operationName, requestLimit);
-                    throw new Exception($"Failed to execute the request {operationName} after {requestLimit} attempts.", exception);
+                    throw new Exception($"Failed to execute the request {operationName} after {requestLimit} attempts.",
+                        exception);
                 }
 
-                _logger.LogWarning(exception, 
-                    "Failed to execute request {Operation} (attempt {Attempt}/{Total})", 
+                _logger.LogWarning(exception,
+                    "Failed to execute request {Operation} (attempt {Attempt}/{Total})",
                     operationName, i + 1, requestLimit);
 
                 await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
@@ -416,14 +429,15 @@ public class KickHttpRepository : BotRepository<KickUser>
             {
                 if (i == requestLimit - 1)
                 {
-                    _logger.LogError(exception, 
-                        "Failed to execute request {Operation} after {Attempts} attempts", 
+                    _logger.LogError(exception,
+                        "Failed to execute request {Operation} after {Attempts} attempts",
                         operationName, requestLimit);
-                    throw new Exception($"Failed to execute the request {operationName} after {requestLimit} attempts.", exception);
+                    throw new Exception($"Failed to execute the request {operationName} after {requestLimit} attempts.",
+                        exception);
                 }
 
-                _logger.LogWarning(exception, 
-                    "Failed to execute request {Operation} (attempt {Attempt}/{Total})", 
+                _logger.LogWarning(exception,
+                    "Failed to execute request {Operation} (attempt {Attempt}/{Total})",
                     operationName, i + 1, requestLimit);
 
                 await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);

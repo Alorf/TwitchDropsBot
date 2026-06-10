@@ -5,7 +5,7 @@ namespace TwitchDropsBot.Core.Platform.Kick.Models;
 public partial class Campaign
 {
     [JsonPropertyName("category")]
-    public Category Category { get; set; }
+    public Category? Category { get; set; }
 
     [JsonPropertyName("channels")] public List<Channel> Channels { get; set; } = new List<Channel>();
     

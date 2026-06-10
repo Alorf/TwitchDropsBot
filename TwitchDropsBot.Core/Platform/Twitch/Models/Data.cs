@@ -27,6 +27,9 @@ public class Data
 
     [JsonPropertyName("token")]
     public string? Token { get; set; }
+    
+    [JsonPropertyName("ChannelDropCampaignsProgress")]
+    public List<DropsCampaign> ChannelDropCampaignsProgress { get; set; } = new List<DropsCampaign>();
 }
 
 public class SendSpadeEvents

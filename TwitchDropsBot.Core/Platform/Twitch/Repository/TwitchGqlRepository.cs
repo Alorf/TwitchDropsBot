@@ -303,6 +303,31 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
         return resp?.Data.CurrentUser.DropCurrentSession;
     }
 
+    public async Task<List<DropsCampaign>> FetchDropCampaignsProgressAsync(User channel)
+    {
+        var query = CreateQuery("DropChannelCampaignsProgress");
+        
+        if (query.Variables is Dictionary<string, object?> variables)
+        {
+            variables["channelID"] = channel.Id;
+        }
+        
+        dynamic? resp = await DoGQLRequestAsync(query);
+
+        List<DropsCampaign> channelDropCampaignsProgress = resp?.Data.ChannelDropCampaignsProgress;
+        
+        foreach (var dropsCampaign in channelDropCampaignsProgress)
+        {
+            foreach (var dropsCampaignRewardGroup in dropsCampaign.RewardGroups)
+            {
+                dropsCampaignRewardGroup.Self.CurrentMinutesWatched ??= 0;
+                dropsCampaignRewardGroup.Self.CurrentSubs ??= 0;
+            }
+        }
+        
+        return channelDropCampaignsProgress;
+    }
+
     // The channel must be live to get the drops
     public async Task<List<DropCampaign>> FetchAvailableDropsAsync(string? channel)
     {
@@ -424,7 +449,7 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
             foreach (var badgeName in BadgeNames)
             {
                 var fuzzed = Fuzz.PartialRatio(badgeName.ToLower(), badge.Title.ToLower());
-                // _logger.LogInformation($"{badgeName} - {badge.Title} = {fuzzed}");
+                // _logger.LogDebug($"{badgeName} - {badge.Title} = {fuzzed}");
                 if (fuzzed >= 80)
                 {
                     return true;
@@ -457,7 +482,7 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
                 foreach (var emoteName in emoteNames)
                 {
                     var fuzzed = Fuzz.PartialRatio(emoteName.ToLower(), emote.Token.ToLower());
-                    _logger.LogInformation($"{emoteName} - {emote.Token} = {fuzzed}");
+                    // _logger.LogDebug($"{emoteName} - {emote.Token} = {fuzzed}");
                     if (fuzzed >= 80)
                     {
                         return true;

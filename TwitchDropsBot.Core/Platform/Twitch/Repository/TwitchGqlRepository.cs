@@ -315,6 +315,11 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
         dynamic? resp = await DoGQLRequestAsync(query);
 
         List<DropsCampaign> channelDropCampaignsProgress = resp?.Data.ChannelDropCampaignsProgress;
+
+        if (channelDropCampaignsProgress is null)
+        {
+            return new List<DropsCampaign>();
+        }
         
         foreach (var dropsCampaign in channelDropCampaignsProgress)
         {

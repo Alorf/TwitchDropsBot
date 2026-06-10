@@ -215,7 +215,8 @@ public class TwitchBot : BaseBot<TwitchUser>
                 continue;
             }
 
-            if (dropCurrentRewardGroup.Self.CurrentMinutesWatched > dropCurrentRewardGroup.ProgressCriteria.Requirements.MinutesWatched)
+            if (dropCurrentRewardGroup.Self.CurrentMinutesWatched >
+                dropCurrentRewardGroup.ProgressCriteria.Requirements.MinutesWatched)
             {
                 Logger.LogInformation("CurrentMinutesWatched > requiredMinutesWatched, skipping");
                 thingsToWatch.Remove(campaign);
@@ -239,7 +240,7 @@ public class TwitchBot : BaseBot<TwitchUser>
             }
 
             Logger.LogInformation($"Time based drops : {timeBasedDrop.Name}");
-        // } while (timeBasedDrop is null || dropCurrentSession is null || broadcaster is null || campaign is null);
+            // } while (timeBasedDrop is null || dropCurrentSession is null || broadcaster is null || campaign is null);
         } while (timeBasedDrop is null || dropCurrentRewardGroup is null || broadcaster is null || campaign is null);
 
 
@@ -274,7 +275,6 @@ public class TwitchBot : BaseBot<TwitchUser>
         AbstractCampaign campaign)
     {
         var dropCurrentSession = await BotUser.TwitchRepository.FetchCurrentSessionContextAsync(broadcaster);
-        var campaignsProgress = await BotUser.TwitchRepository.FetchDropCampaignsProgressAsync(broadcaster);
 
         if (dropCurrentSession is null)
         {
@@ -310,10 +310,10 @@ public class TwitchBot : BaseBot<TwitchUser>
             Logger.LogInformation("No drop campaign progress found for this campaign, skipping");
             return null;
         }
-        
+
         //Remove every drop where
         var filteredCampaignProgress = dropCampaignProgress.RewardGroups
-            .Where(x => x.Self.CurrentMinutesWatched < x.ProgressCriteria.Requirements.MinutesWatched) 
+            .Where(x => x.Self.CurrentMinutesWatched < x.ProgressCriteria.Requirements.MinutesWatched)
             .OrderBy(x => x.ProgressCriteria.Requirements.MinutesWatched).ToList();
 
         return filteredCampaignProgress.FirstOrDefault();
@@ -433,7 +433,7 @@ public class TwitchBot : BaseBot<TwitchUser>
 
         BotUser.WatchManager.Close();
     }
-    
+
     private async Task WatchStreamAsync(User broadcaster, DropsRewardGroup dropCurrentRewardGroup,
         AbstractCampaign campaign,
         int? minutes = null)
@@ -559,8 +559,12 @@ public class TwitchBot : BaseBot<TwitchUser>
 
         if (TwitchSettings.AvoidCampaign.Count > 0)
         {
-            campaigns.RemoveAll(x =>
+            /*campaigns.RemoveAll(x =>
                 TwitchSettings.AvoidCampaign.Contains(x.Game?.DisplayName ?? x.Game?.Name,
+                    StringComparer.OrdinalIgnoreCase));
+            */
+            campaigns.RemoveAll(x =>
+                TwitchSettings.AvoidCampaign.Contains(x.Name,
                     StringComparer.OrdinalIgnoreCase));
         }
 
@@ -574,7 +578,7 @@ public class TwitchBot : BaseBot<TwitchUser>
 
             Logger.LogInformation("Checking {campaignGameDisplayName} ({campaignName})...", campaign.Game.DisplayName,
                 campaign.Name);
-            
+
             if (finishedCampaigns.Contains(campaign))
             {
                 Logger.LogInformation("Campaign {campaign.Name} already completed from local list, skipping",
@@ -595,7 +599,7 @@ public class TwitchBot : BaseBot<TwitchUser>
                 campaigns.Remove(campaign);
                 continue;
             }
-            
+
             try
             {
                 var isCompleted = await campaign.IsCompleted(inventory, BotUser.TwitchRepository);
@@ -640,8 +644,9 @@ public class TwitchBot : BaseBot<TwitchUser>
             }
 
             var channels = campaign.Allow?.Channels;
+            
 
-            if (channels is not null)
+            if (channels is not null && channels.Count < 250)
             {
                 var channelGroups = channels.Select(x => x.Name).Chunk(10).ToList();
 

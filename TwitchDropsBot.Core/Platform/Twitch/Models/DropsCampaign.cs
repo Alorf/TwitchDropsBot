@@ -65,7 +65,7 @@ public class DropsRewardGroup
 public class DropsProgressCriteria
 {
     [JsonPropertyName("requirementType")]
-    public string RequirementType { get; set; }
+    public string RequirementType { get; set; }  // SUBS
 
     [JsonPropertyName("requirements")]
     public DropsUnlockRequirement Requirements { get; set; }
@@ -78,13 +78,13 @@ public class DropsProgressCriteria
 public class DropsUnlockRequirement
 {
     [JsonPropertyName("minutesWatched")]
-    public int MinutesWatched { get; set; }
+    public int? MinutesWatched { get; set; }
 
     [JsonPropertyName("subs")]
-    public string Subs { get; set; }
+    public int? Subs { get; set; }
 
     [JsonPropertyName("turboSubs")]
-    public string TurboSubs { get; set; }
+    public int? TurboSubs { get; set; }
 
 }
 

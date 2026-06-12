@@ -320,6 +320,9 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
         {
             return new List<DropsCampaign>();
         }
+
+        channelDropCampaignsProgress.RemoveAll(x =>
+            x.RewardGroups.All(x => x.ProgressCriteria.RequirementType == "SUBS"));
         
         foreach (var dropsCampaign in channelDropCampaignsProgress)
         {

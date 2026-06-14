@@ -60,7 +60,13 @@ jobs:
         run: |
           tag=$(git describe --tags --abbrev=0)
           release_name="TwitchDropsBot-${{ inputs.project_name }}-${{ inputs.target }}-$tag"
-          cp /tmp/msquic-linux/bin/libmsquic* "$release_name/" 2>/dev/null || echo "No msquic libs found in /tmp/msquic-linux/"
+          so_file=$(ls /tmp/msquic-linux/bin/libmsquic.so.* 2>/dev/null | grep -v lttng | head -1)
+          if [ -n "$so_file" ]; then
+            cp "$so_file" "$release_name/libmsquic.so"
+            echo "Copied $so_file -> $release_name/libmsquic.so"
+          else
+            echo "No libmsquic.so found in /tmp/msquic-linux/"
+          fi
 
       - name: Bundle msquic native libs (Windows)
         if: "${{ startsWith(inputs.target, 'win-') }}"

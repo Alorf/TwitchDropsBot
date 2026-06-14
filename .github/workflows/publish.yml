@@ -71,8 +71,11 @@ jobs:
           fi
 
           # Bundle libxdp dependency (needed by msquic)
-          sudo apt-get update -qq && sudo apt-get install -y -qq libxdp1 2>/dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq libxdp1 patchelf 2>/dev/null
           cp /usr/lib/x86_64-linux-gnu/libxdp* "$release_name/" 2>/dev/null || echo "No libxdp found"
+
+          # Set RPATH=$ORIGIN on libmsquic.so so it finds libxdp.so in its own directory
+          patchelf --set-rpath '$ORIGIN' "$release_name/libmsquic.so" 2>/dev/null || echo "patchelf failed"
 
       - name: Bundle msquic native libs (Windows)
         if: "${{ startsWith(inputs.target, 'win-') }}"

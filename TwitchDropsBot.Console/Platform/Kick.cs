@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using TwitchDropsBot.Console.Helpers;
 using TwitchDropsBot.Core.Platform.Kick.Services;
 using TwitchDropsBot.Core.Platform.Kick.Settings;
 using TwitchDropsBot.Core.Platform.Shared.Services;
@@ -14,6 +15,7 @@ public class Kick
 
         logger.LogInformation("Please, open this link with the Kick mobile app");
         logger.LogInformation(url);
+        QrConsoleHelper.DisplayQrCode(url, "Scan this QR code with your phone:");
         
         var PollService = new KickAuthPollService();
 

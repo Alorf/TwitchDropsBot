@@ -60,6 +60,8 @@ jobs:
         run: |
           tag=$(git describe --tags --abbrev=0)
           release_name="TwitchDropsBot-${{ inputs.project_name }}-${{ inputs.target }}-$tag"
+
+          # Bundle libmsquic.so from GitHub release
           so_file=$(ls /tmp/msquic-linux/bin/libmsquic.so.* 2>/dev/null | grep -v lttng | head -1)
           if [ -n "$so_file" ]; then
             cp "$so_file" "$release_name/libmsquic.so"
@@ -67,6 +69,10 @@ jobs:
           else
             echo "No libmsquic.so found in /tmp/msquic-linux/"
           fi
+
+          # Bundle libxdp dependency (needed by msquic)
+          sudo apt-get update -qq && sudo apt-get install -y -qq libxdp1 2>/dev/null
+          cp /usr/lib/x86_64-linux-gnu/libxdp* "$release_name/" 2>/dev/null || echo "No libxdp found"
 
       - name: Bundle msquic native libs (Windows)
         if: "${{ startsWith(inputs.target, 'win-') }}"

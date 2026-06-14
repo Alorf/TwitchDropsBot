@@ -29,6 +29,15 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      - name: Install msquic (Linux)
+        if: ${{ !startsWith(inputs.target, 'win-') }}
+        shell: bash
+        run: |
+          sudo apt-get update && sudo apt-get install -y curl gnupg && \
+          curl -sSL https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -o packages-microsoft-prod.deb && \
+          sudo dpkg -i packages-microsoft-prod.deb && \
+          sudo apt-get update && sudo apt-get install -y libmsquic
+
       - name: "Build and Publish ${{ inputs.project_name }}"
         shell: bash
         run: |
@@ -44,6 +53,31 @@ jobs:
               -p:IncludeNativeLibrariesForSelfExtract=true \
               -c Release \
               -o "$release_name"
+
+      - name: Bundle msquic native libs (Linux)
+        if: ${{ !startsWith(inputs.target, 'win-') }}
+        shell: bash
+        run: |
+          tag=$(git describe --tags --abbrev=0)
+          release_name="TwitchDropsBot-${{ inputs.project_name }}-${{ inputs.target }}-$tag"
+          cp /usr/lib/x86_64-linux-gnu/libmsquic* "$release_name/" 2>/dev/null || echo "No msquic libs found at /usr/lib/x86_64-linux-gnu/"
+
+      - name: Bundle msquic native libs (Windows)
+        if: "${{ startsWith(inputs.target, 'win-') }}"
+        shell: bash
+        run: |
+          tag=$(git describe --tags --abbrev=0)
+          release_name="TwitchDropsBot-${{ inputs.project_name }}-${{inputs.target }}-$tag"
+
+          # Copy msquic.dll from NuGet package cache
+          msquic_path="$HOME/.nuget/packages/microsoft.native.quic.msquic.schannel/2.5.8/build/native/bin/x64/msquic.dll"
+          if [ -f "$msquic_path" ]; then
+            cp "$msquic_path" "$release_name/"
+            echo "msquic.dll copied to $release_name/"
+          else
+            echo "msquic.dll not found at $msquic_path"
+            exit 1
+          fi
 
       - name: Package for Windows
         shell: bash

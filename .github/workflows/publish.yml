@@ -60,7 +60,7 @@ jobs:
         run: |
           tag=$(git describe --tags --abbrev=0)
           release_name="TwitchDropsBot-${{ inputs.project_name }}-${{ inputs.target }}-$tag"
-          cp /tmp/msquic-linux/libmsquic* "$release_name/" 2>/dev/null || echo "No msquic libs found in /tmp/msquic-linux/"
+          cp /tmp/msquic-linux/bin/libmsquic* "$release_name/" 2>/dev/null || echo "No msquic libs found in /tmp/msquic-linux/"
 
       - name: Bundle msquic native libs (Windows)
         if: "${{ startsWith(inputs.target, 'win-') }}"
@@ -73,7 +73,7 @@ jobs:
           curl -sSL "https://github.com/microsoft/msquic/releases/download/v2.4.10/msquic_windows_x64_Release_schannel.zip" \
             -o /tmp/msquic-win.zip
           unzip -o /tmp/msquic-win.zip -d /tmp/msquic-win/
-          cp /tmp/msquic-win/msquic.dll "$release_name/" 2>/dev/null || echo "msquic.dll not found in zip"
+          cp /tmp/msquic-win/bin/msquic.dll "$release_name/" 2>/dev/null || echo "msquic.dll not found in zip"
           ls -la "$release_name/msquic.dll"
 
       - name: Package for Windows

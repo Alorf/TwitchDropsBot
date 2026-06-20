@@ -192,23 +192,19 @@ public class KickBot : BaseBot<KickUser>
                 foreach (var channel in channels)
                 {
                     var channelInfo = await BotUser.KickRepository.GetChannelAsync(channel.slug);
-
-                    if (channelInfo.Livestream is not null)
+                    
+                    if (channelInfo?.Livestream is not null)
                     {
                         channelToWatch = channelInfo;
                         break;
                     }
+                    
+                    BotUser.Logger.LogInformation("You are not authorized to watch {channelName}, skipping", channel.slug);
                 }
 
                 if (channelToWatch is null)
                 {
                     campaigns.Remove(campaign);
-                    continue;
-                }
-
-                if (await BotUser.KickRepository.GetChannelAsync(channelToWatch.slug) is null)
-                {
-                    BotUser.Logger.LogInformation("Channel {channelName} not accessible, skipping", channelToWatch.slug);
                     continue;
                 }
 
@@ -230,8 +226,7 @@ public class KickBot : BaseBot<KickUser>
 
                 if (await BotUser.KickRepository.GetChannelAsync(livestream.Channel.slug) is null)
                 {
-                    BotUser.Logger.LogInformation("Channel {channelName} not accessible, skipping",
-                        livestream.Channel.slug);
+                    BotUser.Logger.LogInformation("You are not authorized to watch {channelName}, skipping", livestream.Channel.slug);
                     continue;
                 }
                 

@@ -208,7 +208,7 @@ public class KickBot : BaseBot<KickUser>
 
                 if (await BotUser.KickRepository.GetChannelAsync(channelToWatch.slug) is null)
                 {
-                    BotUser.Logger.LogInformation("Channel {channelName} not accessible, skipping", mostViewers.Channel.slug);
+                    BotUser.Logger.LogInformation("Channel {channelName} not accessible, skipping", channelToWatch.slug);
                     continue;
                 }
 

@@ -203,6 +203,12 @@ public class KickHttpRepository : BotRepository<KickUser>
         try
         {
             var response = await _httpClient.SendAsync(request, cancellationToken);
+
+            if (response.StatusCode == HttpStatusCode.Forbidden)
+            {
+                return null;
+            }
+            
             response.EnsureSuccessStatusCode();
 
             var channel = await response.Content.ReadFromJsonAsync<Channel>(cancellationToken);

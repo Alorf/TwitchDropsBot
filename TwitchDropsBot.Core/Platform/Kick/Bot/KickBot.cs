@@ -12,7 +12,8 @@ namespace TwitchDropsBot.Core.Platform.Kick.Bot;
 
 public class KickBot : BaseBot<KickUser>
 {
-    public KickBot(KickUser user, ILogger logger, NotificationService notificationService, IOptionsMonitor<BotSettings> botSettings) : base(user,
+    public KickBot(KickUser user, ILogger logger, NotificationService notificationService,
+        IOptionsMonitor<BotSettings> botSettings) : base(user,
         logger, notificationService, botSettings)
     {
     }
@@ -204,22 +205,45 @@ public class KickBot : BaseBot<KickUser>
                     campaigns.Remove(campaign);
                     continue;
                 }
-                
+
+                if (await BotUser.KickRepository.GetChannelAsync(channelToWatch.slug) is null)
+                {
+                    BotUser.Logger.LogInformation("Channel {channelName} not accessible, skipping", mostViewers.Channel.slug);
+                    continue;
+                }
+
                 return (campaign, channelToWatch);
             }
 
             // var livestreams = await BotUser.KickHttpClient.FindStreams(campaign);
             var livestreams = await BotUser.KickRepository.GetLivestreamCampaignsAsync(campaign);
-
-            var mostViewerLiveStream = livestreams.FirstOrDefault();
-
-            if (mostViewerLiveStream is null)
+            Livestream? streamToWatch = null;
+            foreach (var livestream in livestreams)
             {
-                campaigns.Remove(campaign);
+                await Task.Delay(TimeSpan.FromSeconds(15));
+                
+                if (livestream is null)
+                {
+                    campaigns.Remove(campaign);
+                    continue;
+                }
+
+                if (await BotUser.KickRepository.GetChannelAsync(livestream.Channel.slug) is null)
+                {
+                    BotUser.Logger.LogInformation("Channel {channelName} not accessible, skipping",
+                        livestream.Channel.slug);
+                    continue;
+                }
+                
+                streamToWatch = livestream;
+            }
+
+            if (streamToWatch is null)
+            {
                 continue;
             }
 
-            return (campaign, mostViewerLiveStream.Channel);
+            return (campaign, streamToWatch.Channel);
         }
 
         return (null, null);
@@ -250,8 +274,9 @@ public class KickBot : BaseBot<KickUser>
                         await Task.Delay(TimeSpan.FromSeconds(2));
                         continue;
                     }
-                    
-                    await NotificationService.SendNotification(BotUser, campaign.Category.Name, reward.Name, $"https://ext.cdn.kick.com/{reward.ImageUrl}");
+
+                    await NotificationService.SendNotification(BotUser, campaign.Category.Name, reward.Name,
+                        $"https://ext.cdn.kick.com/{reward.ImageUrl}");
                 }
             }
         }

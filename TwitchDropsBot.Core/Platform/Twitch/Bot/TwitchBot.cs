@@ -28,7 +28,6 @@ public class TwitchBot : BaseBot<TwitchUser>
         }
     }
 
-    private List<CompletedRewardCampaigns> claimedReward;
     private List<AbstractCampaign> finishedCampaigns;
     private IOptionsMonitor<BotSettings> _botSettings;
     private List<string> _gamesToCheck;
@@ -40,7 +39,6 @@ public class TwitchBot : BaseBot<TwitchUser>
         IOptionsMonitor<BotSettings> botSettings
     ) : base(user, logger, notificationService, botSettings)
     {
-        claimedReward = new List<CompletedRewardCampaigns>();
         finishedCampaigns = new List<AbstractCampaign>();
 
         _botSettings = botSettings;
@@ -253,20 +251,6 @@ public class TwitchBot : BaseBot<TwitchUser>
         Logger.LogInformation(
             $"Current drop campaign: {campaign.Name} ({campaign.Game?.DisplayName}), watching {broadcaster.Login} | {broadcaster.Id}");
         await WatchStreamAsync(broadcaster, dropCurrentRewardGroup, campaign);
-
-        if (campaign is RewardCampaign)
-        {
-            var notifications = await BotUser.TwitchRepository.FetchNotificationsAsync(1);
-
-            foreach (var edge in notifications.Edges)
-            {
-                //Search for the first action with the type "click"
-                var action = edge.Node.Actions.FirstOrDefault(x => x.Type == "click");
-
-                await NotificationService.SendNotification(BotUser, edge.Node.Body, edge.Node.ThumbnailUrl,
-                    new Uri(action.Url));
-            }
-        }
 
         Logger.LogDebug("Loop ended");
     }
@@ -758,28 +742,21 @@ public class TwitchBot : BaseBot<TwitchUser>
             }
         }
 
-        var newClaimedReward = inventory.CompletedRewardCampaigns;
-
-
-        if (claimedReward.Count == 0)
+        var earnedDropRewardToClaim = inventory.EarnedDropRewards.Edges.Where(x => x.Node.Status != "CLAIMED").ToList();
+        
+        foreach (var earnedDropRewardEdge in earnedDropRewardToClaim)
         {
-            claimedReward = newClaimedReward;
-        }
-
-        List<CompletedRewardCampaigns> newlyClaimedReward = newClaimedReward.Except(claimedReward).ToList();
-        foreach (var rewardCampaign in newlyClaimedReward)
-        {
-            foreach (var reward in rewardCampaign.Rewards)
+            if (earnedDropRewardEdge.Node.Item.DistributionType != DistributionType.CODE)
             {
-                var rewardCampaignCode = await BotUser.TwitchRepository.RewardCodeModal(rewardCampaign.Id, reward.Id);
-                var message =
-                    $"```{rewardCampaignCode.Value}``` has been rewarded for {reward.Name}`\n Claim before <t:{((DateTimeOffset)reward.EarnableUntil).ToUnixTimeSeconds()}>";
-                await NotificationService.SendNotification(BotUser, message, reward.ThumbnailImage.Image1xURL,
-                    new Uri(rewardCampaign.ExternalURL));
-                await Task.Delay(TimeSpan.FromSeconds(5));
+                continue;
             }
+            
+            var rewardCampaignCode = await BotUser.TwitchRepository.RewardCodeModal(earnedDropRewardEdge.Node.Campaign.Id, earnedDropRewardEdge.Node.Id);
+            var message =
+                $"```{rewardCampaignCode.Value}``` has been rewarded for {earnedDropRewardEdge.Node.Item.Name}`";
+            await NotificationService.SendNotification(BotUser, message, earnedDropRewardEdge.Node.Item.ThumbnailURL,
+                new Uri(earnedDropRewardEdge.Node.Item.RedemptionURL));
+            await Task.Delay(TimeSpan.FromSeconds(5));
         }
-
-        claimedReward = newClaimedReward;
     }
 }

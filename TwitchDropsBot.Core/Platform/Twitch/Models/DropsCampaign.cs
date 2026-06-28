@@ -20,10 +20,10 @@ public class DropsCampaign
     public string DetailsURL { get; set; }
 
     [JsonPropertyName("startAt")]
-    public DateTime StartAt { get; set; }
+    public DateTime? StartAt { get; set; }
 
     [JsonPropertyName("endAt")]
-    public DateTime EndAt { get; set; }
+    public DateTime? EndAt { get; set; }
 
     [JsonPropertyName("imageURL")]
     public string ImageURL { get; set; }
@@ -39,6 +39,9 @@ public class DropsCampaign
 
     [JsonPropertyName("rewardGroups")]
     public List<DropsRewardGroup> RewardGroups { get; set; }
+    
+    [JsonPropertyName("ownerType")]
+    public string OwnerType { get; set; }
 
 }
 
@@ -98,6 +101,9 @@ public class DropsReward
 
     [JsonPropertyName("thumbnailURL")]
     public string ThumbnailURL { get; set; }
+    
+    [JsonPropertyName("redemptionURL")]
+    public string RedemptionURL { get; set; }
 
     [JsonPropertyName("distributionType")]
     public DistributionType DistributionType { get; set; }

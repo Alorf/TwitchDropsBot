@@ -7,8 +7,10 @@ using TwitchDropsBot.Core.Platform.Shared.Exceptions;
 using TwitchDropsBot.Core.Platform.Shared.Services;
 using TwitchDropsBot.Core.Platform.Shared.WatchManager;
 using TwitchDropsBot.Core.Platform.Twitch.Bot;
+using TwitchDropsBot.Core.Platform.Twitch.Device;
 using TwitchDropsBot.Core.Platform.Twitch.Models;
 using TwitchDropsBot.Core.Platform.Twitch.Repository;
+using TwitchDropsBot.Core.Platform.Twitch.Utils;
 using Stream = TwitchDropsBot.Core.Platform.Twitch.Models.Stream;
 
 namespace TwitchDropsBot.Core.Platform.Twitch.WatchManager;
@@ -121,9 +123,17 @@ public class WatchRequest : ITwitchWatchManager
                 if (tempBroadcaster?.Stream is not null)
                 {
                     var stream = tempBroadcaster.Stream;
-                    var payload = GetPayload(tempBroadcaster, stream, game, true);
 
-                    await twitchGraphQlClient.SimulateWatchMobileAsync(payload);
+                    if (Constant.TwitchDevice == TwitchDeviceType.ANDROID_APP)
+                    {
+                        var payload = GetPayload(tempBroadcaster, stream, game, true);
+                        await twitchGraphQlClient.SimulateWatchMobileAsync(payload);
+                    }
+                    else
+                    {
+                        var payload = GetPayload(tempBroadcaster, stream, game, false);
+                        await twitchGraphQlClient.SimulateWatchAsync(payload);
+                    }
                 }
 
                 lastRequestTime = DateTime.Now;

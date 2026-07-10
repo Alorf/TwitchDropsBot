@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Net.Http.Headers;
+using System.Text.Json;
 using FuzzySharp;
 using GraphQL;
 using GraphQL.Client.Http;
@@ -392,6 +393,18 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
         var response = await DoGQLRequestAsync(query);
 
         return response;
+    }
+    
+    public async Task<dynamic?> SimulateWatchMobileAsync(string compressedData)
+    {
+        var customHttpClient = new HttpClient();
+        
+        var content = new StringContent(compressedData, System.Text.Encoding.UTF8, "text/plain");
+
+        var response = await customHttpClient.PostAsync("https://trowel.twitch.tv/track", content);
+        response.EnsureSuccessStatusCode();
+
+        return null;
     }
 
     public async Task<bool> ClaimDropAsync(string dropInstanceID)

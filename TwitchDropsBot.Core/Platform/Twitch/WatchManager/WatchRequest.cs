@@ -121,9 +121,9 @@ public class WatchRequest : ITwitchWatchManager
                 if (tempBroadcaster?.Stream is not null)
                 {
                     var stream = tempBroadcaster.Stream;
-                    var payload = GetPayload(tempBroadcaster, stream, game);
+                    var payload = GetPayload(tempBroadcaster, stream, game, true);
 
-                    await twitchGraphQlClient.SimulateWatchAsync(payload);
+                    await twitchGraphQlClient.SimulateWatchMobileAsync(payload);
                 }
 
                 lastRequestTime = DateTime.Now;
@@ -156,7 +156,7 @@ public class WatchRequest : ITwitchWatchManager
         lastRequestTime = DateTime.MinValue;
     }
 
-    private string GetPayload(User broadcaster, Stream stream, Game game)
+    private string GetPayload(User broadcaster, Stream stream, Game game, bool onlyB64 = false)
     {
         var payload = new[]
         {
@@ -181,7 +181,14 @@ public class WatchRequest : ITwitchWatchManager
                 }
             }
         };
+        
         var json = JsonSerializer.Serialize(payload);
+        
+        if (onlyB64)
+        {
+            return Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
+        }
+        
         var jsonBytes = Encoding.UTF8.GetBytes(json);
         using var output = new MemoryStream();
         using (var gzip = new GZipStream(output, CompressionLevel.Optimal, leaveOpen: true))

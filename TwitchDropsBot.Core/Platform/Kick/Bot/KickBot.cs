@@ -1,4 +1,4 @@
-﻿using Discord;
+using Discord;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TwitchDropsBot.Core.Platform.Kick.Models;
@@ -111,6 +111,18 @@ public class KickBot : BaseBot<KickUser>
 
         var requiredMinutesToWatch = reward.RequiredUnits;
 
+        var uniqueKey = $"kick-{BotUser.Login}-{campaign.Id}";
+        var itemImage = reward.ImageUrl ?? campaign.Category?.ImageUrl ?? string.Empty;
+        var dropsProgress = GetKickProgressList(summary, campaign, reward);
+        await NotificationService.SendOrUpdateProgressNotification(
+            BotUser,
+            campaign.Category?.Name ?? "Unknown Category",
+            campaign.Name ?? "Unknown Campaign",
+            itemImage,
+            dropsProgress,
+            uniqueKey
+        );
+
         while (minuteWatched <
                (minutes ?? requiredMinutesToWatch)) // While all the drops are not claimed
         {
@@ -156,10 +168,69 @@ public class KickBot : BaseBot<KickUser>
             Logger.LogInformation(
                 $"Waiting 60 seconds... {minuteWatched}/{requiredMinutesToWatch} minutes watched.");
 
+            var currentDropsProgress = GetKickProgressList(summary, campaign, reward);
+            await NotificationService.SendOrUpdateProgressNotification(
+                BotUser,
+                campaign.Category?.Name ?? "Unknown Category",
+                campaign.Name ?? "Unknown Campaign",
+                itemImage,
+                currentDropsProgress,
+                uniqueKey
+            );
+
             await Task.Delay(TimeSpan.FromSeconds(60));
         }
 
         BotUser.WatchManager.Close();
+    }
+
+    private List<DropProgressInfo> GetKickProgressList(CampaignSummary? summary, Campaign campaign, Reward activeReward)
+    {
+        var list = new List<DropProgressInfo>();
+        if (campaign.Rewards != null)
+        {
+            foreach (var r in campaign.Rewards)
+            {
+                var summaryReward = summary?.Rewards?.FirstOrDefault(x => x.Id == r.Id);
+                var progressFraction = summaryReward?.Progress ?? r.Progress;
+                var isClaimed = r.Claimed || (summaryReward != null && (summaryReward.Claimed || summaryReward.Progress >= 1));
+                
+                var req = r.RequiredUnits;
+                double curr = 0;
+                var isActive = r.Id == activeReward.Id;
+
+                if (isActive && summary != null)
+                {
+                    curr = summary.ProgressUnits;
+                }
+                else
+                {
+                    curr = progressFraction * req;
+                }
+
+                list.Add(new DropProgressInfo
+                {
+                    Name = r.Name,
+                    CurrentProgress = curr,
+                    RequiredProgress = req,
+                    IsClaimed = isClaimed,
+                    IsActive = isActive
+                });
+            }
+        }
+
+        if (list.Count == 0)
+        {
+            list.Add(new DropProgressInfo
+            {
+                Name = activeReward.Name,
+                CurrentProgress = summary != null ? summary.ProgressUnits : (activeReward.Progress * activeReward.RequiredUnits),
+                RequiredProgress = activeReward.RequiredUnits,
+                IsClaimed = activeReward.Claimed || activeReward.Progress >= 1,
+                IsActive = true
+            });
+        }
+        return list;
     }
 
     private async Task<(Campaign? campaign, Channel? broadcaster)> SelectBroadcasterAsync(List<Campaign> campaigns,

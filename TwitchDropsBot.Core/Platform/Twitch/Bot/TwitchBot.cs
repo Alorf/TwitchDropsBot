@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TwitchDropsBot.Core.Platform.Shared.Bots;
 using TwitchDropsBot.Core.Platform.Shared.Exceptions;
@@ -277,27 +277,68 @@ public class TwitchBot : BaseBot<TwitchUser>
         return dropCurrentSession;
     }
 
+    private async Task<DropsCampaign?> FetchCampaignProgress(User broadcaster, AbstractCampaign campaign)
+    {
+        try
+        {
+            var campaignsProgress = await BotUser.TwitchRepository.FetchDropCampaignsProgressAsync(broadcaster);
+            return campaignsProgress.FirstOrDefault(x => x.Id == campaign.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error fetching campaign progress");
+            return null;
+        }
+    }
+
+    private async Task<List<DropProgressInfo>> GetTwitchProgressListAsync(User broadcaster, AbstractCampaign campaign, DropsRewardGroup dropCurrentRewardGroup)
+    {
+        var list = new List<DropProgressInfo>();
+        try
+        {
+            var campaignProgress = await FetchCampaignProgress(broadcaster, campaign);
+            if (campaignProgress?.RewardGroups != null)
+            {
+                foreach (var group in campaignProgress.RewardGroups)
+                {
+                    list.Add(new DropProgressInfo
+                    {
+                        Name = group.Name,
+                        CurrentProgress = group.Self?.CurrentMinutesWatched ?? 0,
+                        RequiredProgress = group.ProgressCriteria?.Requirements?.MinutesWatched ?? 0,
+                        IsClaimed = group.Self?.Status == "CLAIMED",
+                        IsActive = group.Id == dropCurrentRewardGroup.Id
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error getting Twitch progress list");
+        }
+
+        if (list.Count == 0)
+        {
+            list.Add(new DropProgressInfo
+            {
+                Name = dropCurrentRewardGroup.Name,
+                CurrentProgress = dropCurrentRewardGroup.Self?.CurrentMinutesWatched ?? 0,
+                RequiredProgress = dropCurrentRewardGroup.ProgressCriteria?.Requirements?.MinutesWatched ?? 0,
+                IsClaimed = dropCurrentRewardGroup.Self?.Status == "CLAIMED",
+                IsActive = true
+            });
+        }
+        return list;
+    }
+
     private async Task<DropsRewardGroup?> CheckDropProgress(User broadcaster, AbstractCampaign campaign)
     {
-        var campaignsProgress = await BotUser.TwitchRepository.FetchDropCampaignsProgressAsync(broadcaster);
-
-        if (campaignsProgress.Count == 0)
-        {
-            Logger.LogInformation("No drop campaign progress found, skipping");
-            return null;
-        }
-
-        var dropCampaignProgress = campaignsProgress.FirstOrDefault(x => x.Id == campaign.Id);
-
-        if (dropCampaignProgress is null)
-        {
-            Logger.LogInformation("No drop campaign progress found for this campaign, skipping");
-            return null;
-        }
+        var campaignProgress = await FetchCampaignProgress(broadcaster, campaign);
+        if (campaignProgress is null) return null;
 
         //Remove every drop where
-        var filteredCampaignProgress = dropCampaignProgress.RewardGroups
-            .Where(x => x.Self.CurrentMinutesWatched < x.ProgressCriteria.Requirements.MinutesWatched)
+        var filteredCampaignProgress = campaignProgress.RewardGroups
+            .Where(x => x.Self != null && x.Self.CurrentMinutesWatched < x.ProgressCriteria.Requirements.MinutesWatched)
             .OrderBy(x => x.ProgressCriteria.Requirements.MinutesWatched).ToList();
 
         return filteredCampaignProgress.FirstOrDefault();
@@ -427,6 +468,21 @@ public class TwitchBot : BaseBot<TwitchUser>
         var minuteWatched = dropCurrentRewardGroup.Self.CurrentMinutesWatched;
         var requiredMinutesToWatch = dropCurrentRewardGroup.ProgressCriteria.Requirements.MinutesWatched;
 
+        if (minuteWatched.HasValue && requiredMinutesToWatch.HasValue)
+        {
+            var uniqueKey = $"twitch-{BotUser.Login}-{campaign.Id}";
+            var itemImage = dropCurrentRewardGroup.Rewards.FirstOrDefault()?.ThumbnailURL ?? campaign.Game?.BoxArtUrl ?? string.Empty;
+            var dropsProgress = await GetTwitchProgressListAsync(broadcaster, campaign, dropCurrentRewardGroup);
+            await NotificationService.SendOrUpdateProgressNotification(
+                BotUser,
+                campaign.Game?.DisplayName ?? campaign.Game?.Name ?? "Unknown Game",
+                campaign.Name ?? "Unknown Campaign",
+                itemImage,
+                dropsProgress,
+                uniqueKey
+            );
+        }
+
         while (minuteWatched <= requiredMinutesToWatch)
         {
             try
@@ -529,6 +585,21 @@ public class TwitchBot : BaseBot<TwitchUser>
 
             Logger.LogInformation(
                 $"Waiting 60 seconds... {minuteWatched}/{requiredMinutesToWatch} minutes watched.");
+
+            if (requiredMinutesToWatch.HasValue)
+            {
+                var uniqueKey = $"twitch-{BotUser.Login}-{campaign.Id}";
+                var itemImage = dropCurrentRewardGroup.Rewards.FirstOrDefault()?.ThumbnailURL ?? campaign.Game?.BoxArtUrl ?? string.Empty;
+                var dropsProgress = await GetTwitchProgressListAsync(broadcaster, campaign, dropCurrentRewardGroup);
+                await NotificationService.SendOrUpdateProgressNotification(
+                    BotUser,
+                    campaign.Game?.DisplayName ?? campaign.Game?.Name ?? "Unknown Game",
+                    campaign.Name ?? "Unknown Campaign",
+                    itemImage,
+                    dropsProgress,
+                    uniqueKey
+                );
+            }
 
             await Task.Delay(TimeSpan.FromSeconds(60));
         }

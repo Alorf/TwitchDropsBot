@@ -209,6 +209,41 @@ public class NotificationService
         _          => (new Color(0xFFFFFF), "Unknown")
     };
 
+    public async Task UpdateProgressMessageAsClaimedAsync(BotUser user, string uniqueKey, string gameName, string itemName, string itemImage)
+    {
+        if (_discordWebhookClient is null) return;
+
+        if (_progressMessages.TryRemove(uniqueKey, out var messageId))
+        {
+            var (color, platformName) = GetPlatformData(user);
+            var normalizedImage = NormalizeImageUrl(itemImage, platformName);
+
+            var embedBuilder = new EmbedBuilder()
+                .WithAuthor("TwitchDropsBot", url: "https://github.com/Alorf/TwitchDropsBot")
+                .WithTitle($"{user.Login} — {gameName} ✅ Completed")
+                .WithDescription($"**{itemName}** has been claimed!")
+                .WithColor(color)
+                .WithFooter(platformName)
+                .WithCurrentTimestamp();
+
+            if (!string.IsNullOrEmpty(normalizedImage))
+            {
+                embedBuilder.WithThumbnailUrl(normalizedImage);
+            }
+
+            try
+            {
+                await _discordWebhookClient.ModifyMessageAsync(messageId, x =>
+                {
+                    x.Embeds = new[] { embedBuilder.Build() };
+                });
+            }
+            catch (Exception)
+            {
+            }
+        }
+    }
+
     private async Task SendWebhookAsync(Embed embed, string avatar)
     {
         if (_discordWebhookClient is null) return;

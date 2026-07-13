@@ -343,6 +343,10 @@ public class KickBot : BaseBot<KickUser>
 
                     await NotificationService.SendNotification(BotUser, campaign.Category.Name, reward.Name,
                         $"https://ext.cdn.kick.com/{reward.ImageUrl}");
+
+                    var progressKey = $"kick-{BotUser.Login}-{campaign.Id}";
+                    await NotificationService.UpdateProgressMessageAsClaimedAsync(
+                        BotUser, progressKey, campaign.Category.Name, reward.Name, $"https://ext.cdn.kick.com/{reward.ImageUrl}");
                 }
             }
         }

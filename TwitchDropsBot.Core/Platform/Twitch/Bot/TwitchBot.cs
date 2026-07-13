@@ -806,6 +806,14 @@ public class TwitchBot : BaseBot<TwitchUser>
                             await NotificationService.SendNotification(BotUser, dropCampaignInProgress.Game.Name,
                                 benefitEdge.Benefit.Name, benefitEdge.Benefit.ImageAssetURL);
                         }
+
+                        var firstBenefit = timeBasedDrop.BenefitEdges.FirstOrDefault();
+                        if (firstBenefit is not null)
+                        {
+                            var progressKey = $"twitch-{BotUser.Login}-{dropCampaignInProgress.Id}";
+                            await NotificationService.UpdateProgressMessageAsClaimedAsync(
+                                BotUser, progressKey, dropCampaignInProgress.Game.Name, firstBenefit.Benefit.Name, firstBenefit.Benefit.ImageAssetURL);
+                        }
                     }
 
                     await Task.Delay(TimeSpan.FromSeconds(20));
@@ -827,6 +835,11 @@ public class TwitchBot : BaseBot<TwitchUser>
                 $"```{rewardCampaignCode.Value}``` has been rewarded for {earnedDropRewardEdge.Node.Item.Name}`";
             await NotificationService.SendNotification(BotUser, message, earnedDropRewardEdge.Node.Item.ThumbnailURL,
                 new Uri(earnedDropRewardEdge.Node.Item.RedemptionURL));
+
+            var progressKey = $"twitch-{BotUser.Login}-{earnedDropRewardEdge.Node.Campaign.Id}";
+            await NotificationService.UpdateProgressMessageAsClaimedAsync(
+                BotUser, progressKey, earnedDropRewardEdge.Node.Campaign.Game?.Name ?? earnedDropRewardEdge.Node.Campaign.Name, earnedDropRewardEdge.Node.Item.Name, earnedDropRewardEdge.Node.Item.ThumbnailURL);
+
             await Task.Delay(TimeSpan.FromSeconds(5));
         }
     }

@@ -825,6 +825,14 @@ public class TwitchBot : BaseBot<TwitchUser>
         
         foreach (var earnedDropRewardEdge in earnedDropRewardToClaim)
         {
+            var dropDetails = await BotUser.TwitchRepository.FetchTimeBasedDropsAsync(earnedDropRewardEdge.Node.Campaign.Id);
+            if (string.Equals(dropDetails.Status, "EXPIRED", StringComparison.OrdinalIgnoreCase))
+            {
+                Logger.LogInformation("Skipping reward {RewardName} for campaign {CampaignName} because its status is EXPIRED.",
+                    earnedDropRewardEdge.Node.Item.Name, earnedDropRewardEdge.Node.Campaign.Name);
+                continue;
+            }
+
             if (earnedDropRewardEdge.Node.Item.DistributionType != DistributionType.CODE)
             {
                 continue;

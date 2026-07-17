@@ -341,12 +341,17 @@ public class KickBot : BaseBot<KickUser>
                         continue;
                     }
 
-                    await NotificationService.SendNotification(BotUser, campaign.Category.Name, reward.Name,
-                        $"https://ext.cdn.kick.com/{reward.ImageUrl}");
-
+                    reward.Claimed = true;
                     var progressKey = $"kick-{BotUser.Login}-{campaign.Id}";
-                    await NotificationService.UpdateProgressMessageAsClaimedAsync(
-                        BotUser, progressKey, campaign.Category.Name, reward.Name, $"https://ext.cdn.kick.com/{reward.ImageUrl}");
+                    var dropsProgress = GetKickProgressList(null, campaign, reward);
+                    await NotificationService.SendOrUpdateProgressNotification(
+                        BotUser,
+                        campaign.Category?.Name ?? "Unknown Category",
+                        campaign.Name ?? "Unknown Campaign",
+                        reward.ImageUrl != null ? $"https://ext.cdn.kick.com/{reward.ImageUrl}" : string.Empty,
+                        dropsProgress,
+                        progressKey
+                    );
                 }
             }
         }

@@ -115,7 +115,7 @@ public class NotificationService
                               string.Concat(Enumerable.Repeat("░", 10 - filledCount));
 
             var statusStr = drop.IsClaimed 
-                ? "✅ Claimed" 
+                ? (drop.Code != null ? $"✅ Claimed (Code: `{drop.Code}`)" : "✅ Claimed")
                 : (drop.IsActive ? $"⚡ In progress (`{percentage:P0}`)" : "⏳ Waiting");
 
             var displayProgress = Math.Min(drop.CurrentProgress, drop.RequiredProgress);
@@ -148,7 +148,7 @@ public class NotificationService
                     x.Embeds = new[] { embed };
                 });
                 
-                if (drops.All(d => d.IsClaimed || d.CurrentProgress >= d.RequiredProgress))
+                if (drops.All(d => d.IsClaimed))
                 {
                     _progressMessages.TryRemove(uniqueKey, out _);
                 }
@@ -166,7 +166,7 @@ public class NotificationService
                 embeds: new[] { embed }, 
                 avatarUrl: !string.IsNullOrEmpty(normalizedImage) ? normalizedImage : null);
             
-            if (!drops.All(d => d.IsClaimed || d.CurrentProgress >= d.RequiredProgress))
+            if (!drops.All(d => d.IsClaimed))
             {
                 _progressMessages[uniqueKey] = newId;
             }
@@ -258,4 +258,5 @@ public class DropProgressInfo
     public double RequiredProgress { get; set; }
     public bool IsClaimed { get; set; }
     public bool IsActive { get; set; }
+    public string? Code { get; set; }
 }

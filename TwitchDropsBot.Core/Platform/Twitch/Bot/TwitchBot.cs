@@ -801,19 +801,29 @@ public class TwitchBot : BaseBot<TwitchUser>
                     await BotUser.TwitchRepository.ClaimDropAsync(timeBasedDrop.Self.DropInstanceID);
                     if (dropCampaignInProgress.Game?.Name != null && timeBasedDrop.Name is not null)
                     {
-                        foreach (var benefitEdge in timeBasedDrop.BenefitEdges)
-                        {
-                            await NotificationService.SendNotification(BotUser, dropCampaignInProgress.Game.Name,
-                                benefitEdge.Benefit.Name, benefitEdge.Benefit.ImageAssetURL);
-                        }
+                        timeBasedDrop.Self.IsClaimed = true;
 
-                        var firstBenefit = timeBasedDrop.BenefitEdges.FirstOrDefault();
-                        if (firstBenefit is not null)
+                        var dropsProgress = dropCampaignInProgress.TimeBasedDrops.Select(t => new DropProgressInfo
                         {
-                            var progressKey = $"twitch-{BotUser.Login}-{dropCampaignInProgress.Id}";
-                            await NotificationService.UpdateProgressMessageAsClaimedAsync(
-                                BotUser, progressKey, dropCampaignInProgress.Game.Name, firstBenefit.Benefit.Name, firstBenefit.Benefit.ImageAssetURL);
-                        }
+                            Name = t.Name ?? "Unknown",
+                            CurrentProgress = t.Self?.CurrentMinutesWatched ?? 0,
+                            RequiredProgress = t.RequiredMinutesWatched,
+                            IsClaimed = t.Self?.IsClaimed ?? false,
+                            IsActive = false
+                        }).ToList();
+
+                        var progressKey = $"twitch-{BotUser.Login}-{dropCampaignInProgress.Id}";
+                        var firstBenefit = timeBasedDrop.BenefitEdges.FirstOrDefault();
+                        var itemImage = firstBenefit?.Benefit.ImageAssetURL ?? dropCampaignInProgress.Game?.BoxArtUrl ?? string.Empty;
+
+                        await NotificationService.SendOrUpdateProgressNotification(
+                            BotUser,
+                            dropCampaignInProgress.Game?.DisplayName ?? dropCampaignInProgress.Game?.Name ?? "Unknown Game",
+                            dropCampaignInProgress.Name ?? "Unknown Campaign",
+                            itemImage,
+                            dropsProgress,
+                            progressKey
+                        );
                     }
 
                     await Task.Delay(TimeSpan.FromSeconds(20));
@@ -839,14 +849,42 @@ public class TwitchBot : BaseBot<TwitchUser>
             }
             
             var rewardCampaignCode = await BotUser.TwitchRepository.RewardCodeModal(earnedDropRewardEdge.Node.Campaign.Id, earnedDropRewardEdge.Node.Id);
+            
             var message =
                 $"```{rewardCampaignCode.Value}``` has been rewarded for {earnedDropRewardEdge.Node.Item.Name}`";
             await NotificationService.SendNotification(BotUser, message, earnedDropRewardEdge.Node.Item.ThumbnailURL,
                 new Uri(earnedDropRewardEdge.Node.Item.RedemptionURL));
+            
+            var dropsProgress = new List<DropProgressInfo>();
+            if (dropDetails?.TimeBasedDrops != null)
+            {
+                foreach (var t in dropDetails.TimeBasedDrops)
+                {
+                    var isThisDrop = t.BenefitEdges.Any(b => b.Benefit.Name == earnedDropRewardEdge.Node.Item.Name) || t.Name == earnedDropRewardEdge.Node.Item.Name;
+                    var codeVal = isThisDrop ? rewardCampaignCode.Value : null;
+                    dropsProgress.Add(new DropProgressInfo
+                    {
+                        Name = t.Name ?? "Unknown",
+                        CurrentProgress = t.RequiredMinutesWatched,
+                        RequiredProgress = t.RequiredMinutesWatched,
+                        IsClaimed = isThisDrop || (t.Self?.IsClaimed ?? false),
+                        IsActive = false,
+                        Code = codeVal
+                    });
+                }
+            }
 
             var progressKey = $"twitch-{BotUser.Login}-{earnedDropRewardEdge.Node.Campaign.Id}";
-            await NotificationService.UpdateProgressMessageAsClaimedAsync(
-                BotUser, progressKey, earnedDropRewardEdge.Node.Campaign.Game?.Name ?? earnedDropRewardEdge.Node.Campaign.Name, earnedDropRewardEdge.Node.Item.Name, earnedDropRewardEdge.Node.Item.ThumbnailURL);
+            var itemImage = earnedDropRewardEdge.Node.Item.ThumbnailURL ?? dropDetails?.Game?.BoxArtUrl ?? string.Empty;
+
+            await NotificationService.SendOrUpdateProgressNotification(
+                BotUser,
+                earnedDropRewardEdge.Node.Campaign.Game?.DisplayName ?? earnedDropRewardEdge.Node.Campaign.Game?.Name ?? earnedDropRewardEdge.Node.Campaign.Name,
+                earnedDropRewardEdge.Node.Campaign.Name,
+                itemImage,
+                dropsProgress,
+                progressKey
+            );
 
             await Task.Delay(TimeSpan.FromSeconds(5));
         }

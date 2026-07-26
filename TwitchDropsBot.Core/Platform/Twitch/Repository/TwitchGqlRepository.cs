@@ -313,9 +313,18 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
             variables["channelID"] = channel.Id;
         }
         
-        dynamic? resp = await DoGQLRequestAsync(query);
+        dynamic? resp = null;
+        try
+        {
+            resp = await DoGQLRequestAsync(query);
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            _logger.LogWarning(ex, "JSON parse error in FetchDropCampaignsProgressAsync, returning empty list");
+            return new List<DropsCampaign>();
+        }
 
-        List<DropsCampaign> channelDropCampaignsProgress = resp?.Data.ChannelDropCampaignsProgress;
+        List<DropsCampaign> channelDropCampaignsProgress = resp?.Data?.ChannelDropCampaignsProgress;
 
         if (channelDropCampaignsProgress is null)
         {

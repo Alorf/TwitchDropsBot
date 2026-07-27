@@ -144,5 +144,6 @@ jobs:
           prerelease: ${{ github.ref_type == 'branch' }}
           tag_name: ${{ github.ref_type == 'branch' && format('dev-{0}', github.sha) || github.ref_name }}
           name: ${{ github.ref_type == 'branch' && format('Dev Build {0}', github.sha) || github.ref_name }}
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"

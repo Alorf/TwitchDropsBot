@@ -43,7 +43,7 @@ jobs:
       - name: "Build and Publish ${{ inputs.project_name }}"
         shell: bash
         run: |
-          tag=$(git describe --tags)
+          tag=$(git describe --tags --match="[0-9]*.[0-9]*.[0-9]*")
 
             release_name="TwitchDropsBot-${{ inputs.project_name }}-${{ inputs.target }}-$tag"
 
@@ -60,7 +60,7 @@ jobs:
         if: ${{ !startsWith(inputs.target, 'win-') }}
         shell: bash
         run: |
-          tag=$(git describe --tags)
+          tag=$(git describe --tags --match="[0-9]*.[0-9]*.[0-9]*")
           release_name="TwitchDropsBot-${{ inputs.project_name }}-${{ inputs.target }}-$tag"
 
           # Bundle libmsquic.so from GitHub release
@@ -83,7 +83,7 @@ jobs:
         if: "${{ startsWith(inputs.target, 'win-') }}"
         shell: bash
         run: |
-          tag=$(git describe --tags)
+          tag=$(git describe --tags --match="[0-9]*.[0-9]*.[0-9]*")
           release_name="TwitchDropsBot-${{ inputs.project_name }}-${{inputs.target }}-$tag"
 
           # Download msquic.dll from GitHub releases
@@ -97,7 +97,7 @@ jobs:
         shell: bash
         if: "${{ startsWith(inputs.target, 'win-') }}"
         run: |
-          tag=$(git describe --tags)
+          tag=$(git describe --tags --match="[0-9]*.[0-9]*.[0-9]*")
           release_name="TwitchDropsBot-${{ inputs.project_name }}-${{inputs.target }}-$tag"
 
           # Package as zip
@@ -110,7 +110,7 @@ jobs:
         shell: bash
         if: "${{ !startsWith(inputs.target, 'win-') }}"
         run: |
-          tag=$(git describe --tags)
+          tag=$(git describe --tags --match="[0-9]*.[0-9]*.[0-9]*")
           release_name="TwitchDropsBot-${{ inputs.project_name }}-${{inputs.target }}-$tag"
 
           # Package as tar.gz
@@ -123,7 +123,7 @@ jobs:
         id: release_info
         shell: bash
         run: |
-          tag=$(git describe --tags)
+          tag=$(git describe --tags --match="[0-9]*.[0-9]*.[0-9]*")
           if [[ "${{ github.ref_type }}" == "branch" ]]; then
             echo "TAG_NAME=$tag" >> $GITHUB_ENV
             echo "RELEASE_NAME=Dev Build $tag" >> $GITHUB_ENV

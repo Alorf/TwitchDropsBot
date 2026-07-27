@@ -41,7 +41,11 @@ jobs:
       - name: "Build and Publish ${{ inputs.project_name }}"
         shell: bash
         run: |
-          tag=$(git describe --tags --abbrev=0)
+          if [[ "${{ github.ref_type }}" == "branch" ]]; then
+            tag="dev-${GITHUB_SHA::7}"
+          else
+            tag=$(git describe --tags --abbrev=0)
+          fi
 
             release_name="TwitchDropsBot-${{ inputs.project_name }}-${{ inputs.target }}-$tag"
 
@@ -58,7 +62,11 @@ jobs:
         if: ${{ !startsWith(inputs.target, 'win-') }}
         shell: bash
         run: |
-          tag=$(git describe --tags --abbrev=0)
+          if [[ "${{ github.ref_type }}" == "branch" ]]; then
+            tag="dev-${GITHUB_SHA::7}"
+          else
+            tag=$(git describe --tags --abbrev=0)
+          fi
           release_name="TwitchDropsBot-${{ inputs.project_name }}-${{ inputs.target }}-$tag"
 
           # Bundle libmsquic.so from GitHub release
@@ -81,7 +89,11 @@ jobs:
         if: "${{ startsWith(inputs.target, 'win-') }}"
         shell: bash
         run: |
-          tag=$(git describe --tags --abbrev=0)
+          if [[ "${{ github.ref_type }}" == "branch" ]]; then
+            tag="dev-${GITHUB_SHA::7}"
+          else
+            tag=$(git describe --tags --abbrev=0)
+          fi
           release_name="TwitchDropsBot-${{ inputs.project_name }}-${{inputs.target }}-$tag"
 
           # Download msquic.dll from GitHub releases
@@ -95,7 +107,11 @@ jobs:
         shell: bash
         if: "${{ startsWith(inputs.target, 'win-') }}"
         run: |
-          tag=$(git describe --tags --abbrev=0)
+          if [[ "${{ github.ref_type }}" == "branch" ]]; then
+            tag="dev-${GITHUB_SHA::7}"
+          else
+            tag=$(git describe --tags --abbrev=0)
+          fi
           release_name="TwitchDropsBot-${{ inputs.project_name }}-${{inputs.target }}-$tag"
 
           # Package as zip
@@ -108,7 +124,11 @@ jobs:
         shell: bash
         if: "${{ !startsWith(inputs.target, 'win-') }}"
         run: |
-          tag=$(git describe --tags --abbrev=0)
+          if [[ "${{ github.ref_type }}" == "branch" ]]; then
+            tag="dev-${GITHUB_SHA::7}"
+          else
+            tag=$(git describe --tags --abbrev=0)
+          fi
           release_name="TwitchDropsBot-${{ inputs.project_name }}-${{inputs.target }}-$tag"
 
           # Package as tar.gz
@@ -121,5 +141,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: "TwitchDropsBot-${{ inputs.project_name }}-*"
+          prerelease: ${{ github.ref_type == 'branch' }}
+          tag_name: ${{ github.ref_type == 'branch' && format('dev-{0}', github.sha) || github.ref_name }}
+          name: ${{ github.ref_type == 'branch' && format('Dev Build {0}', github.sha) || github.ref_name }}
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"

@@ -1,4 +1,4 @@
-﻿namespace TwitchDropsBot.Core.Platform.Shared.Settings;
+namespace TwitchDropsBot.Core.Platform.Shared.Settings;
 
 public class BaseUserSettings
 {
@@ -6,4 +6,5 @@ public class BaseUserSettings
     public string Id { get; set; }
     public bool Enabled { get; set; }
     public List<string> FavouriteGames { get; set; } = new List<string>();
+    public List<string> AvoidGames { get; set; } = new List<string>();
 }

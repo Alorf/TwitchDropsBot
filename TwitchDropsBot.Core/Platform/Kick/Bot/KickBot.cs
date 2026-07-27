@@ -51,6 +51,12 @@ public class KickBot : BaseBot<KickUser>
             thingsToWatch.RemoveAll(x => !x.Category?.IsFavorite ?? false);
         }
 
+        if (BotUser.AvoidGames.Count > 0)
+        {
+            var avoidSet = BotUser.AvoidGames.Select(g => g.ToLower()).ToHashSet();
+            thingsToWatch.RemoveAll(x => x.Category != null && avoidSet.Contains(x.Category.Name.ToLower()));
+        }
+
         var (campaign, broadcaster) = await SelectBroadcasterAsync(thingsToWatch, inventory);
 
         if (campaign is null)

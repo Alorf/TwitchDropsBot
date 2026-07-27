@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Discord;
 using Discord.Webhook;
@@ -27,6 +27,7 @@ public abstract class BotUser : INotifyPropertyChanged
     public string Login { get; set; }
     public string Id { get; set; }
     public List<string> FavouriteGames { get; set; }
+    public List<string> AvoidGames { get; set; }
     public bool OnlyFavouriteGames { get; set; }
     public bool OnlyConnectedAccounts { get; set; }
 
@@ -61,6 +62,10 @@ public abstract class BotUser : INotifyPropertyChanged
         FavouriteGames = settings.FavouriteGames.Count > 0 
             ? settings.FavouriteGames 
             : BotSettings.CurrentValue.FavouriteGames;
+
+        AvoidGames = settings.AvoidGames.Count > 0 
+            ? settings.AvoidGames 
+            : BotSettings.CurrentValue.AvoidGames;
 
         if (!string.IsNullOrEmpty(BotSettings.CurrentValue.WebhookURL))
         {

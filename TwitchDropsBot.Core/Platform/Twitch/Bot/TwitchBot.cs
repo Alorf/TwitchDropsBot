@@ -98,6 +98,12 @@ public class TwitchBot : BaseBot<TwitchUser>
             thingsToWatch.RemoveAll(x => !x.Game?.IsFavorite ?? false);
         }
 
+        if (BotUser.AvoidGames.Count > 0)
+        {
+            var avoidSet = BotUser.AvoidGames.Select(g => g.ToLower()).ToHashSet();
+            thingsToWatch.RemoveAll(x => x.Game != null && avoidSet.Contains(x.Game.DisplayName.ToLower()));
+        }
+
         // Assuming you have a list of favorite game names
         var favoriteGameNames = _gamesToCheck;
 

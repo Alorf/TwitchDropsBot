@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+using System.Reflection;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -29,6 +30,12 @@ var services = new ServiceCollection();
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(configuration)
     .CreateLogger();
+
+var uiVersion = TwitchDropsBot.Core.VersionHelper.GetUIVersion(Assembly.GetExecutingAssembly());
+var coreVersion = TwitchDropsBot.Core.VersionHelper.GetCoreVersion();
+var appTitle = $"TwitchDropsBot - Console: {uiVersion} | Core: {coreVersion}";
+Log.Information("Starting {Title}", appTitle);
+Console.Title = appTitle;
 
 services.AddLogging(
     loggingBuilder => 

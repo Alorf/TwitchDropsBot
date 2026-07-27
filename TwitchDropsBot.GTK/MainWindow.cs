@@ -66,6 +66,10 @@ namespace TwitchDropsBot.GTK
             _settingsManager = manager;
             // _serviceProvider = serviceProvider;
 
+            var uiVersion = TwitchDropsBot.Core.VersionHelper.GetUIVersion(Assembly.GetExecutingAssembly());
+            var coreVersion = TwitchDropsBot.Core.VersionHelper.GetCoreVersion();
+            this.Title = $"TwitchDropsBot - UI: {uiVersion} | Core: {coreVersion}";
+
             addAccountButton.Clicked += buttonAddNewAccount_Click;
             putInTrayButton.Clicked += (sender, args) =>
             {

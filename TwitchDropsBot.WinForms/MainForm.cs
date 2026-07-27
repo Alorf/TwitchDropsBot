@@ -1,4 +1,5 @@
 using TwitchDropsBot.Core;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Policy;
 using Microsoft.Win32;
@@ -27,6 +28,9 @@ namespace TwitchDropsBot.WinForms
         public MainForm(IOptionsMonitor<BotSettings> botSettings, ILogger<MainForm> logger, UserFactory userFactory, SettingsManager settingsManager)
         {
             InitializeComponent();
+            var uiVersion = TwitchDropsBot.Core.VersionHelper.GetUIVersion(Assembly.GetExecutingAssembly());
+            var coreVersion = TwitchDropsBot.Core.VersionHelper.GetCoreVersion();
+            this.Text = $"TwitchDropsBot - UI: {uiVersion} | Core: {coreVersion}";
             this.SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
             this.UpdateStyles();
             

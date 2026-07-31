@@ -16,4 +16,5 @@ public class BotSettings
     public int AttemptToWatch { get; set; } = 5;
     public bool WatchBrowserHeadless { get; set; } = true;
     public bool MinimizeInTray { get; set; } = false;
+    public bool CondensedNotifications { get; set; } = false;
 }

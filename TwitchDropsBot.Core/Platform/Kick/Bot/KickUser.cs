@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TwitchDropsBot.Core.Platform.Kick.Factories.Repositories;
 using TwitchDropsBot.Core.Platform.Kick.Factories.WatchManager;
@@ -10,6 +10,8 @@ using TwitchDropsBot.Core.Platform.Shared.Factories.Bot;
 using TwitchDropsBot.Core.Platform.Shared.Serilog;
 using TwitchDropsBot.Core.Platform.Shared.Settings;
 
+using TwitchDropsBot.Core.Platform.Kick.Models;
+
 namespace TwitchDropsBot.Core.Platform.Kick.Bot;
 
 public class KickUser : BotUser
@@ -19,6 +21,62 @@ public class KickUser : BotUser
     
     public IKickWatchManager WatchManager { get; }
     public readonly KickHttpRepository KickRepository;
+
+    private Campaign? _currentCampaign;
+    public Campaign? CurrentCampaign
+    {
+        get => _currentCampaign;
+        set
+        {
+            if (_currentCampaign != value)
+            {
+                _currentCampaign = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    private Reward? _currentReward;
+    public Reward? CurrentReward
+    {
+        get => _currentReward;
+        set
+        {
+            if (_currentReward != value)
+            {
+                _currentReward = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    private Channel? _currentBroadcaster;
+    public Channel? CurrentBroadcaster
+    {
+        get => _currentBroadcaster;
+        set
+        {
+            if (_currentBroadcaster != value)
+            {
+                _currentBroadcaster = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    private CampaignSummary? _currentSummary;
+    public CampaignSummary? CurrentSummary
+    {
+        get => _currentSummary;
+        set
+        {
+            if (_currentSummary != value)
+            {
+                _currentSummary = value;
+                OnPropertyChanged();
+            }
+        }
+    }
 
     public KickUser(
         KickUserSettings settings,

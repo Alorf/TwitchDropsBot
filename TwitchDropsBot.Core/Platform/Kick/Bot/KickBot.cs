@@ -27,6 +27,7 @@ public class KickBot : BaseBot<KickUser>
 
     protected override async Task StartAsync()
     {
+        BotUser.Status = BotStatus.Seeking;
         var inventory = await BotUser.KickRepository.GetInventory();
         var thingsToWatch = await BotUser.KickRepository.GetDropsCampaignsAsync();
 
@@ -51,12 +52,6 @@ public class KickBot : BaseBot<KickUser>
             thingsToWatch.RemoveAll(x => !x.Category?.IsFavorite ?? false);
         }
 
-        if (BotUser.AvoidGames.Count > 0)
-        {
-            var avoidSet = BotUser.AvoidGames.Select(g => g.ToLower()).ToHashSet();
-            thingsToWatch.RemoveAll(x => x.Category != null && avoidSet.Contains(x.Category.Name.ToLower()));
-        }
-
         var (campaign, broadcaster) = await SelectBroadcasterAsync(thingsToWatch, inventory);
 
         if (campaign is null)
@@ -72,8 +67,11 @@ public class KickBot : BaseBot<KickUser>
             return;
         }
 
+        BotUser.CurrentCampaign = campaign;
+        BotUser.CurrentBroadcaster = broadcaster;
+
         // Remove all Rewards from thingsToWatch that are already claimed in the inventory list
-        var reward = campaign.Rewards.First();
+        var reward = campaign.Rewards.OrderBy(r => r.RequiredUnits).FirstOrDefault();
 
         if (reward is null)
         {
@@ -81,11 +79,14 @@ public class KickBot : BaseBot<KickUser>
             throw new Exception("Reward is null");
         }
 
+        BotUser.CurrentReward = reward;
+
         await FakeWatchStreamAsync(broadcaster, campaign);
 
         Logger.LogInformation($"Time based drops : {reward.Name}");
         Logger.LogInformation(
             $"Current drop campaign: {campaign.Name} ({campaign.Category.Name}), watching {broadcaster.slug} | {broadcaster.Id}");
+        BotUser.Status = BotStatus.Watching;
         await WatchStreamAsync(broadcaster, campaign, reward);
     }
 
@@ -101,7 +102,7 @@ public class KickBot : BaseBot<KickUser>
         {
             Logger.LogInformation("Trying to init the drop...");
             await BotUser.WatchManager.WatchStreamAsync(broadcaster, campaign.Category);
-            await Task.Delay(TimeSpan.FromSeconds(60));
+            await Task.Delay(TimeSpan.FromSeconds(60), BotUser.CancellationTokenSource?.Token ?? System.Threading.CancellationToken.None);
             summary = await BotUser.KickRepository.GetSummary(campaign);
         }
 
@@ -111,9 +112,10 @@ public class KickBot : BaseBot<KickUser>
     private async Task WatchStreamAsync(Channel broadcaster, Campaign campaign, Reward reward, int? minutes = null)
     {
         var summary = await BotUser.KickRepository.GetSummary(campaign);
+        BotUser.CurrentSummary = summary;
         var stuckCounter = 0;
         double previousMinuteWatched = 0;
-        var minuteWatched = summary.ProgressUnits;
+        var minuteWatched = summary?.ProgressUnits ?? 0;
 
         var requiredMinutesToWatch = reward.RequiredUnits;
 
@@ -145,6 +147,7 @@ public class KickBot : BaseBot<KickUser>
             }
 
             summary = await BotUser.KickRepository.GetSummary(campaign);
+            BotUser.CurrentSummary = summary;
 
             if (summary is null)
             {
@@ -184,7 +187,7 @@ public class KickBot : BaseBot<KickUser>
                 uniqueKey
             );
 
-            await Task.Delay(TimeSpan.FromSeconds(60));
+            await Task.Delay(TimeSpan.FromSeconds(60), BotUser.CancellationTokenSource?.Token ?? System.Threading.CancellationToken.None);
         }
 
         BotUser.WatchManager.Close();
@@ -250,7 +253,7 @@ public class KickBot : BaseBot<KickUser>
 
             if (matchingCampaignInventory is not null)
             {
-                var claimedRewards = matchingCampaignInventory.Rewards.FindAll(x => x.Claimed || x.Progress == 1);
+                var claimedRewards = matchingCampaignInventory.Rewards.FindAll(x => x.Claimed || x.Progress >= 1.0);
                 campaign.Rewards.RemoveAll(r => claimedRewards.Contains(r));
             }
 
@@ -334,6 +337,13 @@ public class KickBot : BaseBot<KickUser>
                     try
                     {
                         await BotUser.KickRepository.ClaimDrop(campaign, reward);
+                        reward.Claimed = true;
+                        var isLastDrop = campaign.Rewards.All(r => r.Claimed);
+                        var gameName = campaign.Category?.Name ?? "Unknown Category";
+                        var itemName = reward.Name ?? "Unknown Reward";
+                        var itemImage = reward.ImageUrl ?? campaign.Category?.ImageUrl ?? string.Empty;
+                        var uniqueKey = $"kick-{BotUser.Login}-{campaign.Id}";
+                        await NotificationService.SendClaimNotification(BotUser, gameName, campaign.Name ?? "Unknown Campaign", itemName, itemImage, uniqueKey, isLastDrop: isLastDrop);
                     }
                     catch (Exception e)
                     {
@@ -346,18 +356,6 @@ public class KickBot : BaseBot<KickUser>
                         await Task.Delay(TimeSpan.FromSeconds(2));
                         continue;
                     }
-
-                    reward.Claimed = true;
-                    var progressKey = $"kick-{BotUser.Login}-{campaign.Id}";
-                    var dropsProgress = GetKickProgressList(null, campaign, reward);
-                    await NotificationService.SendOrUpdateProgressNotification(
-                        BotUser,
-                        campaign.Category?.Name ?? "Unknown Category",
-                        campaign.Name ?? "Unknown Campaign",
-                        reward.ImageUrl != null ? $"https://ext.cdn.kick.com/{reward.ImageUrl}" : string.Empty,
-                        dropsProgress,
-                        progressKey
-                    );
                 }
             }
         }

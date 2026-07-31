@@ -29,9 +29,75 @@ public class TwitchUser : BotUser
     public string ClientSecret { get; set; }
     public string UniqueId { get; set; }
     public TwitchGqlRepository TwitchRepository { get; set; }
-    public AbstractCampaign? CurrentCampaign { get; set; }
-    public TimeBasedDrop? CurrentTimeBasedDrop { get; set; }
-    public User? CurrentBroadcaster { get; set; }
+    private AbstractCampaign? _currentCampaign;
+    public AbstractCampaign? CurrentCampaign
+    {
+        get => _currentCampaign;
+        set
+        {
+            if (_currentCampaign != value)
+            {
+                _currentCampaign = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    private TimeBasedDrop? _currentTimeBasedDrop;
+    public TimeBasedDrop? CurrentTimeBasedDrop
+    {
+        get => _currentTimeBasedDrop;
+        set
+        {
+            if (_currentTimeBasedDrop != value)
+            {
+                _currentTimeBasedDrop = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    private User? _currentBroadcaster;
+    public User? CurrentBroadcaster
+    {
+        get => _currentBroadcaster;
+        set
+        {
+            if (_currentBroadcaster != value)
+            {
+                _currentBroadcaster = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    private int? _currentMinutesWatched;
+    public int? CurrentMinutesWatched
+    {
+        get => _currentMinutesWatched;
+        set
+        {
+            if (_currentMinutesWatched != value)
+            {
+                _currentMinutesWatched = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    private int? _requiredMinutesWatched;
+    public int? RequiredMinutesWatched
+    {
+        get => _requiredMinutesWatched;
+        set
+        {
+            if (_requiredMinutesWatched != value)
+            {
+                _requiredMinutesWatched = value;
+                OnPropertyChanged();
+            }
+        }
+    }
     
     private DropCurrentSession? _currentDropCurrentSession;
     public DropCurrentSession? CurrentDropCurrentSession
@@ -94,5 +160,7 @@ public class TwitchUser : BotUser
     {
         WatchManager.Close();
         Status = BotStatus.Idle;
+        CurrentMinutesWatched = null;
+        RequiredMinutesWatched = null;
     }
 }

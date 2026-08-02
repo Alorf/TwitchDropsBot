@@ -29,12 +29,13 @@ public class KickBot : BaseBot<KickUser>
     {
         BotUser.Status = BotStatus.Seeking;
         var inventory = await BotUser.KickRepository.GetInventory();
+        await CheckForClaim(inventory);
         var thingsToWatch = await BotUser.KickRepository.GetDropsCampaignsAsync();
 
         var finishedCampaigns = inventory.FindAll(x => x.Status == "claimed");
         Logger.LogInformation($"Removing {finishedCampaigns.Count} finished campaigns...");
         thingsToWatch.RemoveAll(campaign => finishedCampaigns.Any(finished => finished.Id == campaign.Id));
-
+        
         if (thingsToWatch.Count == 0)
         {
             Logger.LogError("No campaigns to watch found.");
@@ -44,9 +45,7 @@ public class KickBot : BaseBot<KickUser>
         thingsToWatch = thingsToWatch
             .OrderBy(x => x.Channels.Count == 0)
             .ToList();
-
-        await CheckForClaim(inventory);
-
+        
         if (BotUser.OnlyFavouriteGames)
         {
             thingsToWatch.RemoveAll(x => !x.Category?.IsFavorite ?? false);

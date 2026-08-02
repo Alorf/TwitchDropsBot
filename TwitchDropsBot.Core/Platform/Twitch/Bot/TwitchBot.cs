@@ -810,18 +810,32 @@ public class TwitchBot : BaseBot<TwitchUser>
 
                 if (timeBasedDrop.Self.IsClaimed == false && timeBasedDrop.Self?.DropInstanceID != null)
                 {
-                    var claimed = await BotUser.TwitchRepository.ClaimDropAsync(timeBasedDrop.Self.DropInstanceID);
-                    if (claimed)
+                    try
                     {
-                        timeBasedDrop.Self.IsClaimed = true;
-                        var isLastDrop = dropCampaignInProgress.TimeBasedDrops.All(d => d.Self?.IsClaimed == true);
-                        var gameName = dropCampaignInProgress.Game?.DisplayName ?? dropCampaignInProgress.Game?.Name ?? "Unknown Game";
+                        var claimed = await BotUser.TwitchRepository.ClaimDropAsync(timeBasedDrop.Self.DropInstanceID);
+                        if (claimed)
+                        {
+                            timeBasedDrop.Self.IsClaimed = true;
+                            var isLastDrop = dropCampaignInProgress.TimeBasedDrops.All(d => d.Self?.IsClaimed == true);
+                            var gameName = dropCampaignInProgress.Game?.DisplayName ?? dropCampaignInProgress.Game?.Name ?? "Unknown Game";
+                            var itemName = timeBasedDrop.BenefitEdges.FirstOrDefault()?.Benefit.Name ?? timeBasedDrop.Name;
+                            var itemImage = timeBasedDrop.BenefitEdges.FirstOrDefault()?.Benefit.ImageAssetURL ?? dropCampaignInProgress.Game?.BoxArtUrl ?? string.Empty;
+                            var uniqueKey = $"twitch-{BotUser.Login}-{dropCampaignInProgress.Id}";
+                            await NotificationService.SendClaimNotification(BotUser, gameName, dropCampaignInProgress.Name, itemName, itemImage, uniqueKey, isLastDrop: isLastDrop);
+                        }
+                    }
+                    catch (Exception e)
+                    {
                         var itemName = timeBasedDrop.BenefitEdges.FirstOrDefault()?.Benefit.Name ?? timeBasedDrop.Name;
                         var itemImage = timeBasedDrop.BenefitEdges.FirstOrDefault()?.Benefit.ImageAssetURL ?? dropCampaignInProgress.Game?.BoxArtUrl ?? string.Empty;
-                        var uniqueKey = $"twitch-{BotUser.Login}-{dropCampaignInProgress.Id}";
-                        await NotificationService.SendClaimNotification(BotUser, gameName, dropCampaignInProgress.Name, itemName, itemImage, uniqueKey, isLastDrop: isLastDrop);
+                        Logger.LogError(e, $"Failed to claim drop {itemName} for campaign {dropCampaignInProgress.Name}.");
+                        var message = $"Can't claim {itemName} for the campaign {dropCampaignInProgress.Name}. Twitch API error or account not linked.";
+                        await NotifyError("CLAIM ERROR", message, itemImage);
                     }
-                    await Task.Delay(TimeSpan.FromSeconds(20));
+                    finally
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(20));
+                    }
                 }
             }
         }
@@ -835,16 +849,29 @@ public class TwitchBot : BaseBot<TwitchUser>
                 continue;
             }
             
-            var rewardCampaignCode = await BotUser.TwitchRepository.RewardCodeModal(earnedDropRewardEdge.Node.Campaign.Id, earnedDropRewardEdge.Node.Id);
-            Logger.LogInformation("Code {Code} rewarded for {ItemName}", rewardCampaignCode.Value, earnedDropRewardEdge.Node.Item.Name);
+            try
+            {
+                var rewardCampaignCode = await BotUser.TwitchRepository.RewardCodeModal(earnedDropRewardEdge.Node.Campaign.Id, earnedDropRewardEdge.Node.Id);
+                Logger.LogInformation("Code {Code} rewarded for {ItemName}", rewardCampaignCode.Value, earnedDropRewardEdge.Node.Item.Name);
 
-            var gameName = earnedDropRewardEdge.Node.Campaign?.Game?.DisplayName ?? earnedDropRewardEdge.Node.Campaign?.Game?.Name ?? "Unknown Game";
-            var itemName = earnedDropRewardEdge.Node.Item?.Name ?? "Unknown Item";
-            var itemImage = earnedDropRewardEdge.Node.Item?.ThumbnailURL ?? earnedDropRewardEdge.Node.Campaign?.Game?.BoxArtUrl ?? string.Empty;
-            var uniqueKey = $"twitch-{BotUser.Login}-{earnedDropRewardEdge.Node.Campaign?.Id}";
-            await NotificationService.SendClaimNotification(BotUser, gameName, earnedDropRewardEdge.Node.Campaign?.Name ?? "Unknown Campaign", itemName, itemImage, uniqueKey, rewardCampaignCode.Value);
-
-            await Task.Delay(TimeSpan.FromSeconds(5));
+                var gameName = earnedDropRewardEdge.Node.Campaign?.Game?.DisplayName ?? earnedDropRewardEdge.Node.Campaign?.Game?.Name ?? "Unknown Game";
+                var itemName = earnedDropRewardEdge.Node.Item?.Name ?? "Unknown Item";
+                var itemImage = earnedDropRewardEdge.Node.Item?.ThumbnailURL ?? earnedDropRewardEdge.Node.Campaign?.Game?.BoxArtUrl ?? string.Empty;
+                var uniqueKey = $"twitch-{BotUser.Login}-{earnedDropRewardEdge.Node.Campaign?.Id}";
+                await NotificationService.SendClaimNotification(BotUser, gameName, earnedDropRewardEdge.Node.Campaign?.Name ?? "Unknown Campaign", itemName, itemImage, uniqueKey, rewardCampaignCode.Value);
+            }
+            catch (Exception e)
+            {
+                var itemName = earnedDropRewardEdge.Node.Item?.Name ?? "Unknown Item";
+                var itemImage = earnedDropRewardEdge.Node.Item?.ThumbnailURL ?? earnedDropRewardEdge.Node.Campaign?.Game?.BoxArtUrl ?? string.Empty;
+                Logger.LogError(e, $"Failed to fetch reward code for {itemName}.");
+                var message = $"Can't fetch reward code for {itemName}. Twitch API error.";
+                await NotifyError("CLAIM ERROR", message, itemImage);
+            }
+            finally
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5));
+            }
         }
     }
 }

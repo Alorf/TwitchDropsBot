@@ -684,11 +684,16 @@ public class TwitchBot : BaseBot<TwitchUser>
             }
 
             // Todo: check if we got enough time
-            var firstTimeBasedDrops = campaign.TimeBasedDrops.FirstOrDefault();
-            if (firstTimeBasedDrops != null && campaign.EndAt.HasValue)
+            var inProgressCampaign = inventory?.DropCampaignsInProgress?.FirstOrDefault(x => x.Id == campaign.Id);
+            var activeDrop = inProgressCampaign?.TimeBasedDrops?.FirstOrDefault(x => (x.Self?.CurrentMinutesWatched ?? 0) < x.RequiredMinutesWatched) 
+                             ?? campaign.TimeBasedDrops.FirstOrDefault();
+
+            if (activeDrop != null && campaign.EndAt.HasValue)
             {
                 var minutesLeft = (campaign.EndAt.Value - DateTime.UtcNow).TotalMinutes;
-                if (minutesLeft < firstTimeBasedDrops.RequiredMinutesWatched)
+                var currentWatched = activeDrop.Self?.CurrentMinutesWatched ?? 0;
+                
+                if (minutesLeft < (activeDrop.RequiredMinutesWatched - currentWatched))
                 {
                     Logger.LogInformation("Not enough time to watch this campaign ({campaign.Name}), skipping",
                         campaign.Name);

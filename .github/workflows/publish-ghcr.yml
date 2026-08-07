@@ -1,6 +1,13 @@
 name: Publish Docker image (GHCR)
 
 on:
+  push:
+    tags:
+      - "*"
+    branches:
+      - main
+      - master
+      - dev
   workflow_dispatch:
     inputs:
       image:
@@ -37,6 +44,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/${{ github.event.inputs.image || 'alorf/twitchdropsbot' }}
+          tags: |
+            type=raw,value=dev,enable=${{ github.ref_type == 'branch' && github.event_name != 'workflow_dispatch' }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
+            type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -44,6 +63,5 @@ jobs:
           file: ./TwitchDropsBot.Console/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: |
-            ghcr.io/${{ github.event.inputs.image }}:${{ github.event.inputs.tag }}
-            ghcr.io/${{ github.event.inputs.image }}:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

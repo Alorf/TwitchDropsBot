@@ -12,15 +12,7 @@ public partial class RewardCampaign : AbstractCampaign
     
     public override async Task<bool> IsCompleted(Inventory inventory, TwitchGqlRepository _repository)
     {
-        if (inventory.CompletedRewardCampaigns is null)
-        {
-            return false;
-        }
-
-        List<CompletedRewardCampaigns> completedRewardCampaigns = inventory.CompletedRewardCampaigns;
-
-        var anyCompletedRewardCampaigns = completedRewardCampaigns.Any(x => x.Id == Id);
-
-        return anyCompletedRewardCampaigns;
+        // CompletedRewardCampaigns no longer available in new Twitch API
+        return false;
     }
 }

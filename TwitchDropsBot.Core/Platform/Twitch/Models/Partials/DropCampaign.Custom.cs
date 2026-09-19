@@ -49,8 +49,9 @@ public partial class DropCampaign : AbstractCampaign
                         return response;
                     }
                     
-                    var correspondingDrop = inventory.GameEventDrops?
-                        .FirstOrDefault(x => x.Id == benefitEdge.Benefit.Id);
+                    var correspondingDrop = inventory.GameEventDropsConnection?
+                        .Edges
+                        .FirstOrDefault(x => x.Node.Id == benefitEdge.Benefit.Id)?.Node;
 
                     benefitEdge.Benefit.IsClaimed = correspondingDrop != null
                                                     && correspondingDrop.LastAwardedAt >= timeBasedDrop.StartAt

@@ -197,7 +197,12 @@ namespace TwitchDropsBot.WinForms
         private async Task LoadInventoryAsync()
         {
             List<IInventorySystem> inventoryItems = new List<IInventorySystem>();
-            var gameEventDrops = twitchUser.Inventory?.GameEventDrops?.OrderBy(drop => drop.LastAwardedAt).Reverse().ToList() ?? new List<UserDropReward>();
+            var gameEventDrops = twitchUser.Inventory?.GameEventDropsConnection?
+                        .Edges
+                        .Select(x => x.Node)
+                        .OrderBy(drop => drop.LastAwardedAt)
+                        .Reverse()
+                        .ToList() ?? new List<UserDropReward>();
             var dropCampaignsInProgress = twitchUser.Inventory?.DropCampaignsInProgress;
 
             if (dropCampaignsInProgress != null)

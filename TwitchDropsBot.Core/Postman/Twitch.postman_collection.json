@@ -105,7 +105,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"operationName\": \"Inventory\",\r\n    \"variables\": {\r\n        \"fetchRewardCampaigns\": false\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"8337eb8541b314040b0edde0c09c5c7a2783ba1960aa9edfbf3bac16d0fec404\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
+					"raw": "{\r\n    \"operationName\": \"Inventory\",\r\n    \"variables\": {\r\n        \"fetchRewardCampaigns\": false\r\n    },\r\n    \"extensions\": {\r\n        \"persistedQuery\": {\r\n            \"sha256Hash\": \"e7197a7e03be13e423118005966d097a2f44045b3642bfdb70820e01c8129fd6\",\r\n            \"version\": 1\r\n        }\r\n    }\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"

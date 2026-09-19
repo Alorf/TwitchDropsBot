@@ -802,6 +802,11 @@ public class TwitchBot : BaseBot<TwitchUser>
             return;
         }
 
+        if (!TwitchSettings.AutoClaimDrops)
+        {
+            return;
+        }
+
         // For every timebased drop, check if it is claimed
         foreach (var dropCampaignInProgress in inventory.DropCampaignsInProgress)
         {

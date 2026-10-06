@@ -407,7 +407,7 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
         return null;
     }
 
-    public async Task<bool> ClaimDropAsync(string dropInstanceID)
+    public async Task<ClaimDropRewardsPayload?> ClaimDropAsync(string dropInstanceID)
     {
         var query = CreateQuery("DropsPage_ClaimDropRewards");
 
@@ -433,7 +433,7 @@ public class TwitchGqlRepository : BotRepository<TwitchUser>
 
         dynamic? resp = await DoGQLRequestAsync(query, redeemGraphQLClient);
 
-        return resp != null;
+        return resp?.Data?.ClaimDropRewards;
     }
 
     public async Task<RewardCampaignCode> RewardCodeModal(string campaignId, string rewardId)

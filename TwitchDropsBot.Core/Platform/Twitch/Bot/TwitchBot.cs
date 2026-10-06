@@ -32,6 +32,7 @@ public class TwitchBot : BaseBot<TwitchUser>
     private IOptionsMonitor<BotSettings> _botSettings;
     private List<string> _gamesToCheck;
     private readonly Dictionary<string, DateTime> _failedRewardCodeModals = new();
+    private readonly Dictionary<string, DateTime> _unconfirmedDropClaims = new();
 
     public TwitchBot(
         TwitchUser user,
@@ -802,6 +803,8 @@ public class TwitchBot : BaseBot<TwitchUser>
             return;
         }
 
+        var claimAttempts = new List<(DropCampaign Campaign, TimeBasedDrop Drop, ClaimDropRewardsPayload? Payload)>();
+
         // For every timebased drop, check if it is claimed
         foreach (var dropCampaignInProgress in inventory.DropCampaignsInProgress)
         {
@@ -816,19 +819,20 @@ public class TwitchBot : BaseBot<TwitchUser>
 
                 if (timeBasedDrop.Self.IsClaimed == false && timeBasedDrop.Self?.DropInstanceID != null)
                 {
+                    var dropInstanceId = timeBasedDrop.Self.DropInstanceID;
+                    if (_unconfirmedDropClaims.TryGetValue(dropInstanceId, out var unconfirmedTime))
+                    {
+                        if (DateTime.UtcNow - unconfirmedTime < TimeSpan.FromHours(8))
+                        {
+                            continue;
+                        }
+                        _unconfirmedDropClaims.Remove(dropInstanceId);
+                    }
+
                     try
                     {
-                        var claimed = await BotUser.TwitchRepository.ClaimDropAsync(timeBasedDrop.Self.DropInstanceID);
-                        if (claimed)
-                        {
-                            timeBasedDrop.Self.IsClaimed = true;
-                            var isLastDrop = dropCampaignInProgress.TimeBasedDrops.All(d => d.Self?.IsClaimed == true);
-                            var gameName = dropCampaignInProgress.Game?.DisplayName ?? dropCampaignInProgress.Game?.Name ?? "Unknown Game";
-                            var itemName = timeBasedDrop.BenefitEdges.FirstOrDefault()?.Benefit.Name ?? timeBasedDrop.Name;
-                            var itemImage = timeBasedDrop.BenefitEdges.FirstOrDefault()?.Benefit.ImageAssetURL ?? dropCampaignInProgress.Game?.BoxArtUrl ?? string.Empty;
-                            var uniqueKey = $"twitch-{BotUser.Login}-{dropCampaignInProgress.Id}";
-                            await NotificationService.SendClaimNotification(BotUser, gameName, dropCampaignInProgress.Name, itemName, itemImage, uniqueKey, isLastDrop: isLastDrop);
-                        }
+                        var payload = await BotUser.TwitchRepository.ClaimDropAsync(dropInstanceId);
+                        claimAttempts.Add((dropCampaignInProgress, timeBasedDrop, payload));
                     }
                     catch (Exception e)
                     {
@@ -844,6 +848,11 @@ public class TwitchBot : BaseBot<TwitchUser>
                     }
                 }
             }
+        }
+
+        if (claimAttempts.Count > 0)
+        {
+            await ConfirmDropClaims(claimAttempts);
         }
 
         var earnedDropRewardToClaim = inventory.EarnedDropRewards.Edges.Where(x => x.Node.Status != "CLAIMED").ToList();
@@ -889,6 +898,52 @@ public class TwitchBot : BaseBot<TwitchUser>
             {
                 await Task.Delay(TimeSpan.FromSeconds(5));
             }
+        }
+    }
+
+    // Twitch can answer a claim without error and still not claim the drop (e.g. account not linked),
+    // so a claim only counts once the inventory shows the drop claimed, or gone with its fully claimed campaign
+    private async Task ConfirmDropClaims(List<(DropCampaign Campaign, TimeBasedDrop Drop, ClaimDropRewardsPayload? Payload)> claimAttempts)
+    {
+        Inventory? inventory = null;
+        try
+        {
+            inventory = await BotUser.TwitchRepository.FetchInventoryDropsAsync();
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, e.Message);
+        }
+
+        if (inventory is null)
+        {
+            Logger.LogWarning("Can't re-read the inventory, {ClaimCount} drop claim(s) will be retried next time", claimAttempts.Count);
+            return;
+        }
+
+        foreach (var (dropCampaignInProgress, timeBasedDrop, payload) in claimAttempts)
+        {
+            var itemName = timeBasedDrop.BenefitEdges.FirstOrDefault()?.Benefit.Name ?? timeBasedDrop.Name;
+            var refreshedDrop = inventory.DropCampaignsInProgress
+                .FirstOrDefault(x => x.Id == dropCampaignInProgress.Id)?.TimeBasedDrops
+                .FirstOrDefault(x => x.Id == timeBasedDrop.Id);
+
+            if (refreshedDrop is not null && refreshedDrop.Self?.IsClaimed != true)
+            {
+                _unconfirmedDropClaims[timeBasedDrop.Self!.DropInstanceID!] = DateTime.UtcNow;
+                Logger.LogWarning(
+                    "Claim of {ItemName} for {CampaignName} was not confirmed (status {Status}, isUserAccountConnected {IsUserAccountConnected}), account probably not linked. Skipping it for 8 hours.",
+                    itemName, dropCampaignInProgress.Name, payload?.Status, payload?.IsUserAccountConnected);
+                continue;
+            }
+
+            timeBasedDrop.Self!.IsClaimed = true;
+            Logger.LogInformation("Claimed {ItemName} for {CampaignName}", itemName, dropCampaignInProgress.Name);
+            var isLastDrop = dropCampaignInProgress.TimeBasedDrops.All(d => d.Self?.IsClaimed == true);
+            var gameName = dropCampaignInProgress.Game?.DisplayName ?? dropCampaignInProgress.Game?.Name ?? "Unknown Game";
+            var itemImage = timeBasedDrop.BenefitEdges.FirstOrDefault()?.Benefit.ImageAssetURL ?? dropCampaignInProgress.Game?.BoxArtUrl ?? string.Empty;
+            var uniqueKey = $"twitch-{BotUser.Login}-{dropCampaignInProgress.Id}";
+            await NotificationService.SendClaimNotification(BotUser, gameName, dropCampaignInProgress.Name, itemName, itemImage, uniqueKey, isLastDrop: isLastDrop);
         }
     }
 }

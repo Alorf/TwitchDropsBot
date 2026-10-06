@@ -30,12 +30,24 @@ public class Data
     
     [JsonPropertyName("channelDropCampaignsProgress")]
     public List<DropsCampaign> ChannelDropCampaignsProgress { get; set; } = new List<DropsCampaign>();
+
+    [JsonPropertyName("claimDropRewards")]
+    public ClaimDropRewardsPayload? ClaimDropRewards { get; set; }
 }
 
 public class SendSpadeEvents
 {
     [JsonPropertyName("statusCode")] 
     public int statusCode { get; set; }
+}
+
+public class ClaimDropRewardsPayload
+{
+    [JsonPropertyName("status")]
+    public string? Status { get; set; }
+
+    [JsonPropertyName("isUserAccountConnected")]
+    public bool? IsUserAccountConnected { get; set; }
 }
 
 

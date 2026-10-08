@@ -24,6 +24,8 @@ public class WatchRequest : ITwitchWatchManager
     private readonly TwitchGqlRepository twitchGraphQlClient;
     private DateTime lastRequestTime;
     private readonly bool enableOldSystem;
+    private readonly object segmentWatcherLock = new();
+    private HlsSegmentWatcher? segmentWatcher;
 
     public WatchRequest(TwitchUser user, ILogger logger, bool enableOldSystem)
     {
@@ -138,11 +140,29 @@ public class WatchRequest : ITwitchWatchManager
 
                 lastRequestTime = DateTime.Now;
             }
+
+            // Twitch only counts the minutes above while the stream's segments are being requested.
+            EnsureSegmentWatcher(broadcaster);
         }
         catch (System.Exception ex)
         {
             _logger.LogError(ex.Message);
             throw;
+        }
+    }
+
+    private void EnsureSegmentWatcher(User broadcaster)
+    {
+        lock (segmentWatcherLock)
+        {
+            if (segmentWatcher is { IsRunning: true } && segmentWatcher.Login == broadcaster.Login)
+            {
+                segmentWatcher.Touch();
+                return;
+            }
+
+            segmentWatcher?.Dispose();
+            segmentWatcher = new HlsSegmentWatcher(broadcaster.Login, twitchGraphQlClient, _logger);
         }
     }
 
@@ -164,6 +184,12 @@ public class WatchRequest : ITwitchWatchManager
     {
         streamUrl = null;
         lastRequestTime = DateTime.MinValue;
+
+        lock (segmentWatcherLock)
+        {
+            segmentWatcher?.Dispose();
+            segmentWatcher = null;
+        }
     }
 
     private string GetPayload(User broadcaster, Stream stream, Game game, bool onlyB64 = false)

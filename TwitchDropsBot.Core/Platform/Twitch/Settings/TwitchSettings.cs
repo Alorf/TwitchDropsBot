@@ -11,4 +11,9 @@ public class TwitchSettings
     public bool ForceTryWithTags { get; set; } = false;
     public bool OnlyConnectedAccounts { get; set; } = false;
     public string WatchManager { get; set; } = WatchManagerType.WatchRequest;
+
+    /// <summary>
+    /// When true (default), the bot automatically claims completed drops and reward codes.
+    /// </summary>
+    public bool AutoClaimDrops { get; set; } = true;
 }

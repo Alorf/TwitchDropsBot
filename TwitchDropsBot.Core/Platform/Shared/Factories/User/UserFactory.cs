@@ -6,6 +6,7 @@ using Serilog.Core;
 using TwitchDropsBot.Core.Platform.Kick.Bot;
 using TwitchDropsBot.Core.Platform.Kick.Settings;
 using TwitchDropsBot.Core.Platform.Shared.Serilog;
+using TwitchDropsBot.Core.Platform.Shared.Services;
 using TwitchDropsBot.Core.Platform.Shared.Settings;
 using TwitchDropsBot.Core.Platform.Twitch.Bot;
 using TwitchDropsBot.Core.Platform.Twitch.Settings;
@@ -48,16 +49,23 @@ public class UserFactory
 
     public TwitchUser CreateTwitchUser(TwitchUserSettings settings, bool addSink = false)
     {
+        TwitchUser user;
+
         if (addSink)
         {
-            UISink sink = new UISink();    
+            UISink sink = new UISink();
             var loggersink = CreateLogger(typeof(TwitchUser).Name, settings, sink);
-            return ActivatorUtilities.CreateInstance<TwitchUser>(_serviceProvider, settings, loggersink, sink);
-
+            user = ActivatorUtilities.CreateInstance<TwitchUser>(_serviceProvider, settings, loggersink, sink);
+        }
+        else
+        {
+            var logger = CreateLogger(typeof(TwitchUser).Name, settings);
+            user = ActivatorUtilities.CreateInstance<TwitchUser>(_serviceProvider, settings, logger);
         }
 
-        var logger = CreateLogger(typeof(TwitchUser).Name, settings);
-        return ActivatorUtilities.CreateInstance<TwitchUser>(_serviceProvider, settings, logger);
+        _serviceProvider.GetService<BotRegistry>()?.Register(user);
+
+        return user;
     }
 
     public KickUser CreateKickUser(KickUserSettings settings)

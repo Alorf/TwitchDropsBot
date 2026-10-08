@@ -22,7 +22,9 @@ public static class ServiceCollectionExtension
         services.AddSingleton<BrowserService>();
         services.AddSingleton<UserFactory>();
         services.AddSingleton<BotFactory>();
-        
+        services.AddSingleton<BotRegistry>();
+        services.AddSingleton<CampaignQueueService>();
+
         return services;
     }
     

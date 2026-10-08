@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -129,6 +130,29 @@ public class TwitchUser : BotUser
     
     public ITwitchWatchManager WatchManager { get; }
 
+    // Read by the web UI: this cycle's campaigns, the campaign being checked, live tier progress,
+    // and why each campaign was last passed over
+    private List<AbstractCampaign> _availableCampaigns = new();
+    public List<AbstractCampaign> AvailableCampaigns
+    {
+        get => _availableCampaigns;
+        set
+        {
+            _availableCampaigns = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public DateTime? AvailableCampaignsAt { get; set; }
+    public AbstractCampaign? CheckingCampaign { get; set; }
+    public List<DropProgressInfo>? CurrentDropsProgress { get; set; }
+    public ConcurrentDictionary<string, CampaignNote> CampaignNotes { get; } = new();
+
+    public void NoteCampaign(AbstractCampaign campaign, CampaignNoteKind kind)
+    {
+        CampaignNotes[campaign.Id] = new CampaignNote(kind, DateTime.UtcNow);
+    }
+
     public TwitchUser(
         TwitchUserSettings settings,
         IOptionsMonitor<BotSettings> BotSettings,
@@ -162,5 +186,7 @@ public class TwitchUser : BotUser
         Status = BotStatus.Idle;
         CurrentMinutesWatched = null;
         RequiredMinutesWatched = null;
+        CheckingCampaign = null;
+        CurrentDropsProgress = null;
     }
 }

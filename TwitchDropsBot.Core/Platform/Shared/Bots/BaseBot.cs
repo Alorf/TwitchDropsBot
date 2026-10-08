@@ -36,38 +36,53 @@ public abstract class BaseBot<TUser> where TUser : BotUser
         
         while(true)
         {
+            // A fresh token each cycle, so a re-pick request can end the current watch or wait
+            var cycleCancellation = new CancellationTokenSource();
+            BotUser.CancellationTokenSource = cycleCancellation;
+            BotUser.NextCycleAt = null;
+
             try
             {
                 await StartAsync();
                 waitingTime = TimeSpan.FromSeconds(20);
+                BotUser.IdleReason = BotIdleReason.CycleFinished;
             }
             catch (NoBroadcasterOrNoCampaignLeft ex)
             {
                 Logger.LogDebug(ex.Message);
                 Logger.LogDebug($"Waiting {BotSettings.CurrentValue.WaitingSeconds} seconds before trying again.");
                 waitingTime = TimeSpan.FromSeconds(BotSettings.CurrentValue.WaitingSeconds);
+                BotUser.IdleReason = BotIdleReason.NothingToWatch;
             }
             catch (StreamOffline ex)
             {
                 Logger.LogDebug(ex.Message);
                 Logger.LogDebug($"Waiting {BotSettings.CurrentValue.WaitingSeconds} seconds before trying again.");
                 waitingTime = TimeSpan.FromSeconds(BotSettings.CurrentValue.WaitingSeconds);
+                BotUser.IdleReason = BotIdleReason.StreamOffline;
             }
             catch (CurrentDropSessionChanged ex)
             {
                 Logger.LogDebug(ex.Message);
                 Logger.LogDebug($"Waiting {BotSettings.CurrentValue.WaitingSeconds} seconds before trying again.");
                 waitingTime = TimeSpan.FromSeconds(BotSettings.CurrentValue.WaitingSeconds);
+                BotUser.IdleReason = BotIdleReason.DropSessionChanged;
             }
             catch (OperationCanceledException ex)
             {
                 Logger.LogDebug(ex.Message);
                 waitingTime = TimeSpan.FromSeconds(10);
+                BotUser.IdleReason = cycleCancellation.IsCancellationRequested
+                    ? BotIdleReason.Switching
+                    : BotIdleReason.Error;
             }
             catch (System.Exception ex)
             {
                 Logger.LogError(ex, ex.Message);
-        
+                BotUser.IdleReason = BotIdleReason.Error;
+                BotUser.LastError = ex.Message;
+                BotUser.LastErrorAt = DateTime.UtcNow;
+
                 if (!string.IsNullOrEmpty(BotSettings.CurrentValue.WebhookURL))
                 {
                     await BotUser.SendWebhookAsync(new List<Embed>
@@ -84,7 +99,17 @@ public abstract class BaseBot<TUser> where TUser : BotUser
             }
         
             BotUser.Close();
-            await Task.Delay(waitingTime);
+            BotUser.NextCycleAt = DateTime.UtcNow + waitingTime;
+
+            // A re-pick request during the wait starts the next cycle at once
+            try
+            {
+                await Task.Delay(waitingTime,
+                    cycleCancellation.IsCancellationRequested ? CancellationToken.None : cycleCancellation.Token);
+            }
+            catch (OperationCanceledException)
+            {
+            }
         }
     }
 

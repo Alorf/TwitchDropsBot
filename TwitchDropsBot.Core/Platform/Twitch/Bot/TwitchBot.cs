@@ -105,8 +105,7 @@ public class TwitchBot : BaseBot<TwitchUser>
         if (BotUser.OnlyConnectedAccounts)
         {
             thingsToWatch.RemoveAll(x =>
-                x is DropCampaign dropCampaign && !dropCampaign.Self.IsAccountConnected &&
-                dropCampaign.AccountLinkURL != "https://twitch.tv/");
+                x is DropCampaign dropCampaign && !dropCampaign.CanReceiveRewards());
         }
 
         if (BotUser.OnlyFavouriteGames)
@@ -837,7 +836,8 @@ public class TwitchBot : BaseBot<TwitchUser>
         // For every timebased drop, check if it is claimed
         foreach (var dropCampaignInProgress in inventory.DropCampaignsInProgress)
         {
-            if (dropCampaignInProgress.Self is not null && !dropCampaignInProgress.Self.IsAccountConnected)
+            // Twitch refuses claims for unlinked games; campaigns that need no link are claimed as usual
+            if (dropCampaignInProgress.Self is not null && !dropCampaignInProgress.CanReceiveRewards())
             {
                 continue;
             }

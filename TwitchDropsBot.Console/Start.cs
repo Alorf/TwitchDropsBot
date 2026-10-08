@@ -86,7 +86,8 @@ public class Start
 
         foreach (var twitchUserSetting in twitchUsers.Where(u => u.Enabled))
         {
-            var user = _userFactory.CreateTwitchUser(twitchUserSetting);
+            // The log sink feeds the web UI's Activity view when it runs
+            var user = _userFactory.CreateTwitchUser(twitchUserSetting, true);
             botTasks.Add(user.StartBot());
         }
 

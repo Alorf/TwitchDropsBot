@@ -11,6 +11,7 @@ using TwitchDropsBot.Core.Platform.Shared.Factories.User;
 using TwitchDropsBot.Core.Platform.Shared.Helpers;
 using TwitchDropsBot.Core.Platform.Shared.Services.Extensions;
 using TwitchDropsBot.Core.Platform.Shared.Settings;
+using TwitchDropsBot.Web;
 
 var builder = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json", false, true)
@@ -57,6 +58,16 @@ services.AddSingleton(settingsManager);
 
 await using var provider = services.BuildServiceProvider();
 
+// Optional web UI, only when WEBUI_PORT is set; created before the bots so it sees their first log lines
+var webUi = WebUiHost.Create(provider);
+if (webUi is { IsDemo: true })
+{
+    await webUi.RunAsync();
+    return;
+}
+
+var webUiTask = webUi?.RunAsync() ?? Task.CompletedTask;
+
 var start = new Start(
     provider.GetRequiredService<IOptionsMonitor<BotSettings>>(),
     provider.GetRequiredService<ILogger<Start>>(),
@@ -66,3 +77,4 @@ var start = new Start(
 );
 
 await start.StartAsync();
+await webUiTask;

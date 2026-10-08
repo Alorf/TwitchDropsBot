@@ -11,6 +11,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TwitchDropsBot.WinForms", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchDropsBot.GTK", "TwitchDropsBot.GTK\TwitchDropsBot.GTK.csproj", "{46A6DD5B-0A4E-4C93-9DBD-BABFA2CEB514}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchDropsBot.Web", "TwitchDropsBot.Web\TwitchDropsBot.Web.csproj", "{E055CCF2-A399-4A24-AEC2-31D161D1046B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{46A6DD5B-0A4E-4C93-9DBD-BABFA2CEB514}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{46A6DD5B-0A4E-4C93-9DBD-BABFA2CEB514}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{46A6DD5B-0A4E-4C93-9DBD-BABFA2CEB514}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E055CCF2-A399-4A24-AEC2-31D161D1046B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E055CCF2-A399-4A24-AEC2-31D161D1046B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E055CCF2-A399-4A24-AEC2-31D161D1046B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E055CCF2-A399-4A24-AEC2-31D161D1046B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

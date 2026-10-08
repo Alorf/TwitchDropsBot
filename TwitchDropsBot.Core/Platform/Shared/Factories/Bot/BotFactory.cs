@@ -12,16 +12,19 @@ public class BotFactory
 
     private readonly NotificationService _notificationService;
     private readonly IOptionsMonitor<BotSettings> _botSettings;
-    
-    public BotFactory(NotificationService notificationService, IOptionsMonitor<BotSettings> botSettings)
+    private readonly CampaignQueueService _campaignQueue;
+
+    public BotFactory(NotificationService notificationService, IOptionsMonitor<BotSettings> botSettings,
+        CampaignQueueService campaignQueue)
     {
         _notificationService = notificationService;
         _botSettings = botSettings;
+        _campaignQueue = campaignQueue;
     }
 
     public TwitchBot CreateTwitchBot(TwitchUser user, ILogger logger)
     {
-        return new TwitchBot(user, logger, _notificationService, _botSettings); 
+        return new TwitchBot(user, logger, _notificationService, _botSettings, _campaignQueue);
     }
 
     public KickBot CreateKickBot(KickUser user, ILogger logger)

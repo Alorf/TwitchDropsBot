@@ -46,8 +46,25 @@ public abstract class BotUser : INotifyPropertyChanged
     }
 
     public ILogger Logger { get; }
-    
+
     public CancellationTokenSource CancellationTokenSource { get; set; }
+
+    public DateTime? NextCycleAt { get; set; }
+    public BotIdleReason IdleReason { get; set; }
+    public string? LastError { get; set; }
+    public DateTime? LastErrorAt { get; set; }
+
+    // Ends the current watch or wait, so the bot picks its campaign again
+    public void RequestReselect()
+    {
+        try
+        {
+            CancellationTokenSource?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+    }
     private DiscordWebhookClient? _discordWebhookClient;
 
     protected BotUser(

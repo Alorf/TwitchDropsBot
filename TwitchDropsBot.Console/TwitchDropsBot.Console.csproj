@@ -17,6 +17,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\TwitchDropsBot.Core\TwitchDropsBot.Core.csproj" />
+      <ProjectReference Include="..\TwitchDropsBot.Web\TwitchDropsBot.Web.csproj" />
     </ItemGroup>
 
     <ItemGroup>

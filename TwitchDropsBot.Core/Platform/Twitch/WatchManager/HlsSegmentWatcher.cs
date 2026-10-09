@@ -224,14 +224,9 @@ public sealed class HlsSegmentWatcher : IDisposable
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeoutCts.CancelAfter(timeout);
 
+        // Connections are kept between polls: the playlist and segment servers hold them open, and a new
+        // connection for every poll costs each account a TLS handshake every 10 seconds, too many behind a proxy.
         using var request = new HttpRequestMessage(method, url);
-
-        if (method == HttpMethod.Get)
-        {
-            // The CDN drops the connection shortly after serving a playlist anyway.
-            request.Headers.ConnectionClose = true;
-        }
-
         using var response =
             await Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutCts.Token);
 
